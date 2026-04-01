@@ -893,8 +893,10 @@
 <body>
   <div class="page-shell">
     <nav class="tool-nav" aria-label="Tools">
+      <a class="tool-tab" href="./index.html"><span class="tool-tab-index">00</span><span>Home</span></a>
       <a class="tool-tab" href="./income.html"><span class="tool-tab-index">01</span><span>Income</span></a>
       <a class="tool-tab is-active" href="./mortgage.html"><span class="tool-tab-index">02</span><span>Mortgage</span></a>
+      <a class="tool-tab" href="./savings.html"><span class="tool-tab-index">03</span><span>Savings</span></a>
     </nav>
 
     <header class="hero">
@@ -1213,6 +1215,8 @@
 
   <script>
     (() => {
+      const COOKIE_NAME = "finance_tools_mortgage_v1";
+      const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
       const LOAN_ORDER = ["fixed30", "arm76", "arm106"];
 
       const DEFAULTS = {
@@ -1319,6 +1323,48 @@
         lastInputs: null,
         lastScenario: null
       };
+
+      function setCookie(name, value) {
+        document.cookie = `${name}=${encodeURIComponent(value)}; max-age=${COOKIE_MAX_AGE}; path=/; samesite=lax`;
+      }
+
+      function getCookie(name) {
+        return document.cookie
+          .split("; ")
+          .find((row) => row.startsWith(`${name}=`))
+          ?.slice(name.length + 1) ?? "";
+      }
+
+      function loadSavedState() {
+        try {
+          const raw = getCookie(COOKIE_NAME);
+          return raw ? JSON.parse(decodeURIComponent(raw)) : null;
+        } catch {
+          return null;
+        }
+      }
+
+      function saveState() {
+        setCookie(COOKIE_NAME, JSON.stringify({
+          homePrice: refs.homePrice.value,
+          downPayment: refs.downPayment.value,
+          propertyTaxRate: refs.propertyTaxRate.value,
+          insurancePerYear: refs.insurancePerYear.value,
+          hoaPerMonth: refs.hoaPerMonth.value,
+          advancedOpen: refs.advancedDetails.open,
+          downPaymentMode: uiState.downPaymentMode,
+          activeLoanType: uiState.activeLoanType,
+          compareLoanType: uiState.compareLoanType,
+          rate_fixed30: loanRefs.fixed30.rate.value,
+          term_fixed30: loanRefs.fixed30.term.value,
+          rate_arm76_initial: loanRefs.arm76.initialRate.value,
+          rate_arm76_adjusted: loanRefs.arm76.adjustedRate.value,
+          term_arm76: loanRefs.arm76.term.value,
+          rate_arm106_initial: loanRefs.arm106.initialRate.value,
+          rate_arm106_adjusted: loanRefs.arm106.adjustedRate.value,
+          term_arm106: loanRefs.arm106.term.value
+        }));
+      }
 
       function clamp(value, min, max) {
         return Math.min(Math.max(value, min), max);
@@ -2081,6 +2127,7 @@
         renderCharts(scenario);
         renderComparisons(inputs, scenario);
         renderScheduleTable(scenario);
+        saveState();
       }
 
       function handleFocus(event) {
@@ -2148,6 +2195,38 @@
         selectCompareLoan(DEFAULTS.compareLoanType);
       }
 
+      function applySavedState(savedState) {
+        if (!savedState || typeof savedState !== "object") {
+          applyDefaults();
+          return;
+        }
+
+        refs.homePrice.value = savedState.homePrice ?? formatInputDisplay(DEFAULTS.homePrice, inputConfigs.homePrice);
+        refs.propertyTaxRate.value = savedState.propertyTaxRate ?? formatInputDisplay(DEFAULTS.propertyTaxRate, inputConfigs.propertyTaxRate);
+        refs.insurancePerYear.value = savedState.insurancePerYear ?? formatInputDisplay(DEFAULTS.insurancePerYear, inputConfigs.insurancePerYear);
+        refs.hoaPerMonth.value = savedState.hoaPerMonth ?? formatInputDisplay(DEFAULTS.hoaPerMonth, inputConfigs.hoaPerMonth);
+        refs.advancedDetails.open = Boolean(savedState.advancedOpen);
+
+        uiState.downPaymentMode = savedState.downPaymentMode === "dollar" ? "dollar" : DEFAULTS.downPaymentMode;
+        uiState.activeLoanType = LOAN_DEFAULTS[savedState.activeLoanType] ? savedState.activeLoanType : DEFAULTS.activeLoanType;
+        uiState.compareLoanType = LOAN_DEFAULTS[savedState.compareLoanType] ? savedState.compareLoanType : DEFAULTS.compareLoanType;
+
+        setDownPaymentMode(uiState.downPaymentMode, false);
+        refs.downPayment.value = savedState.downPayment ?? formatInputDisplay(DEFAULTS.downPaymentValuePercent, { kind: "percent", decimals: 3 });
+
+        loanRefs.fixed30.rate.value = savedState.rate_fixed30 ?? formatInputDisplay(LOAN_DEFAULTS.fixed30.rate, inputConfigs.rate_fixed30);
+        loanRefs.fixed30.term.value = savedState.term_fixed30 ?? formatInputDisplay(LOAN_DEFAULTS.fixed30.term, inputConfigs.term_fixed30);
+        loanRefs.arm76.initialRate.value = savedState.rate_arm76_initial ?? formatInputDisplay(LOAN_DEFAULTS.arm76.initialRate, inputConfigs.rate_arm76_initial);
+        loanRefs.arm76.adjustedRate.value = savedState.rate_arm76_adjusted ?? "";
+        loanRefs.arm76.term.value = savedState.term_arm76 ?? formatInputDisplay(LOAN_DEFAULTS.arm76.term, inputConfigs.term_arm76);
+        loanRefs.arm106.initialRate.value = savedState.rate_arm106_initial ?? formatInputDisplay(LOAN_DEFAULTS.arm106.initialRate, inputConfigs.rate_arm106_initial);
+        loanRefs.arm106.adjustedRate.value = savedState.rate_arm106_adjusted ?? "";
+        loanRefs.arm106.term.value = savedState.term_arm106 ?? formatInputDisplay(LOAN_DEFAULTS.arm106.term, inputConfigs.term_arm106);
+
+        selectLoanOption(uiState.activeLoanType);
+        selectCompareLoan(uiState.compareLoanType);
+      }
+
       function attachEvents() {
         Object.keys(inputConfigs).forEach((id) => {
           const node = document.getElementById(id);
@@ -2176,13 +2255,14 @@
 
         refs.downDollarButton.addEventListener("click", () => setDownPaymentMode("dollar"));
         refs.downPercentButton.addEventListener("click", () => setDownPaymentMode("percent"));
+        refs.advancedDetails.addEventListener("toggle", saveState);
         refs.resetButton.addEventListener("click", () => {
           applyDefaults();
           recalculate();
         });
       }
 
-      applyDefaults();
+      applySavedState(loadSavedState());
       attachEvents();
       recalculate();
     })();

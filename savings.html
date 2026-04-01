@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Savings Growth Calculator</title>
+  <link rel="stylesheet" href="./shared-tools.css">
+  <style>
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    .workspace-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.12fr) minmax(320px, 0.88fr);
+      align-items: start;
+    }
+
+    .input-column {
+      padding: 28px;
+    }
+
+    .summary-column {
+      position: sticky;
+      top: 22px;
+      padding: 28px;
+      border-left: 1px solid rgba(20, 37, 47, 0.1);
+      background: rgba(255, 255, 255, 0.42);
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .asset-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .asset-row {
+      border: 1px solid rgba(20, 37, 47, 0.12);
+      background: rgba(255, 255, 255, 0.54);
+    }
+
+    .asset-row-header {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) 180px auto;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(20, 37, 47, 0.08);
+    }
+
+    .asset-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      padding: 14px 16px 16px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    label {
+      color: var(--ink);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .control-shell {
+      position: relative;
+      display: flex;
+      align-items: center;
+      min-height: 52px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .control-shell::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 5px;
+      background: linear-gradient(180deg, var(--teal), var(--clay));
+      opacity: 0.84;
+    }
+
+    .control-shell:focus-within {
+      border-color: rgba(13, 106, 115, 0.36);
+      box-shadow: 0 0 0 4px rgba(13, 106, 115, 0.12);
+    }
+
+    .prefix,
+    .suffix {
+      flex: 0 0 auto;
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+      font-weight: 800;
+    }
+
+    .prefix {
+      margin-left: 4px;
+      margin-right: 10px;
+    }
+
+    .suffix {
+      margin-left: 10px;
+    }
+
+    input[type="number"],
+    input[type="text"],
+    select {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: var(--ink);
+      font-size: 1rem;
+      font-weight: 700;
+      outline: none;
+      font-family: inherit;
+    }
+
+    input[type="number"]::placeholder,
+    input[type="text"]::placeholder {
+      color: rgba(86, 103, 115, 0.82);
+    }
+
+    select {
+      appearance: none;
+      background-image:
+        linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%),
+        linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+      background-position:
+        calc(100% - 18px) calc(50% - 3px),
+        calc(100% - 12px) calc(50% - 3px);
+      background-size: 6px 6px, 6px 6px;
+      background-repeat: no-repeat;
+      padding-right: 32px;
+    }
+
+    .advanced-panel {
+      margin-top: 22px;
+      border: 1px solid rgba(20, 37, 47, 0.1);
+      background: rgba(255, 255, 255, 0.38);
+      overflow: hidden;
+    }
+
+    .advanced-panel summary {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 18px;
+      cursor: pointer;
+    }
+
+    .advanced-panel summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .advanced-title {
+      color: var(--ink);
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+
+    .advanced-chevron {
+      position: relative;
+      width: 30px;
+      height: 30px;
+      border: 1px solid rgba(20, 37, 47, 0.14);
+      background: rgba(255, 255, 255, 0.42);
+      flex: 0 0 auto;
+    }
+
+    .advanced-chevron::before,
+    .advanced-chevron::after {
+      content: "";
+      position: absolute;
+      top: 14px;
+      left: 8px;
+      width: 12px;
+      height: 2px;
+      background: var(--teal-deep);
+      transition: transform 180ms ease;
+    }
+
+    .advanced-chevron::after {
+      transform: rotate(90deg);
+    }
+
+    .advanced-panel[open] .advanced-chevron::after {
+      transform: rotate(0deg);
+    }
+
+    .advanced-body {
+      padding: 12px 18px 18px;
+      border-top: 1px solid rgba(20, 37, 47, 0.08);
+    }
+
+    .advanced-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .summary-strip {
+      padding: 0 0 18px;
+      border-bottom: 1px solid rgba(20, 37, 47, 0.12);
+    }
+
+    .summary-kicker {
+      margin-bottom: 10px;
+      color: var(--ink-soft);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .summary-strip strong {
+      display: block;
+      font-family: "Baskerville", "Iowan Old Style", "Palatino Linotype", serif;
+      font-size: clamp(2.8rem, 5vw, 4.2rem);
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+      color: var(--teal-deep);
+      overflow-wrap: anywhere;
+    }
+
+    .summary-note {
+      margin-top: 12px;
+      max-width: 34ch;
+      color: var(--ink-soft);
+      line-height: 1.55;
+    }
+
+    .results-list {
+      margin-top: 18px;
+      display: grid;
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(20, 37, 47, 0.1);
+    }
+
+    .result-row span:first-child {
+      color: var(--ink-soft);
+    }
+
+    .bucket-table-wrap,
+    .projection-wrap {
+      margin-top: 28px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(20, 37, 47, 0.08);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+
+    th,
+    td {
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(20, 37, 47, 0.08);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--ink-soft);
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    td:not(:first-child),
+    th:not(:first-child) {
+      text-align: right;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    @media (max-width: 1080px) {
+      .workspace-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-column {
+        position: static;
+        border-left: 0;
+        border-top: 1px solid rgba(20, 37, 47, 0.1);
+      }
+
+      .asset-row-header,
+      .asset-grid,
+      .advanced-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .input-column,
+      .summary-column {
+        padding: 18px;
+      }
+
+      .section-head,
+      .result-row {
+        align-items: start;
+        flex-direction: column;
+      }
+
+      .asset-row-header,
+      .asset-grid,
+      .advanced-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <nav class="tool-nav" aria-label="Tools">
+      <a class="tool-tab" href="./index.html"><span class="tool-tab-index">00</span><span>Home</span></a>
+      <a class="tool-tab" href="./income.html"><span class="tool-tab-index">01</span><span>Income</span></a>
+      <a class="tool-tab" href="./mortgage.html"><span class="tool-tab-index">02</span><span>Mortgage</span></a>
+      <a class="tool-tab is-active" href="./savings.html"><span class="tool-tab-index">03</span><span>Savings</span></a>
+    </nav>
+
+    <header class="hero">
+      <div class="hero-copy">
+        <h1>Savings Growth Calculator</h1>
+      </div>
+      <button id="resetButton" type="button">Reset</button>
+    </header>
+
+    <main class="surface">
+      <section class="workspace-layout">
+        <div class="input-column">
+          <div class="section-head">
+            <h2>Assets</h2>
+            <button id="addBucketButton" type="button">Add asset</button>
+          </div>
+
+          <div id="assetList" class="asset-list"></div>
+
+          <details id="advancedDetails" class="advanced-panel">
+            <summary>
+              <span class="advanced-title">Advanced assumptions</span>
+              <span class="advanced-chevron" aria-hidden="true"></span>
+            </summary>
+            <div class="advanced-body">
+              <div class="advanced-grid">
+                <div class="field">
+                  <label for="horizonYears">Projection horizon</label>
+                  <div class="control-shell">
+                    <input id="horizonYears" type="number" min="1" max="60" step="1" placeholder="20">
+                    <span class="suffix">years</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <section class="bucket-table-wrap">
+            <div class="section-head">
+              <h2>Ending Bucket Detail</h2>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Bucket</th>
+                  <th>Gross end</th>
+                  <th>Tax due</th>
+                  <th>After-tax end</th>
+                </tr>
+              </thead>
+              <tbody id="bucketTable"></tbody>
+            </table>
+          </section>
+        </div>
+
+        <aside class="summary-column">
+          <div class="summary-strip">
+            <p class="summary-kicker">After-Tax Ending Value</p>
+            <strong id="afterTaxEndingValue">$0</strong>
+            <p class="summary-note" id="summaryNote">Liquidation view across all asset buckets.</p>
+          </div>
+
+          <div class="results-list">
+            <div class="result-row">
+              <span>Current total</span>
+              <strong id="currentTotal">$0</strong>
+            </div>
+            <div class="result-row">
+              <span>Annual contributions</span>
+              <strong id="annualContributionTotal">$0</strong>
+            </div>
+            <div class="result-row">
+              <span>Gross ending value</span>
+              <strong id="grossEndingValue">$0</strong>
+            </div>
+            <div class="result-row">
+              <span>Total embedded tax</span>
+              <strong id="embeddedTaxValue">$0</strong>
+            </div>
+            <div class="result-row">
+              <span>Tax basis protected</span>
+              <strong id="basisProtectedValue">$0</strong>
+            </div>
+            <div class="result-row">
+              <span>Projection horizon</span>
+              <strong id="horizonValue">0 years</strong>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="projection-wrap">
+        <div class="input-column">
+          <div class="section-head">
+            <h2>Year-by-Year Projection</h2>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th>Total liquid</th>
+                <th>Embedded tax</th>
+              </tr>
+            </thead>
+            <tbody id="projectionTable"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <template id="assetRowTemplate">
+    <article class="asset-row">
+      <div class="asset-row-header">
+        <div class="field">
+          <label>Asset name</label>
+          <div class="control-shell">
+            <input type="text" data-field="name" placeholder="Asset name">
+          </div>
+        </div>
+        <div class="field">
+          <label>Tax treatment</label>
+          <div class="control-shell">
+            <select data-field="type">
+              <option value="cash">Cash</option>
+              <option value="taxable_stock">Taxable stock</option>
+              <option value="traditional">Traditional / non-Roth</option>
+              <option value="tax_free">Tax-free</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" data-action="remove-bucket">Remove</button>
+      </div>
+      <div class="asset-grid" data-fields></div>
+    </article>
+  </template>
+
+  <script>
+    (() => {
+      const COOKIE_NAME = "finance_tools_savings_v1";
+      const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
+      const TYPE_DEFAULTS = {
+        cash: {
+          name: "Cash",
+          current: 70000,
+          contribution: 12000,
+          growth: 4.2,
+          taxRate: 32
+        },
+        taxable_stock: {
+          name: "Taxable Stock",
+          current: 320000,
+          contribution: 24000,
+          growth: 7.0,
+          basis: 210000,
+          taxRate: 20
+        },
+        traditional: {
+          name: "Traditional",
+          current: 260000,
+          contribution: 23000,
+          growth: 6.5,
+          taxRate: 30
+        },
+        tax_free: {
+          name: "Tax-Free",
+          current: 95000,
+          contribution: 10000,
+          growth: 7.0
+        }
+      };
+
+      const DEFAULT_STATE = {
+        horizonYears: "",
+        advancedOpen: false,
+        buckets: [
+          { id: crypto.randomUUID(), type: "cash", name: "", current: "", contribution: "", growth: "", basis: "", taxRate: "" },
+          { id: crypto.randomUUID(), type: "taxable_stock", name: "", current: "", contribution: "", growth: "", basis: "", taxRate: "" },
+          { id: crypto.randomUUID(), type: "traditional", name: "", current: "", contribution: "", growth: "", basis: "", taxRate: "" },
+          { id: crypto.randomUUID(), type: "tax_free", name: "", current: "", contribution: "", growth: "", basis: "", taxRate: "" }
+        ]
+      };
+
+      const refs = {
+        assetList: document.getElementById("assetList"),
+        addBucketButton: document.getElementById("addBucketButton"),
+        advancedDetails: document.getElementById("advancedDetails"),
+        horizonYears: document.getElementById("horizonYears"),
+        resetButton: document.getElementById("resetButton"),
+        afterTaxEndingValue: document.getElementById("afterTaxEndingValue"),
+        currentTotal: document.getElementById("currentTotal"),
+        annualContributionTotal: document.getElementById("annualContributionTotal"),
+        grossEndingValue: document.getElementById("grossEndingValue"),
+        embeddedTaxValue: document.getElementById("embeddedTaxValue"),
+        basisProtectedValue: document.getElementById("basisProtectedValue"),
+        horizonValue: document.getElementById("horizonValue"),
+        summaryNote: document.getElementById("summaryNote"),
+        bucketTable: document.getElementById("bucketTable"),
+        projectionTable: document.getElementById("projectionTable"),
+        assetRowTemplate: document.getElementById("assetRowTemplate")
+      };
+
+      let state = loadState();
+
+      function setCookie(name, value) {
+        document.cookie = `${name}=${encodeURIComponent(value)}; max-age=${COOKIE_MAX_AGE}; path=/; samesite=lax`;
+      }
+
+      function getCookie(name) {
+        return document.cookie
+          .split("; ")
+          .find((row) => row.startsWith(`${name}=`))
+          ?.slice(name.length + 1) ?? "";
+      }
+
+      function saveState() {
+        setCookie(COOKIE_NAME, JSON.stringify(state));
+      }
+
+      function normalizeBucket(rawBucket, fallbackType = "taxable_stock") {
+        const type = TYPE_DEFAULTS[rawBucket?.type] ? rawBucket.type : fallbackType;
+        return {
+          id: typeof rawBucket?.id === "string" && rawBucket.id ? rawBucket.id : crypto.randomUUID(),
+          type,
+          name: typeof rawBucket?.name === "string" ? rawBucket.name : "",
+          current: typeof rawBucket?.current === "string" ? rawBucket.current : "",
+          contribution: typeof rawBucket?.contribution === "string" ? rawBucket.contribution : "",
+          growth: typeof rawBucket?.growth === "string" ? rawBucket.growth : "",
+          basis: typeof rawBucket?.basis === "string" ? rawBucket.basis : "",
+          taxRate: typeof rawBucket?.taxRate === "string" ? rawBucket.taxRate : ""
+        };
+      }
+
+      function loadState() {
+        try {
+          const raw = getCookie(COOKIE_NAME);
+          if (!raw) {
+            return structuredClone(DEFAULT_STATE);
+          }
+
+          const parsed = JSON.parse(decodeURIComponent(raw));
+          const buckets = Array.isArray(parsed?.buckets) && parsed.buckets.length
+            ? parsed.buckets.map((bucket) => normalizeBucket(bucket))
+            : structuredClone(DEFAULT_STATE.buckets);
+
+          return {
+            horizonYears: typeof parsed?.horizonYears === "string" ? parsed.horizonYears : "",
+            advancedOpen: Boolean(parsed?.advancedOpen),
+            buckets
+          };
+        } catch {
+          return structuredClone(DEFAULT_STATE);
+        }
+      }
+
+      function resetState() {
+        state = structuredClone(DEFAULT_STATE);
+        renderPage();
+      }
+
+      function defaultLabelForBucket(bucket) {
+        return bucket.name.trim() || TYPE_DEFAULTS[bucket.type].name;
+      }
+
+      function getFieldDefs(type) {
+        const defs = [
+          { key: "current", label: "Current value", prefix: "$", suffix: "", step: "1000" },
+          { key: "contribution", label: "Annual add", prefix: "$", suffix: "", step: "500" },
+          { key: "growth", label: "Growth", prefix: "", suffix: "%", step: "0.1" }
+        ];
+
+        if (type === "taxable_stock") {
+          defs.push({ key: "basis", label: "Current basis", prefix: "$", suffix: "", step: "1000" });
+        }
+
+        if (type === "cash" || type === "taxable_stock" || type === "traditional") {
+          defs.push({ key: "taxRate", label: "Tax rate", prefix: "", suffix: "%", step: "0.1" });
+        }
+
+        return defs;
+      }
+
+      function buildFieldMarkup(bucket, field) {
+        const defaults = TYPE_DEFAULTS[bucket.type];
+        const placeholderValue = defaults[field.key];
+        const placeholder = Number.isFinite(placeholderValue) ? String(placeholderValue) : "";
+
+        return `
+          <div class="field">
+            <label>${field.label}</label>
+            <div class="control-shell">
+              ${field.prefix ? `<span class="prefix">${field.prefix}</span>` : ""}
+              <input type="number" data-field="${field.key}" step="${field.step}" min="0" value="${escapeHtml(bucket[field.key] ?? "")}" placeholder="${placeholder}">
+              ${field.suffix ? `<span class="suffix">${field.suffix}</span>` : ""}
+            </div>
+          </div>
+        `;
+      }
+
+      function renderAssetList() {
+        refs.assetList.innerHTML = "";
+
+        state.buckets.forEach((bucket) => {
+          const fragment = refs.assetRowTemplate.content.cloneNode(true);
+          const row = fragment.querySelector(".asset-row");
+          const nameInput = fragment.querySelector('[data-field="name"]');
+          const typeSelect = fragment.querySelector('[data-field="type"]');
+          const fieldsWrap = fragment.querySelector("[data-fields]");
+          const removeButton = fragment.querySelector('[data-action="remove-bucket"]');
+
+          row.dataset.bucketId = bucket.id;
+          nameInput.value = bucket.name;
+          nameInput.placeholder = TYPE_DEFAULTS[bucket.type].name;
+          typeSelect.value = bucket.type;
+          fieldsWrap.innerHTML = getFieldDefs(bucket.type).map((field) => buildFieldMarkup(bucket, field)).join("");
+
+          nameInput.addEventListener("input", (event) => {
+            updateBucket(bucket.id, { name: event.target.value });
+          });
+
+          typeSelect.addEventListener("change", (event) => {
+            updateBucket(bucket.id, { type: event.target.value });
+          });
+
+          fieldsWrap.querySelectorAll("input").forEach((input) => {
+            input.addEventListener("input", (event) => {
+              updateBucket(bucket.id, { [event.target.dataset.field]: event.target.value });
+            });
+          });
+
+          removeButton.addEventListener("click", () => {
+            state.buckets = state.buckets.filter((item) => item.id !== bucket.id);
+            renderPage();
+          });
+
+          refs.assetList.appendChild(fragment);
+        });
+      }
+
+      function updateBucket(bucketId, patch) {
+        state.buckets = state.buckets.map((bucket) => {
+          if (bucket.id !== bucketId) {
+            return bucket;
+          }
+
+          const nextBucket = { ...bucket, ...patch };
+          if (patch.type && patch.type !== bucket.type) {
+            return normalizeBucket({ ...nextBucket, basis: "", taxRate: "" }, patch.type);
+          }
+          return nextBucket;
+        });
+
+        renderPage();
+      }
+
+      function readNumber(value, fallback) {
+        const parsed = Number.parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : fallback;
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+      }
+
+      function usd(value) {
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+          maximumFractionDigits: 0
+        }).format(Number.isFinite(value) ? value : 0);
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;");
+      }
+
+      function normalizeForCalculation() {
+        const horizonYears = clamp(Math.round(readNumber(state.horizonYears, 20)), 1, 60);
+
+        return {
+          horizonYears,
+          buckets: state.buckets.map((bucket) => {
+            const defaults = TYPE_DEFAULTS[bucket.type];
+            const current = Math.max(0, readNumber(bucket.current, defaults.current));
+            const contribution = Math.max(0, readNumber(bucket.contribution, defaults.contribution));
+            const growth = readNumber(bucket.growth, defaults.growth) / 100;
+            const taxRate = clamp(readNumber(bucket.taxRate, defaults.taxRate ?? 0), 0, 100) / 100;
+            const basis = bucket.type === "taxable_stock"
+              ? clamp(readNumber(bucket.basis, defaults.basis ?? current), 0, current)
+              : current;
+
+            return {
+              ...bucket,
+              label: defaultLabelForBucket(bucket),
+              current,
+              contribution,
+              growth,
+              basis,
+              taxRate
+            };
+          })
+        };
+      }
+
+      function projectBucket(bucket) {
+        let balance = bucket.current;
+        let basis = bucket.type === "taxable_stock" ? bucket.basis : bucket.current;
+        let paidTax = 0;
+
+        return {
+          step() {
+            if (bucket.type === "cash") {
+              const growthBase = (balance * bucket.growth) + (bucket.contribution * (bucket.growth / 2));
+              const tax = Math.max(0, growthBase) * bucket.taxRate;
+              paidTax += tax;
+              balance = balance + bucket.contribution + growthBase - tax;
+            } else {
+              balance = (balance * (1 + bucket.growth)) + (bucket.contribution * (1 + (bucket.growth / 2)));
+              if (bucket.type === "taxable_stock") {
+                basis += bucket.contribution;
+              }
+            }
+          },
+          snapshot() {
+            let taxDue = 0;
+            if (bucket.type === "taxable_stock") {
+              taxDue = Math.max(0, balance - basis) * bucket.taxRate;
+            } else if (bucket.type === "traditional") {
+              taxDue = balance * bucket.taxRate;
+            }
+
+            return {
+              label: bucket.label,
+              type: bucket.type,
+              balance,
+              basis,
+              paidTax,
+              taxDue,
+              afterTax: balance - taxDue
+            };
+          }
+        };
+      }
+
+      function calculate(inputs) {
+        const engines = inputs.buckets.map(projectBucket);
+        const projection = [];
+
+        for (let year = 1; year <= inputs.horizonYears; year += 1) {
+          engines.forEach((engine) => engine.step());
+          const snapshots = engines.map((engine) => engine.snapshot());
+          projection.push({
+            year,
+            totalLiquid: snapshots.reduce((sum, item) => sum + item.afterTax, 0),
+            embeddedTax: snapshots.reduce((sum, item) => sum + item.taxDue + item.paidTax, 0)
+          });
+        }
+
+        const buckets = engines.map((engine) => engine.snapshot());
+        const totals = {
+          currentTotal: inputs.buckets.reduce((sum, bucket) => sum + bucket.current, 0),
+          annualContributionTotal: inputs.buckets.reduce((sum, bucket) => sum + bucket.contribution, 0),
+          grossEndingValue: buckets.reduce((sum, bucket) => sum + bucket.balance, 0),
+          embeddedTax: buckets.reduce((sum, bucket) => sum + bucket.taxDue + bucket.paidTax, 0),
+          afterTaxEndingValue: buckets.reduce((sum, bucket) => sum + bucket.afterTax, 0),
+          basisProtected: buckets.reduce((sum, bucket) => {
+            if (bucket.type === "taxable_stock") {
+              return sum + bucket.basis;
+            }
+            if (bucket.type === "traditional") {
+              return sum;
+            }
+            return sum + bucket.balance;
+          }, 0)
+        };
+
+        return { totals, buckets, projection };
+      }
+
+      function renderOutputs(inputs, results) {
+        refs.afterTaxEndingValue.textContent = usd(results.totals.afterTaxEndingValue);
+        refs.currentTotal.textContent = usd(results.totals.currentTotal);
+        refs.annualContributionTotal.textContent = usd(results.totals.annualContributionTotal);
+        refs.grossEndingValue.textContent = usd(results.totals.grossEndingValue);
+        refs.embeddedTaxValue.textContent = usd(results.totals.embeddedTax);
+        refs.basisProtectedValue.textContent = usd(results.totals.basisProtected);
+        refs.horizonValue.textContent = `${inputs.horizonYears} years`;
+        refs.summaryNote.textContent = `${results.buckets.length} asset bucket${results.buckets.length === 1 ? "" : "s"} modeled.`;
+
+        refs.bucketTable.innerHTML = results.buckets.map((bucket) => `
+          <tr>
+            <td>${escapeHtml(bucket.label)}</td>
+            <td>${usd(bucket.balance)}</td>
+            <td>${usd(bucket.taxDue + bucket.paidTax)}</td>
+            <td>${usd(bucket.afterTax)}</td>
+          </tr>
+        `).join("");
+
+        refs.projectionTable.innerHTML = results.projection.map((row) => `
+          <tr>
+            <td>${row.year}</td>
+            <td>${usd(row.totalLiquid)}</td>
+            <td>${usd(row.embeddedTax)}</td>
+          </tr>
+        `).join("");
+      }
+
+      function renderPage() {
+        refs.horizonYears.value = state.horizonYears;
+        refs.advancedDetails.open = state.advancedOpen;
+        renderAssetList();
+        const inputs = normalizeForCalculation();
+        const results = calculate(inputs);
+        renderOutputs(inputs, results);
+        saveState();
+      }
+
+      refs.addBucketButton.addEventListener("click", () => {
+        state.buckets.push({
+          id: crypto.randomUUID(),
+          type: "taxable_stock",
+          name: "",
+          current: "",
+          contribution: "",
+          growth: "",
+          basis: "",
+          taxRate: ""
+        });
+        renderPage();
+      });
+
+      refs.horizonYears.addEventListener("input", (event) => {
+        state.horizonYears = event.target.value;
+        renderPage();
+      });
+
+      refs.advancedDetails.addEventListener("toggle", () => {
+        state.advancedOpen = refs.advancedDetails.open;
+        saveState();
+      });
+
+      refs.resetButton.addEventListener("click", resetState);
+
+      renderPage();
+    })();
+  </script>
+</body>
+</html>

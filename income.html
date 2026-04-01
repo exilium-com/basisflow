@@ -302,8 +302,10 @@
 <body>
   <div class="page-shell">
     <nav class="tool-nav" aria-label="Tools">
+      <a class="tool-tab" href="./index.html"><span class="tool-tab-index">00</span><span>Home</span></a>
       <a class="tool-tab is-active" href="./income.html"><span class="tool-tab-index">01</span><span>Income</span></a>
       <a class="tool-tab" href="./mortgage.html"><span class="tool-tab-index">02</span><span>Mortgage</span></a>
+      <a class="tool-tab" href="./savings.html"><span class="tool-tab-index">03</span><span>Savings</span></a>
     </nav>
 
     <header class="hero">
@@ -438,6 +440,9 @@
 
   <script>
     (() => {
+      const COOKIE_NAME = "finance_tools_income_v1";
+      const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
       const defaults = {
         grossSalary: 255000,
         employee401k: 24500,
@@ -499,6 +504,42 @@
         contributionTable: document.getElementById("contributionTable"),
         taxTable: document.getElementById("taxTable")
       };
+
+      function setCookie(name, value) {
+        document.cookie = `${name}=${encodeURIComponent(value)}; max-age=${COOKIE_MAX_AGE}; path=/; samesite=lax`;
+      }
+
+      function getCookie(name) {
+        return document.cookie
+          .split("; ")
+          .find((row) => row.startsWith(`${name}=`))
+          ?.slice(name.length + 1) ?? "";
+      }
+
+      function loadSavedState() {
+        try {
+          const raw = getCookie(COOKIE_NAME);
+          return raw ? JSON.parse(decodeURIComponent(raw)) : null;
+        } catch {
+          return null;
+        }
+      }
+
+      function saveState() {
+        setCookie(COOKIE_NAME, JSON.stringify({
+          grossSalary: refs.grossSalary.value,
+          employee401k: refs.employee401k.value,
+          annualAdditions: refs.annualAdditions.value,
+          matchRate: refs.matchRate.value,
+          megaBackdoorInput: refs.megaBackdoorInput.value,
+          hsaContribution: refs.hsaContribution.value,
+          federalStandardDeduction: refs.federalStandardDeduction.value,
+          caStandardDeduction: refs.caStandardDeduction.value,
+          caSdiRate: refs.caSdiRate.value,
+          includeCaSdi: refs.includeCaSdi.value,
+          taxAssumptionsOpen: refs.taxAssumptions.open
+        }));
+      }
 
       function usd(value) {
         return new Intl.NumberFormat("en-US", {
@@ -671,6 +712,7 @@
         const inputs = readInputs();
         const results = calculate(inputs);
         render(inputs, results);
+        saveState();
       }
 
       function applyDefaults() {
@@ -687,6 +729,25 @@
         refs.taxAssumptions.open = false;
       }
 
+      function applySavedState(savedState) {
+        if (!savedState || typeof savedState !== "object") {
+          applyDefaults();
+          return;
+        }
+
+        refs.grossSalary.value = savedState.grossSalary ?? defaults.grossSalary;
+        refs.employee401k.value = savedState.employee401k ?? defaults.employee401k;
+        refs.annualAdditions.value = savedState.annualAdditions ?? defaults.annualAdditions;
+        refs.matchRate.value = savedState.matchRate ?? defaults.matchRate;
+        refs.megaBackdoorInput.value = savedState.megaBackdoorInput ?? defaults.megaBackdoorInput;
+        refs.hsaContribution.value = savedState.hsaContribution ?? defaults.hsaContribution;
+        refs.federalStandardDeduction.value = savedState.federalStandardDeduction ?? defaults.federalStandardDeduction;
+        refs.caStandardDeduction.value = savedState.caStandardDeduction ?? defaults.caStandardDeduction;
+        refs.caSdiRate.value = savedState.caSdiRate ?? defaults.caSdiRate;
+        refs.includeCaSdi.value = savedState.includeCaSdi ?? defaults.includeCaSdi;
+        refs.taxAssumptions.open = Boolean(savedState.taxAssumptionsOpen);
+      }
+
       Object.values(refs).forEach((node) => {
         if (node instanceof HTMLInputElement || node instanceof HTMLSelectElement) {
           node.addEventListener("input", recalculate);
@@ -694,12 +755,14 @@
         }
       });
 
+      refs.taxAssumptions.addEventListener("toggle", saveState);
+
       refs.resetButton.addEventListener("click", () => {
         applyDefaults();
         recalculate();
       });
 
-      applyDefaults();
+      applySavedState(loadSavedState());
       recalculate();
     })();
   </script>
