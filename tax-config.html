@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tax Config</title>
+  <link rel="stylesheet" href="./shared-tools.css">
+  <style>
+    .content-column {
+      padding: 28px;
+    }
+
+    .section {
+      padding-top: 18px;
+      margin-top: 18px;
+      border-top: 1px solid rgba(20, 37, 47, 0.08);
+    }
+
+    .section:first-child {
+      padding-top: 0;
+      margin-top: 0;
+      border-top: 0;
+    }
+
+    .section h2 {
+      margin-bottom: 12px;
+      font-size: 1.3rem;
+    }
+
+    .section p,
+    .status {
+      color: var(--ink-soft);
+      line-height: 1.55;
+    }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    label {
+      color: var(--ink);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 240px;
+      padding: 12px 13px;
+      border: 1px solid rgba(20, 37, 47, 0.12);
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--ink);
+      font: 600 0.92rem/1.45 "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+      resize: vertical;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .status {
+      margin-top: 14px;
+      min-height: 1.5em;
+    }
+
+    @media (max-width: 760px) {
+      .content-column {
+        padding: 18px;
+      }
+
+      .config-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <nav class="tool-nav" aria-label="Tools">
+      <a class="tool-tab" href="./index.html"><span class="tool-tab-index">00</span><span>Home</span></a>
+      <a class="tool-tab" href="./income.html"><span class="tool-tab-index">01</span><span>Income</span></a>
+      <a class="tool-tab" href="./mortgage.html"><span class="tool-tab-index">02</span><span>Mortgage</span></a>
+      <a class="tool-tab" href="./savings.html"><span class="tool-tab-index">03</span><span>Assets</span></a>
+      <a class="tool-tab" href="./expenses.html"><span class="tool-tab-index">04</span><span>Expenses</span></a>
+      <a class="tool-tab is-active" href="./tax-config.html"><span class="tool-tab-index">05</span><span>Taxes</span></a>
+    </nav>
+
+    <header class="hero">
+      <div class="hero-copy">
+        <h1>Tax Config</h1>
+      </div>
+      <button id="resetDefaultsButton" type="button">Reset defaults</button>
+    </header>
+
+    <main class="surface">
+      <section class="content-column">
+        <div class="section">
+          <h2>Bracket Config</h2>
+          <p>Each array is saved to local storage and reused by the income and savings tools. Use `null` for the top bracket.</p>
+          <div class="config-grid">
+            <div class="field">
+              <label for="federalBrackets">Federal brackets</label>
+              <textarea id="federalBrackets"></textarea>
+            </div>
+            <div class="field">
+              <label for="stateBrackets">State brackets</label>
+              <textarea id="stateBrackets"></textarea>
+            </div>
+            <div class="field">
+              <label for="longTermCapitalGains">Long-term capital gains</label>
+              <textarea id="longTermCapitalGains"></textarea>
+            </div>
+          </div>
+          <div class="actions">
+            <button id="applyConfigButton" type="button">Apply config</button>
+          </div>
+          <div id="statusMessage" class="status" aria-live="polite"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./shared-tax-config.js"></script>
+  <script>
+    (() => {
+      const refs = {
+        federalBrackets: document.getElementById("federalBrackets"),
+        stateBrackets: document.getElementById("stateBrackets"),
+        longTermCapitalGains: document.getElementById("longTermCapitalGains"),
+        applyConfigButton: document.getElementById("applyConfigButton"),
+        resetDefaultsButton: document.getElementById("resetDefaultsButton"),
+        statusMessage: document.getElementById("statusMessage")
+      };
+
+      function formatConfig(config) {
+        refs.federalBrackets.value = JSON.stringify(config.federalBrackets, null, 2);
+        refs.stateBrackets.value = JSON.stringify(config.stateBrackets, null, 2);
+        refs.longTermCapitalGains.value = JSON.stringify(config.longTermCapitalGains, null, 2);
+      }
+
+      function readConfigFromInputs() {
+        return {
+          federalBrackets: JSON.parse(refs.federalBrackets.value),
+          stateBrackets: JSON.parse(refs.stateBrackets.value),
+          longTermCapitalGains: JSON.parse(refs.longTermCapitalGains.value)
+        };
+      }
+
+      refs.applyConfigButton.addEventListener("click", () => {
+        try {
+          const config = FinanceTaxConfig.saveConfig(readConfigFromInputs());
+          formatConfig(config);
+          refs.statusMessage.textContent = "Saved to local storage.";
+        } catch (error) {
+          refs.statusMessage.textContent = `Config error: ${error.message}`;
+        }
+      });
+
+      refs.resetDefaultsButton.addEventListener("click", () => {
+        const config = FinanceTaxConfig.resetConfig();
+        formatConfig(config);
+        refs.statusMessage.textContent = "Reset to 2026 defaults.";
+      });
+
+      formatConfig(FinanceTaxConfig.loadConfig());
+    })();
+  </script>
+</body>
+</html>

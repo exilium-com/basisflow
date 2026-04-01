@@ -410,34 +410,19 @@
     }
 
     .advanced-chevron {
-      position: relative;
-      width: 34px;
-      height: 34px;
-      border-radius: 0;
-      border: 1px solid rgba(20, 37, 47, 0.14);
-      background: rgba(255, 255, 255, 0.42);
       flex: 0 0 auto;
+      color: var(--teal-deep);
+      font-size: 0.9rem;
+      font-weight: 800;
+      line-height: 1;
     }
 
-    .advanced-chevron::before,
-    .advanced-chevron::after {
-      content: "";
-      position: absolute;
-      top: 16px;
-      left: 10px;
-      width: 14px;
-      height: 2px;
-      border-radius: 0;
-      background: var(--teal-deep);
-      transition: transform 180ms ease;
+    .advanced-chevron::before {
+      content: "+";
     }
 
-    .advanced-chevron::after {
-      transform: rotate(90deg);
-    }
-
-    .advanced-panel[open] .advanced-chevron::after {
-      transform: rotate(0deg);
+    .advanced-panel[open] .advanced-chevron::before {
+      content: "\2212";
     }
 
     .advanced-body {
@@ -896,7 +881,9 @@
       <a class="tool-tab" href="./index.html"><span class="tool-tab-index">00</span><span>Home</span></a>
       <a class="tool-tab" href="./income.html"><span class="tool-tab-index">01</span><span>Income</span></a>
       <a class="tool-tab is-active" href="./mortgage.html"><span class="tool-tab-index">02</span><span>Mortgage</span></a>
-      <a class="tool-tab" href="./savings.html"><span class="tool-tab-index">03</span><span>Savings</span></a>
+      <a class="tool-tab" href="./savings.html"><span class="tool-tab-index">03</span><span>Assets</span></a>
+      <a class="tool-tab" href="./expenses.html"><span class="tool-tab-index">04</span><span>Expenses</span></a>
+      <a class="tool-tab" href="./tax-config.html"><span class="tool-tab-index">05</span><span>Taxes</span></a>
     </nav>
 
     <header class="hero">
@@ -914,7 +901,6 @@
               <div>
                 <h2>Core Inputs</h2>
               </div>
-              <p>Keep the main loan inputs visible. Open advanced only when you need the rest.</p>
             </div>
 
             <div class="form-grid">

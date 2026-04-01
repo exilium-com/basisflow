@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Savings Growth Calculator</title>
+  <title>Assets Calculator</title>
   <link rel="stylesheet" href="./shared-tools.css">
   <style>
     h1,
@@ -24,8 +24,7 @@
     }
 
     .summary-column {
-      position: sticky;
-      top: 22px;
+      position: static;
       padding: 28px;
       border-left: 1px solid rgba(20, 37, 47, 0.1);
       background: rgba(255, 255, 255, 0.42);
@@ -39,30 +38,92 @@
       margin-bottom: 18px;
     }
 
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
     .asset-list {
       display: grid;
       gap: 10px;
     }
 
     .asset-row {
+      position: relative;
       border: 1px solid rgba(20, 37, 47, 0.12);
       background: rgba(255, 255, 255, 0.54);
     }
 
     .asset-row-header {
       display: grid;
-      grid-template-columns: minmax(180px, 1fr) 180px auto;
+      grid-template-columns: minmax(180px, 1fr) minmax(180px, 220px);
       gap: 12px;
       align-items: center;
-      padding: 14px 16px;
-      border-bottom: 1px solid rgba(20, 37, 47, 0.08);
+      padding: 14px 52px 12px 16px;
+    }
+
+    .remove-bucket-button {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      min-width: 18px;
+      min-height: 18px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--ink-soft);
+      font-size: 0.82rem;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .remove-bucket-button:hover {
+      color: var(--ink);
     }
 
     .asset-grid {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 14px;
       padding: 14px 16px 16px;
+    }
+
+    .asset-options {
+      border-top: 1px solid rgba(20, 37, 47, 0.08);
+    }
+
+    .asset-options summary {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 16px 12px;
+      cursor: pointer;
+      color: var(--ink-soft);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .asset-options summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .asset-options summary::after {
+      content: "+";
+      color: var(--teal-deep);
+      font-size: 0.82rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .asset-options[open] summary::after {
+      content: "\2212";
     }
 
     .field {
@@ -139,7 +200,7 @@
 
     input[type="number"]::placeholder,
     input[type="text"]::placeholder {
-      color: rgba(86, 103, 115, 0.82);
+      color: transparent;
     }
 
     select {
@@ -184,32 +245,19 @@
     }
 
     .advanced-chevron {
-      position: relative;
-      width: 30px;
-      height: 30px;
-      border: 1px solid rgba(20, 37, 47, 0.14);
-      background: rgba(255, 255, 255, 0.42);
       flex: 0 0 auto;
+      color: var(--teal-deep);
+      font-size: 0.9rem;
+      font-weight: 800;
+      line-height: 1;
     }
 
-    .advanced-chevron::before,
-    .advanced-chevron::after {
-      content: "";
-      position: absolute;
-      top: 14px;
-      left: 8px;
-      width: 12px;
-      height: 2px;
-      background: var(--teal-deep);
-      transition: transform 180ms ease;
+    .advanced-chevron::before {
+      content: "+";
     }
 
-    .advanced-chevron::after {
-      transform: rotate(90deg);
-    }
-
-    .advanced-panel[open] .advanced-chevron::after {
-      transform: rotate(0deg);
+    .advanced-panel[open] .advanced-chevron::before {
+      content: "\2212";
     }
 
     .advanced-body {
@@ -254,6 +302,26 @@
       line-height: 1.55;
     }
 
+    .display-toggle {
+      display: inline-flex;
+      gap: 6px;
+      padding: 4px;
+      border: 1px solid rgba(20, 37, 47, 0.12);
+      background: rgba(255, 255, 255, 0.54);
+    }
+
+    .display-toggle button {
+      padding: 0.56rem 0.78rem;
+      border: 0;
+      background: transparent;
+      font-size: 0.74rem;
+    }
+
+    .display-toggle button[aria-pressed="true"] {
+      background: rgba(13, 106, 115, 0.12);
+      color: var(--teal-deep);
+    }
+
     .results-list {
       margin-top: 18px;
       display: grid;
@@ -272,10 +340,40 @@
     }
 
     .bucket-table-wrap,
+    .chart-wrap,
     .projection-wrap {
       margin-top: 28px;
       padding-top: 18px;
       border-top: 1px solid rgba(20, 37, 47, 0.08);
+    }
+
+    .chart-panel svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid rgba(20, 37, 47, 0.08);
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .chart-key {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 18px;
+      margin-top: 10px;
+      color: var(--ink-soft);
+      font-size: 0.86rem;
+    }
+
+    .chart-key span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .swatch {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
     }
 
     table {
@@ -315,7 +413,6 @@
       }
 
       .summary-column {
-        position: static;
         border-left: 0;
         border-top: 1px solid rgba(20, 37, 47, 0.1);
       }
@@ -333,6 +430,7 @@
         padding: 18px;
       }
 
+      .hero-actions,
       .section-head,
       .result-row {
         align-items: start;
@@ -353,14 +451,22 @@
       <a class="tool-tab" href="./index.html"><span class="tool-tab-index">00</span><span>Home</span></a>
       <a class="tool-tab" href="./income.html"><span class="tool-tab-index">01</span><span>Income</span></a>
       <a class="tool-tab" href="./mortgage.html"><span class="tool-tab-index">02</span><span>Mortgage</span></a>
-      <a class="tool-tab is-active" href="./savings.html"><span class="tool-tab-index">03</span><span>Savings</span></a>
+      <a class="tool-tab is-active" href="./savings.html"><span class="tool-tab-index">03</span><span>Assets</span></a>
+      <a class="tool-tab" href="./expenses.html"><span class="tool-tab-index">04</span><span>Expenses</span></a>
+      <a class="tool-tab" href="./tax-config.html"><span class="tool-tab-index">05</span><span>Taxes</span></a>
     </nav>
 
     <header class="hero">
       <div class="hero-copy">
-        <h1>Savings Growth Calculator</h1>
+        <h1>Assets Calculator</h1>
       </div>
-      <button id="resetButton" type="button">Reset</button>
+      <div class="hero-actions">
+        <div class="display-toggle" role="group" aria-label="Display mode">
+          <button id="nominalModeButton" type="button" aria-pressed="true">Nominal</button>
+          <button id="realModeButton" type="button" aria-pressed="false">Real</button>
+        </div>
+        <button id="resetButton" type="button">Reset</button>
+      </div>
     </header>
 
     <main class="surface">
@@ -372,6 +478,31 @@
           </div>
 
           <div id="assetList" class="asset-list"></div>
+
+          <details id="growthDetails" class="advanced-panel">
+            <summary>
+              <span class="advanced-title">Growth assumptions</span>
+              <span class="advanced-chevron" aria-hidden="true"></span>
+            </summary>
+            <div class="advanced-body">
+              <div class="advanced-grid">
+                <div class="field">
+                  <label for="baselineGrowthRate">Baseline growth</label>
+                  <div class="control-shell">
+                    <input id="baselineGrowthRate" type="number" min="0" step="0.1" placeholder="7.0">
+                    <span class="suffix">%</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="inflationRate">Inflation</label>
+                  <div class="control-shell">
+                    <input id="inflationRate" type="number" min="0" step="0.1" placeholder="2.5">
+                    <span class="suffix">%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
 
           <details id="advancedDetails" class="advanced-panel">
             <summary>
@@ -385,6 +516,13 @@
                   <div class="control-shell">
                     <input id="horizonYears" type="number" min="1" max="60" step="1" placeholder="20">
                     <span class="suffix">years</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="incomeBaseline">Taxable income baseline</label>
+                  <div class="control-shell">
+                    <span class="prefix">$</span>
+                    <input id="incomeBaseline" type="number" min="0" step="1000" placeholder="180000">
                   </div>
                 </div>
               </div>
@@ -411,9 +549,9 @@
 
         <aside class="summary-column">
           <div class="summary-strip">
-            <p class="summary-kicker">After-Tax Ending Value</p>
-            <strong id="afterTaxEndingValue">$0</strong>
-            <p class="summary-note" id="summaryNote">Liquidation view across all asset buckets.</p>
+            <p class="summary-kicker">Gross Ending Value</p>
+            <strong id="grossHeadlineValue">$0</strong>
+            <p class="summary-note" id="summaryNote">Projected in-account value across all asset buckets.</p>
           </div>
 
           <div class="results-list">
@@ -445,6 +583,21 @@
         </aside>
       </section>
 
+      <section class="chart-wrap">
+        <div class="input-column">
+          <div class="section-head">
+            <h2>Growth Curve</h2>
+          </div>
+          <div class="chart-panel">
+            <svg id="growthChart" viewBox="0 0 720 320" role="img" aria-label="Gross value and embedded tax over time chart"></svg>
+            <div class="chart-key">
+              <span><i class="swatch" style="background:#0c6a7c;"></i>Gross value</span>
+              <span><i class="swatch" style="background:#d28a47;"></i>Embedded tax</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="projection-wrap">
         <div class="input-column">
           <div class="section-head">
@@ -467,6 +620,7 @@
 
   <template id="assetRowTemplate">
     <article class="asset-row">
+      <button class="remove-bucket-button" type="button" data-action="remove-bucket" aria-label="Remove asset">X</button>
       <div class="asset-row-header">
         <div class="field">
           <label>Asset name</label>
@@ -475,52 +629,36 @@
           </div>
         </div>
         <div class="field">
-          <label>Tax treatment</label>
+          <label>Current value</label>
           <div class="control-shell">
-            <select data-field="type">
-              <option value="cash">Cash</option>
-              <option value="taxable_stock">Taxable stock</option>
-              <option value="traditional">Traditional / non-Roth</option>
-              <option value="tax_free">Tax-free</option>
-            </select>
+            <span class="prefix">$</span>
+            <input type="number" data-field="current" step="1000" min="0">
           </div>
         </div>
-        <button type="button" data-action="remove-bucket">Remove</button>
       </div>
-      <div class="asset-grid" data-fields></div>
+      <details class="asset-options" data-options>
+        <summary>Bucket details</summary>
+        <div class="asset-grid" data-fields></div>
+      </details>
     </article>
   </template>
 
+  <script src="./shared-tax-config.js"></script>
   <script>
     (() => {
       const COOKIE_NAME = "finance_tools_savings_v1";
       const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
       const TYPE_DEFAULTS = {
-        cash: {
-          name: "Cash",
-          current: 70000,
-          contribution: 12000,
-          growth: 4.2,
-          taxRate: 32
-        },
-        taxable_stock: {
-          name: "Taxable Stock",
+        taxable: {
+          name: "Taxable Asset",
           current: 320000,
           contribution: 24000,
           growth: 7.0,
-          basis: 210000,
-          taxRate: 20
-        },
-        traditional: {
-          name: "Traditional",
-          current: 260000,
-          contribution: 23000,
-          growth: 6.5,
-          taxRate: 30
+          basis: 210000
         },
         tax_free: {
-          name: "Tax-Free",
+          name: "Tax-Free Asset",
           current: 95000,
           contribution: 10000,
           growth: 7.0
@@ -529,22 +667,31 @@
 
       const DEFAULT_STATE = {
         horizonYears: "",
+        incomeBaseline: "",
+        inflationRate: "",
+        displayMode: "nominal",
+        growthOpen: false,
         advancedOpen: false,
+        baselineGrowthRate: "",
         buckets: [
-          { id: crypto.randomUUID(), type: "cash", name: "", current: "", contribution: "", growth: "", basis: "", taxRate: "" },
-          { id: crypto.randomUUID(), type: "taxable_stock", name: "", current: "", contribution: "", growth: "", basis: "", taxRate: "" },
-          { id: crypto.randomUUID(), type: "traditional", name: "", current: "", contribution: "", growth: "", basis: "", taxRate: "" },
-          { id: crypto.randomUUID(), type: "tax_free", name: "", current: "", contribution: "", growth: "", basis: "", taxRate: "" }
+          { id: crypto.randomUUID(), taxFree: false, name: "", current: "", contribution: "", growth: "", basis: "", detailsOpen: false },
+          { id: crypto.randomUUID(), taxFree: true, name: "", current: "", contribution: "", growth: "", basis: "", detailsOpen: false }
         ]
       };
 
       const refs = {
         assetList: document.getElementById("assetList"),
         addBucketButton: document.getElementById("addBucketButton"),
+        growthDetails: document.getElementById("growthDetails"),
+        baselineGrowthRate: document.getElementById("baselineGrowthRate"),
         advancedDetails: document.getElementById("advancedDetails"),
         horizonYears: document.getElementById("horizonYears"),
+        incomeBaseline: document.getElementById("incomeBaseline"),
+        inflationRate: document.getElementById("inflationRate"),
+        nominalModeButton: document.getElementById("nominalModeButton"),
+        realModeButton: document.getElementById("realModeButton"),
         resetButton: document.getElementById("resetButton"),
-        afterTaxEndingValue: document.getElementById("afterTaxEndingValue"),
+        grossHeadlineValue: document.getElementById("grossHeadlineValue"),
         currentTotal: document.getElementById("currentTotal"),
         annualContributionTotal: document.getElementById("annualContributionTotal"),
         grossEndingValue: document.getElementById("grossEndingValue"),
@@ -554,6 +701,7 @@
         summaryNote: document.getElementById("summaryNote"),
         bucketTable: document.getElementById("bucketTable"),
         projectionTable: document.getElementById("projectionTable"),
+        growthChart: document.getElementById("growthChart"),
         assetRowTemplate: document.getElementById("assetRowTemplate")
       };
 
@@ -574,17 +722,20 @@
         setCookie(COOKIE_NAME, JSON.stringify(state));
       }
 
-      function normalizeBucket(rawBucket, fallbackType = "taxable_stock") {
-        const type = TYPE_DEFAULTS[rawBucket?.type] ? rawBucket.type : fallbackType;
+      function normalizeBucket(rawBucket) {
+        const rawType = rawBucket?.type;
+        const taxFree = typeof rawBucket?.taxFree === "boolean"
+          ? rawBucket.taxFree
+          : rawType === "tax_free";
         return {
           id: typeof rawBucket?.id === "string" && rawBucket.id ? rawBucket.id : crypto.randomUUID(),
-          type,
+          taxFree,
           name: typeof rawBucket?.name === "string" ? rawBucket.name : "",
           current: typeof rawBucket?.current === "string" ? rawBucket.current : "",
           contribution: typeof rawBucket?.contribution === "string" ? rawBucket.contribution : "",
           growth: typeof rawBucket?.growth === "string" ? rawBucket.growth : "",
           basis: typeof rawBucket?.basis === "string" ? rawBucket.basis : "",
-          taxRate: typeof rawBucket?.taxRate === "string" ? rawBucket.taxRate : ""
+          detailsOpen: Boolean(rawBucket?.detailsOpen)
         };
       }
 
@@ -602,7 +753,20 @@
 
           return {
             horizonYears: typeof parsed?.horizonYears === "string" ? parsed.horizonYears : "",
+            incomeBaseline: typeof parsed?.incomeBaseline === "string" ? parsed.incomeBaseline : "",
+            inflationRate: typeof parsed?.inflationRate === "string" ? parsed.inflationRate : "",
+            displayMode: parsed?.displayMode === "real" ? "real" : "nominal",
+            growthOpen: Boolean(parsed?.growthOpen),
             advancedOpen: Boolean(parsed?.advancedOpen),
+            baselineGrowthRate: typeof parsed?.baselineGrowthRate === "string"
+              ? parsed.baselineGrowthRate
+              : typeof parsed?.growthDefaults?.taxable === "string"
+                ? parsed.growthDefaults.taxable
+                : typeof parsed?.growthDefaults?.taxable_stock === "string"
+                  ? parsed.growthDefaults.taxable_stock
+                  : typeof parsed?.growthDefaults?.tax_free === "string"
+                    ? parsed.growthDefaults.tax_free
+                    : "",
             buckets
           };
         } catch {
@@ -616,38 +780,43 @@
       }
 
       function defaultLabelForBucket(bucket) {
-        return bucket.name.trim() || TYPE_DEFAULTS[bucket.type].name;
+        return bucket.name.trim() || TYPE_DEFAULTS[bucket.taxFree ? "tax_free" : "taxable"].name;
       }
 
-      function getFieldDefs(type) {
+      function getFieldDefs(bucket) {
         const defs = [
-          { key: "current", label: "Current value", prefix: "$", suffix: "", step: "1000" },
+          { key: "taxFree", label: "Tax-free growth", type: "checkbox" },
           { key: "contribution", label: "Annual add", prefix: "$", suffix: "", step: "500" },
-          { key: "growth", label: "Growth", prefix: "", suffix: "%", step: "0.1" }
+          { key: "growth", label: "Growth override", suffix: "%", step: "0.1", placeholderForTaxMode: true }
         ];
 
-        if (type === "taxable_stock") {
+        if (!bucket.taxFree) {
           defs.push({ key: "basis", label: "Current basis", prefix: "$", suffix: "", step: "1000" });
-        }
-
-        if (type === "cash" || type === "taxable_stock" || type === "traditional") {
-          defs.push({ key: "taxRate", label: "Tax rate", prefix: "", suffix: "%", step: "0.1" });
         }
 
         return defs;
       }
 
       function buildFieldMarkup(bucket, field) {
-        const defaults = TYPE_DEFAULTS[bucket.type];
-        const placeholderValue = defaults[field.key];
-        const placeholder = Number.isFinite(placeholderValue) ? String(placeholderValue) : "";
+        const defaults = TYPE_DEFAULTS[bucket.taxFree ? "tax_free" : "taxable"];
+        const growthPlaceholder = readNumber(state.baselineGrowthRate, defaults.growth);
+        if (field.type === "checkbox") {
+          return `
+            <div class="field">
+              <label>${field.label}</label>
+              <div class="control-shell">
+                <input type="checkbox" data-field="${field.key}"${bucket.taxFree ? " checked" : ""}>
+              </div>
+            </div>
+          `;
+        }
 
         return `
           <div class="field">
             <label>${field.label}</label>
             <div class="control-shell">
               ${field.prefix ? `<span class="prefix">${field.prefix}</span>` : ""}
-              <input type="number" data-field="${field.key}" step="${field.step}" min="0" value="${escapeHtml(bucket[field.key] ?? "")}" placeholder="${placeholder}">
+              <input type="number" data-field="${field.key}" step="${field.step}" min="0" value="${escapeHtml(bucket[field.key] ?? "")}"${field.placeholderForTaxMode ? ` placeholder="${escapeHtml(growthPlaceholder)}"` : ""}>
               ${field.suffix ? `<span class="suffix">${field.suffix}</span>` : ""}
             </div>
           </div>
@@ -661,28 +830,39 @@
           const fragment = refs.assetRowTemplate.content.cloneNode(true);
           const row = fragment.querySelector(".asset-row");
           const nameInput = fragment.querySelector('[data-field="name"]');
-          const typeSelect = fragment.querySelector('[data-field="type"]');
+          const currentInput = fragment.querySelector('[data-field="current"]');
+          const details = fragment.querySelector("[data-options]");
           const fieldsWrap = fragment.querySelector("[data-fields]");
           const removeButton = fragment.querySelector('[data-action="remove-bucket"]');
 
           row.dataset.bucketId = bucket.id;
           nameInput.value = bucket.name;
-          nameInput.placeholder = TYPE_DEFAULTS[bucket.type].name;
-          typeSelect.value = bucket.type;
-          fieldsWrap.innerHTML = getFieldDefs(bucket.type).map((field) => buildFieldMarkup(bucket, field)).join("");
+          currentInput.value = bucket.current;
+          details.open = bucket.detailsOpen;
+          fieldsWrap.innerHTML = getFieldDefs(bucket).map((field) => buildFieldMarkup(bucket, field)).join("");
 
           nameInput.addEventListener("input", (event) => {
-            updateBucket(bucket.id, { name: event.target.value });
+            updateBucket(bucket.id, { name: event.target.value }, false);
           });
 
-          typeSelect.addEventListener("change", (event) => {
-            updateBucket(bucket.id, { type: event.target.value });
+          currentInput.addEventListener("input", (event) => {
+            updateBucket(bucket.id, { current: event.target.value }, false);
           });
 
-          fieldsWrap.querySelectorAll("input").forEach((input) => {
+          fieldsWrap.querySelectorAll('input[type="number"]').forEach((input) => {
             input.addEventListener("input", (event) => {
-              updateBucket(bucket.id, { [event.target.dataset.field]: event.target.value });
+              updateBucket(bucket.id, { [event.target.dataset.field]: event.target.value }, false);
             });
+          });
+
+          fieldsWrap.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+            input.addEventListener("change", (event) => {
+              updateBucket(bucket.id, { [event.target.dataset.field]: event.target.checked }, true);
+            });
+          });
+
+          details.addEventListener("toggle", () => {
+            updateBucket(bucket.id, { detailsOpen: details.open }, false);
           });
 
           removeButton.addEventListener("click", () => {
@@ -694,20 +874,25 @@
         });
       }
 
-      function updateBucket(bucketId, patch) {
+      function updateBucket(bucketId, patch, rerender = false) {
         state.buckets = state.buckets.map((bucket) => {
           if (bucket.id !== bucketId) {
             return bucket;
           }
 
           const nextBucket = { ...bucket, ...patch };
-          if (patch.type && patch.type !== bucket.type) {
-            return normalizeBucket({ ...nextBucket, basis: "", taxRate: "" }, patch.type);
+          if (typeof patch.taxFree === "boolean" && patch.taxFree !== bucket.taxFree) {
+            return normalizeBucket({ ...nextBucket, basis: "" });
           }
           return nextBucket;
         });
 
-        renderPage();
+        if (rerender) {
+          renderPage();
+          return;
+        }
+
+        refreshOutputs();
       }
 
       function readNumber(value, fallback) {
@@ -740,13 +925,16 @@
 
         return {
           horizonYears,
+          incomeBaseline: Math.max(0, readNumber(state.incomeBaseline, 180000)),
+          inflationRate: Math.max(0, readNumber(state.inflationRate, 2.5)) / 100,
+          displayMode: state.displayMode === "real" ? "real" : "nominal",
+          baselineGrowthRate: readNumber(state.baselineGrowthRate, TYPE_DEFAULTS.taxable.growth) / 100,
           buckets: state.buckets.map((bucket) => {
-            const defaults = TYPE_DEFAULTS[bucket.type];
+            const defaults = TYPE_DEFAULTS[bucket.taxFree ? "tax_free" : "taxable"];
             const current = Math.max(0, readNumber(bucket.current, defaults.current));
             const contribution = Math.max(0, readNumber(bucket.contribution, defaults.contribution));
-            const growth = readNumber(bucket.growth, defaults.growth) / 100;
-            const taxRate = clamp(readNumber(bucket.taxRate, defaults.taxRate ?? 0), 0, 100) / 100;
-            const basis = bucket.type === "taxable_stock"
+            const growth = readNumber(bucket.growth, readNumber(state.baselineGrowthRate, defaults.growth)) / 100;
+            const basis = !bucket.taxFree
               ? clamp(readNumber(bucket.basis, defaults.basis ?? current), 0, current)
               : current;
 
@@ -756,46 +944,39 @@
               current,
               contribution,
               growth,
-              basis,
-              taxRate
+              basis
             };
           })
         };
       }
 
-      function projectBucket(bucket) {
+      function projectBucket(bucket, inputs, taxConfig) {
         let balance = bucket.current;
-        let basis = bucket.type === "taxable_stock" ? bucket.basis : bucket.current;
-        let paidTax = 0;
+        let basis = bucket.taxFree ? bucket.current : bucket.basis;
+
+        function computeCapitalGainsTax(amount) {
+          const federal = FinanceTaxConfig.computeAdditionalTax(inputs.incomeBaseline, amount, taxConfig.longTermCapitalGains);
+          const state = FinanceTaxConfig.computeAdditionalTax(inputs.incomeBaseline, amount, taxConfig.stateBrackets);
+          return federal + state;
+        }
 
         return {
           step() {
-            if (bucket.type === "cash") {
-              const growthBase = (balance * bucket.growth) + (bucket.contribution * (bucket.growth / 2));
-              const tax = Math.max(0, growthBase) * bucket.taxRate;
-              paidTax += tax;
-              balance = balance + bucket.contribution + growthBase - tax;
-            } else {
-              balance = (balance * (1 + bucket.growth)) + (bucket.contribution * (1 + (bucket.growth / 2)));
-              if (bucket.type === "taxable_stock") {
-                basis += bucket.contribution;
-              }
+            balance = (balance * (1 + bucket.growth)) + (bucket.contribution * (1 + (bucket.growth / 2)));
+            if (!bucket.taxFree) {
+              basis += bucket.contribution;
             }
           },
           snapshot() {
-            let taxDue = 0;
-            if (bucket.type === "taxable_stock") {
-              taxDue = Math.max(0, balance - basis) * bucket.taxRate;
-            } else if (bucket.type === "traditional") {
-              taxDue = balance * bucket.taxRate;
-            }
+            const taxDue = bucket.taxFree
+              ? 0
+              : computeCapitalGainsTax(Math.max(0, balance - basis));
 
             return {
               label: bucket.label,
-              type: bucket.type,
+              type: bucket.taxFree ? "tax_free" : "taxable",
               balance,
               basis,
-              paidTax,
               taxDue,
               afterTax: balance - taxDue
             };
@@ -804,7 +985,8 @@
       }
 
       function calculate(inputs) {
-        const engines = inputs.buckets.map(projectBucket);
+        const taxConfig = FinanceTaxConfig.loadConfig();
+        const engines = inputs.buckets.map((bucket) => projectBucket(bucket, inputs, taxConfig));
         const projection = [];
 
         for (let year = 1; year <= inputs.horizonYears; year += 1) {
@@ -812,8 +994,9 @@
           const snapshots = engines.map((engine) => engine.snapshot());
           projection.push({
             year,
+            grossValue: snapshots.reduce((sum, item) => sum + item.balance, 0),
             totalLiquid: snapshots.reduce((sum, item) => sum + item.afterTax, 0),
-            embeddedTax: snapshots.reduce((sum, item) => sum + item.taxDue + item.paidTax, 0)
+            embeddedTax: snapshots.reduce((sum, item) => sum + item.taxDue, 0)
           });
         }
 
@@ -822,14 +1005,11 @@
           currentTotal: inputs.buckets.reduce((sum, bucket) => sum + bucket.current, 0),
           annualContributionTotal: inputs.buckets.reduce((sum, bucket) => sum + bucket.contribution, 0),
           grossEndingValue: buckets.reduce((sum, bucket) => sum + bucket.balance, 0),
-          embeddedTax: buckets.reduce((sum, bucket) => sum + bucket.taxDue + bucket.paidTax, 0),
+          embeddedTax: buckets.reduce((sum, bucket) => sum + bucket.taxDue, 0),
           afterTaxEndingValue: buckets.reduce((sum, bucket) => sum + bucket.afterTax, 0),
           basisProtected: buckets.reduce((sum, bucket) => {
-            if (bucket.type === "taxable_stock") {
+            if (bucket.type === "taxable") {
               return sum + bucket.basis;
-            }
-            if (bucket.type === "traditional") {
-              return sum;
             }
             return sum + bucket.balance;
           }, 0)
@@ -838,61 +1018,207 @@
         return { totals, buckets, projection };
       }
 
+      function toDisplayValue(value, year, inputs) {
+        if (inputs.displayMode !== "real") {
+          return value;
+        }
+        return value / Math.pow(1 + inputs.inflationRate, year);
+      }
+
       function renderOutputs(inputs, results) {
-        refs.afterTaxEndingValue.textContent = usd(results.totals.afterTaxEndingValue);
+        const endingYear = inputs.horizonYears;
+        refs.grossHeadlineValue.textContent = usd(toDisplayValue(results.totals.grossEndingValue, endingYear, inputs));
         refs.currentTotal.textContent = usd(results.totals.currentTotal);
         refs.annualContributionTotal.textContent = usd(results.totals.annualContributionTotal);
-        refs.grossEndingValue.textContent = usd(results.totals.grossEndingValue);
-        refs.embeddedTaxValue.textContent = usd(results.totals.embeddedTax);
-        refs.basisProtectedValue.textContent = usd(results.totals.basisProtected);
+        refs.grossEndingValue.textContent = usd(toDisplayValue(results.totals.grossEndingValue, endingYear, inputs));
+        refs.embeddedTaxValue.textContent = usd(toDisplayValue(results.totals.embeddedTax, endingYear, inputs));
+        refs.basisProtectedValue.textContent = usd(toDisplayValue(results.totals.basisProtected, endingYear, inputs));
         refs.horizonValue.textContent = `${inputs.horizonYears} years`;
-        refs.summaryNote.textContent = `${results.buckets.length} asset bucket${results.buckets.length === 1 ? "" : "s"} modeled.`;
+        refs.summaryNote.textContent = inputs.displayMode === "real"
+          ? `${results.buckets.length} asset bucket${results.buckets.length === 1 ? "" : "s"} modeled in today's dollars before liquidation tax.`
+          : `${results.buckets.length} asset bucket${results.buckets.length === 1 ? "" : "s"} modeled in nominal dollars before liquidation tax.`;
+        refs.nominalModeButton.setAttribute("aria-pressed", String(inputs.displayMode === "nominal"));
+        refs.realModeButton.setAttribute("aria-pressed", String(inputs.displayMode === "real"));
 
         refs.bucketTable.innerHTML = results.buckets.map((bucket) => `
           <tr>
             <td>${escapeHtml(bucket.label)}</td>
-            <td>${usd(bucket.balance)}</td>
-            <td>${usd(bucket.taxDue + bucket.paidTax)}</td>
-            <td>${usd(bucket.afterTax)}</td>
+            <td>${usd(toDisplayValue(bucket.balance, endingYear, inputs))}</td>
+            <td>${usd(toDisplayValue(bucket.taxDue, endingYear, inputs))}</td>
+            <td>${usd(toDisplayValue(bucket.afterTax, endingYear, inputs))}</td>
           </tr>
         `).join("");
 
         refs.projectionTable.innerHTML = results.projection.map((row) => `
           <tr>
             <td>${row.year}</td>
-            <td>${usd(row.totalLiquid)}</td>
-            <td>${usd(row.embeddedTax)}</td>
+            <td>${usd(toDisplayValue(row.totalLiquid, row.year, inputs))}</td>
+            <td>${usd(toDisplayValue(row.embeddedTax, row.year, inputs))}</td>
           </tr>
         `).join("");
       }
 
-      function renderPage() {
+      function makeEmptyChart(svg, message) {
+        svg.innerHTML = `
+          <rect x="18" y="18" width="684" height="284" fill="rgba(255,255,255,0.75)" stroke="rgba(16,33,47,0.08)" />
+          <text x="360" y="168" text-anchor="middle" fill="#576675" font-size="18" font-family="Avenir Next, Segoe UI, sans-serif">${message}</text>
+        `;
+      }
+
+      function getChartFrame() {
+        const width = 720;
+        const height = 320;
+        const margin = { top: 24, right: 24, bottom: 58, left: 88 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        return {
+          width,
+          height,
+          innerWidth,
+          innerHeight,
+          plotLeft: margin.left,
+          plotTop: margin.top,
+          plotRight: margin.left + innerWidth,
+          plotBottom: margin.top + innerHeight
+        };
+      }
+
+      function buildLinePath(points) {
+        return points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(" ");
+      }
+
+      function renderGrowthChart(inputs, results) {
+        const svg = refs.growthChart;
+        const projection = results.projection;
+
+        if (!projection.length) {
+          makeEmptyChart(svg, "Add assets to draw the growth curve.");
+          return;
+        }
+
+        const { height, innerWidth, innerHeight, plotLeft, plotTop, plotRight, plotBottom } = getChartFrame();
+        const totalYears = projection.length;
+        const displayProjection = projection.map((row) => ({
+          year: row.year,
+          grossValue: toDisplayValue(row.grossValue, row.year, inputs),
+          embeddedTax: toDisplayValue(row.embeddedTax, row.year, inputs)
+        }));
+        const maxValue = Math.max(
+          ...displayProjection.flatMap((row) => [row.grossValue, row.embeddedTax]),
+          1
+        );
+
+        const linePoints = displayProjection.map((row, index) => ({
+          x: plotLeft + (index / Math.max(totalYears - 1, 1)) * innerWidth,
+          y: plotTop + ((maxValue - row.grossValue) / maxValue) * innerHeight
+        }));
+
+        const taxPoints = displayProjection.map((row, index) => ({
+          x: plotLeft + (index / Math.max(totalYears - 1, 1)) * innerWidth,
+          y: plotTop + ((maxValue - row.embeddedTax) / maxValue) * innerHeight
+        }));
+
+        const linePath = buildLinePath(linePoints);
+        const taxPath = buildLinePath(taxPoints);
+        const yLabels = [0, 0.25, 0.5, 0.75, 1].map((fraction) => {
+          const value = maxValue * (1 - fraction);
+          const y = plotTop + innerHeight * fraction;
+          return `
+            <line x1="${plotLeft}" y1="${y}" x2="${plotRight}" y2="${y}" stroke="rgba(16,33,47,0.08)" stroke-dasharray="4 8" />
+            <text x="${plotLeft - 12}" y="${y + 5}" text-anchor="end" fill="#576675" font-size="12">${usd(value)}</text>
+          `;
+        }).join("");
+
+        const xTicks = displayProjection.map((row, index) => {
+          if (!(index === 0 || index === projection.length - 1 || row.year % 5 === 0)) {
+            return "";
+          }
+          const x = plotLeft + (index / Math.max(totalYears - 1, 1)) * innerWidth;
+          return `
+            <line x1="${x}" y1="${plotBottom}" x2="${x}" y2="${plotBottom + 6}" stroke="rgba(16,33,47,0.16)" />
+            <text x="${x}" y="${height - 12}" text-anchor="middle" fill="#576675" font-size="12">${row.year}</text>
+          `;
+        }).join("");
+
+        svg.innerHTML = `
+          <rect x="${plotLeft}" y="${plotTop}" width="${innerWidth}" height="${innerHeight}" fill="rgba(255,255,255,0.7)" stroke="rgba(16,33,47,0.08)" />
+          ${yLabels}
+          <path d="${taxPath}" fill="none" stroke="#d28a47" stroke-width="3" stroke-dasharray="8 8" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="${linePath}" fill="none" stroke="#0c6a7c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
+          <line x1="${plotLeft}" y1="${plotBottom}" x2="${plotRight}" y2="${plotBottom}" stroke="rgba(16,33,47,0.16)" />
+          <line x1="${plotLeft}" y1="${plotTop}" x2="${plotLeft}" y2="${plotBottom}" stroke="rgba(16,33,47,0.16)" />
+          <text x="${plotLeft}" y="${plotTop - 6}" fill="#576675" font-size="12">Projected value</text>
+          ${xTicks}
+        `;
+      }
+
+      function refreshOutputs() {
+        refs.growthDetails.open = state.growthOpen;
+        refs.baselineGrowthRate.value = state.baselineGrowthRate;
         refs.horizonYears.value = state.horizonYears;
+        refs.incomeBaseline.value = state.incomeBaseline;
+        refs.inflationRate.value = state.inflationRate;
         refs.advancedDetails.open = state.advancedOpen;
-        renderAssetList();
         const inputs = normalizeForCalculation();
         const results = calculate(inputs);
         renderOutputs(inputs, results);
+        renderGrowthChart(inputs, results);
         saveState();
+      }
+
+      function renderPage() {
+        renderAssetList();
+        refreshOutputs();
       }
 
       refs.addBucketButton.addEventListener("click", () => {
         state.buckets.push({
           id: crypto.randomUUID(),
-          type: "taxable_stock",
+          taxFree: false,
           name: "",
           current: "",
           contribution: "",
           growth: "",
           basis: "",
-          taxRate: ""
+          detailsOpen: false
         });
         renderPage();
       });
 
+      refs.growthDetails.addEventListener("toggle", () => {
+        state.growthOpen = refs.growthDetails.open;
+        saveState();
+      });
+
+      refs.baselineGrowthRate.addEventListener("input", (event) => {
+        state.baselineGrowthRate = event.target.value;
+        refreshOutputs();
+      });
+
       refs.horizonYears.addEventListener("input", (event) => {
         state.horizonYears = event.target.value;
-        renderPage();
+        refreshOutputs();
+      });
+
+      refs.incomeBaseline.addEventListener("input", (event) => {
+        state.incomeBaseline = event.target.value;
+        refreshOutputs();
+      });
+
+      refs.inflationRate.addEventListener("input", (event) => {
+        state.inflationRate = event.target.value;
+        refreshOutputs();
+      });
+
+      refs.nominalModeButton.addEventListener("click", () => {
+        state.displayMode = "nominal";
+        refreshOutputs();
+      });
+
+      refs.realModeButton.addEventListener("click", () => {
+        state.displayMode = "real";
+        refreshOutputs();
       });
 
       refs.advancedDetails.addEventListener("toggle", () => {
@@ -901,6 +1227,19 @@
       });
 
       refs.resetButton.addEventListener("click", resetState);
+
+      window.addEventListener("storage", (event) => {
+        if (event.key === FinanceTaxConfig.STORAGE_KEY) {
+          refreshOutputs();
+        }
+      });
+
+      window.addEventListener("pageshow", refreshOutputs);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) {
+          refreshOutputs();
+        }
+      });
 
       renderPage();
     })();
