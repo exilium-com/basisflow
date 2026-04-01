@@ -1,0 +1,2191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mortgage Calculator</title>
+  <link rel="stylesheet" href="./shared-tools.css">
+  <style>
+    :root {
+      --gold: #9a7640;
+      --danger: #b03e2e;
+      --surface-strong: rgba(255, 253, 249, 0.96);
+      --shadow-lg: 0 16px 36px rgba(15, 31, 40, 0.08);
+      --shadow-md: 0 10px 20px rgba(15, 31, 40, 0.06);
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+    }
+
+    h2 {
+      font-size: clamp(1.8rem, 2.8vw, 2.45rem);
+    }
+
+    h3 {
+      font-size: 1.3rem;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    h1 {
+      max-width: none;
+    }
+
+    .secondary-btn {
+      box-shadow: none;
+      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+    }
+
+    .secondary-btn:hover,
+    .secondary-btn:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(13, 106, 115, 0.28);
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: none;
+      outline: none;
+    }
+
+    .surface {
+      position: relative;
+      overflow: hidden;
+      box-shadow: none;
+    }
+
+
+    .surface::before,
+    .surface::after {
+      display: none;
+    }
+
+    .surface-inner {
+      position: relative;
+      z-index: 1;
+      padding: 0;
+    }
+
+    .workspace-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
+      gap: 0;
+      align-items: start;
+    }
+
+    .input-column {
+      padding: 28px;
+    }
+
+    .summary-column {
+      position: sticky;
+      top: 22px;
+      min-width: 0;
+      padding: 28px;
+      background: rgba(255, 255, 255, 0.48);
+      border-left: 1px solid rgba(20, 37, 47, 0.1);
+      color: var(--ink);
+    }
+
+    .summary-column .section-head {
+      margin-bottom: 14px;
+    }
+
+    .summary-column .section-head p,
+    .summary-column .helper {
+      color: var(--ink-soft);
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .section-head p,
+    .helper,
+    .arm-copy,
+    .compare-note,
+    .footnote {
+      margin: 0;
+      color: var(--ink-soft);
+      line-height: 1.58;
+      font-size: 0.94rem;
+    }
+
+    .section-block {
+      margin-top: 0;
+      padding: 28px;
+      border-top: 1px solid rgba(20, 37, 47, 0.08);
+    }
+
+    .section-block:nth-of-type(2n) {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .form-grid,
+    .advanced-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px 16px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    fieldset.field {
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+
+    .field.span-2,
+    .arm-panel {
+      grid-column: 1 / -1;
+    }
+
+    label,
+    .field legend {
+      color: var(--ink);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .control-shell {
+      position: relative;
+      display: flex;
+      align-items: center;
+      min-height: 58px;
+      padding: 0 16px;
+      border-radius: 0;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: none;
+      transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    }
+
+    .control-shell::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      background: linear-gradient(180deg, var(--teal), var(--clay));
+      opacity: 0.88;
+    }
+
+    .control-shell:focus-within {
+      border-color: rgba(13, 106, 115, 0.4);
+      box-shadow: 0 0 0 4px rgba(13, 106, 115, 0.12), 0 16px 30px rgba(20, 37, 47, 0.08);
+      transform: translateY(-2px);
+    }
+
+    .control-shell.invalid {
+      border-color: rgba(176, 62, 46, 0.5);
+      box-shadow: 0 0 0 4px rgba(176, 62, 46, 0.08);
+    }
+
+    .prefix,
+    .suffix {
+      flex: 0 0 auto;
+      color: var(--ink-soft);
+      font-size: 0.96rem;
+      font-weight: 800;
+    }
+
+    .prefix {
+      margin-left: 4px;
+      margin-right: 10px;
+    }
+
+    .suffix {
+      margin-left: 10px;
+    }
+
+    input[type="text"],
+    select {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: var(--ink);
+      font-size: 1.02rem;
+      font-weight: 700;
+      outline: none;
+    }
+
+    select {
+      appearance: none;
+      background-image:
+        linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%),
+        linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+      background-position:
+        calc(100% - 18px) calc(50% - 3px),
+        calc(100% - 12px) calc(50% - 3px);
+      background-size: 6px 6px, 6px 6px;
+      background-repeat: no-repeat;
+      padding-right: 32px;
+    }
+
+    .segmented {
+      display: inline-flex;
+      width: fit-content;
+      gap: 6px;
+      padding: 5px;
+      border-radius: 0;
+      border: 1px solid rgba(20, 37, 47, 0.12);
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .segmented button {
+      border: 0;
+      border-radius: 0;
+      padding: 0.58rem 0.98rem;
+      background: transparent;
+      color: var(--ink-soft);
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: background 180ms ease, color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+    }
+
+    .segmented button[aria-pressed="true"] {
+      background: rgba(13, 106, 115, 0.12);
+      color: var(--teal-deep);
+      transform: translateY(-1px);
+      box-shadow: none;
+    }
+
+    .loan-options-section {
+      margin-top: 24px;
+      border-top: 1px solid rgba(20, 37, 47, 0.08);
+      padding-top: 24px;
+    }
+
+    .loan-options {
+      display: grid;
+      gap: 10px;
+    }
+
+    .loan-option {
+      border: 1px solid rgba(20, 37, 47, 0.12);
+      background: rgba(255, 255, 255, 0.56);
+    }
+
+    .loan-option.is-active {
+      border-color: rgba(13, 106, 115, 0.38);
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .loan-option.is-compare:not(.is-active) {
+      border-color: rgba(210, 138, 71, 0.38);
+      background: rgba(255, 252, 247, 0.92);
+    }
+
+    .loan-option-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .loan-option-select {
+      width: 100%;
+      display: grid;
+      gap: 16px;
+      align-items: center;
+      padding: 14px 16px;
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+    }
+
+    .loan-option-compare {
+      border: 0;
+      border-left: 1px solid rgba(20, 37, 47, 0.08);
+      background: transparent;
+      color: var(--ink-soft);
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 0 14px;
+      min-width: 92px;
+    }
+
+    .loan-option-compare[aria-pressed="true"] {
+      color: var(--teal-deep);
+      background: rgba(13, 106, 115, 0.06);
+    }
+
+    .loan-option-title {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .loan-option-meta {
+      color: var(--ink-soft);
+      font-size: 0.88rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .loan-option-panel {
+      border-top: 1px solid rgba(20, 37, 47, 0.08);
+      padding: 14px 16px 16px;
+    }
+
+    .loan-option-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .advanced-panel {
+      margin-top: 22px;
+      border: 1px solid rgba(20, 37, 47, 0.1);
+      border-radius: 0;
+      background: rgba(255, 255, 255, 0.38);
+      overflow: hidden;
+      box-shadow: none;
+    }
+
+    .advanced-panel summary {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 20px;
+      cursor: pointer;
+      transition: background 180ms ease;
+    }
+
+    .advanced-panel summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .advanced-panel summary:hover,
+    .advanced-panel summary:focus-visible {
+      background: rgba(13, 106, 115, 0.05);
+      outline: none;
+    }
+
+    .advanced-heading {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .advanced-title {
+      color: var(--ink);
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+
+    .advanced-chevron {
+      position: relative;
+      width: 34px;
+      height: 34px;
+      border-radius: 0;
+      border: 1px solid rgba(20, 37, 47, 0.14);
+      background: rgba(255, 255, 255, 0.42);
+      flex: 0 0 auto;
+    }
+
+    .advanced-chevron::before,
+    .advanced-chevron::after {
+      content: "";
+      position: absolute;
+      top: 16px;
+      left: 10px;
+      width: 14px;
+      height: 2px;
+      border-radius: 0;
+      background: var(--teal-deep);
+      transition: transform 180ms ease;
+    }
+
+    .advanced-chevron::after {
+      transform: rotate(90deg);
+    }
+
+    .advanced-panel[open] .advanced-chevron::after {
+      transform: rotate(0deg);
+    }
+
+    .advanced-body {
+      padding: 0 20px 20px;
+      border-top: 1px solid rgba(20, 37, 47, 0.08);
+    }
+
+    .advanced-grid {
+      padding-top: 18px;
+    }
+
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 18px;
+      border-radius: 0;
+      background: linear-gradient(90deg, rgba(13, 106, 115, 0.08), rgba(197, 107, 61, 0.08));
+      border: 1px solid rgba(20, 37, 47, 0.06);
+    }
+
+    .switch-meta strong {
+      display: block;
+      font-size: 0.96rem;
+      letter-spacing: -0.01em;
+    }
+
+    .switch-meta span {
+      display: block;
+      margin-top: 4px;
+      color: var(--ink-soft);
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+
+    .toggle {
+      position: relative;
+      width: 58px;
+      height: 32px;
+      flex: 0 0 auto;
+    }
+
+    .toggle input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      border-radius: 0;
+      background: rgba(20, 37, 47, 0.18);
+      transition: background 180ms ease;
+    }
+
+    .toggle-track::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 26px;
+      height: 26px;
+      border-radius: 0;
+      background: #fff;
+      box-shadow: 0 8px 16px rgba(20, 37, 47, 0.2);
+      transition: transform 180ms ease;
+    }
+
+    .toggle input:checked + .toggle-track {
+      background: linear-gradient(90deg, var(--teal), var(--clay));
+    }
+
+    .toggle input:checked + .toggle-track::after {
+      transform: translateX(26px);
+    }
+
+    .toggle input:focus-visible + .toggle-track {
+      outline: 3px solid rgba(13, 106, 115, 0.22);
+      outline-offset: 2px;
+    }
+
+    .arm-panel {
+      display: none;
+      gap: 16px;
+      margin-top: 2px;
+      padding: 18px;
+      border-radius: 0;
+      background:
+        linear-gradient(135deg, rgba(13, 106, 115, 0.08), rgba(255, 255, 255, 0.96)),
+        rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(13, 106, 115, 0.12);
+    }
+
+    .arm-panel.is-visible {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      animation: panel-rise 220ms ease;
+    }
+
+    .summary-strip {
+      position: relative;
+      padding: 16px 0 18px;
+      color: var(--ink);
+      background: none;
+      box-shadow: none;
+      clip-path: none;
+      isolation: isolate;
+      border-top: 1px solid rgba(20, 37, 47, 0.12);
+      border-bottom: 1px solid rgba(20, 37, 47, 0.12);
+    }
+
+    .summary-strip::after {
+      display: none;
+    }
+
+    .summary-kicker {
+      margin: 0 0 10px;
+      font-size: 0.78rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      opacity: 1;
+      font-weight: 800;
+      color: var(--ink-soft);
+    }
+
+    .summary-strip strong {
+      display: block;
+      position: relative;
+      z-index: 1;
+      max-width: 100%;
+      font-family: "Baskerville", "Iowan Old Style", "Palatino Linotype", serif;
+      font-size: clamp(3rem, 5vw, 4.4rem);
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+      color: var(--teal-deep);
+      overflow-wrap: anywhere;
+    }
+
+    .summary-strip span {
+      display: block;
+      position: relative;
+      z-index: 1;
+      max-width: 34ch;
+      margin-top: 12px;
+      line-height: 1.55;
+      color: var(--ink-soft);
+    }
+
+    .results-list {
+      margin-top: 22px;
+      padding-top: 6px;
+      display: block;
+    }
+
+    .result-row {
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(20, 37, 47, 0.1);
+    }
+
+    .result-row::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 18px;
+      width: 6px;
+      height: 6px;
+      background: var(--teal);
+      opacity: 0.45;
+    }
+
+    .result-row span:first-child {
+      padding-left: 16px;
+      color: var(--ink-soft);
+      font-size: 0.92rem;
+    }
+
+    .result-row strong {
+      font-size: 1.02rem;
+      letter-spacing: -0.02em;
+      text-align: right;
+      color: var(--ink);
+    }
+
+    .charts-grid,
+    .compare-grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .chart-panel,
+    .compare-panel {
+      position: relative;
+      overflow: hidden;
+      background: none;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      transition: none;
+    }
+
+    .charts-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .chart-panel {
+      padding-right: 18px;
+    }
+
+    .charts-grid > .chart-panel + .chart-panel {
+      padding-left: 18px;
+      border-left: 1px solid rgba(20, 37, 47, 0.12);
+    }
+
+    .chart-panel svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      margin-top: 10px;
+    }
+
+    .chart-key {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 10px;
+      color: var(--ink-soft);
+      font-size: 0.84rem;
+      letter-spacing: 0.03em;
+    }
+
+    .chart-key span {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .swatch {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 0;
+    }
+
+    .compare-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .compare-panel {
+      padding-right: 18px;
+    }
+
+    .compare-grid > .compare-panel + .compare-panel {
+      padding-left: 18px;
+      border-left: 1px solid rgba(20, 37, 47, 0.12);
+    }
+
+    .compare-panel h3 {
+      margin-bottom: 12px;
+      font-size: 1.28rem;
+    }
+
+    .mini-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .mini-table th,
+    .mini-table td {
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(20, 37, 47, 0.08);
+      text-align: right;
+      font-size: 0.93rem;
+    }
+
+    .mini-table th:first-child,
+    .mini-table td:first-child {
+      text-align: left;
+      color: var(--ink-soft);
+      font-weight: 600;
+    }
+
+    .mini-table thead th {
+      color: var(--ink);
+      font-size: 0.79rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 580px;
+      margin-top: 14px;
+      border: 1px solid rgba(20, 37, 47, 0.08);
+      background: rgba(255, 253, 249, 0.76);
+      box-shadow: none;
+    }
+
+    table.schedule {
+      width: 100%;
+      min-width: 700px;
+      border-collapse: collapse;
+    }
+
+    .schedule th,
+    .schedule td {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(20, 37, 47, 0.07);
+      text-align: right;
+      font-size: 0.93rem;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .schedule th:first-child,
+    .schedule td:first-child {
+      text-align: left;
+    }
+
+    .schedule thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: rgba(252, 248, 240, 0.98);
+      color: var(--ink);
+      font-size: 0.79rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .schedule tbody tr:nth-child(2n) {
+      background: rgba(13, 106, 115, 0.03);
+    }
+
+    .empty-state {
+      padding: 26px;
+      text-align: center;
+      color: var(--ink-soft);
+      background: rgba(255, 255, 255, 0.72);
+      border-radius: 0;
+      border: 1px dashed rgba(20, 37, 47, 0.12);
+    }
+
+    @keyframes panel-rise {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes float-shape {
+      0%,
+      100% {
+        transform: translateY(0px) rotate(0deg);
+      }
+      50% {
+        transform: translateY(18px) rotate(7deg);
+      }
+    }
+
+    @media (max-width: 1040px) {
+      .hero,
+      .workspace-layout,
+      .charts-grid,
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .summary-column {
+        position: static;
+      }
+
+      .input-column {
+        padding: 24px;
+      }
+
+      .summary-column {
+        padding: 24px;
+      }
+
+      .surface::before {
+        background:
+          linear-gradient(180deg, rgba(13, 106, 115, 0.08), rgba(13, 106, 115, 0) 24%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0) 18%);
+      }
+
+      .surface::after {
+        display: none;
+      }
+
+      .charts-grid > .chart-panel + .chart-panel,
+      .compare-grid > .compare-panel + .compare-panel {
+        border-left: 0;
+        padding-left: 0;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .page-shell {
+        width: min(100% - 10px, 1580px);
+        padding-top: 10px;
+      }
+
+      .surface-inner {
+        padding: 0;
+      }
+
+      .form-grid,
+      .advanced-grid,
+      .arm-panel.is-visible {
+        grid-template-columns: 1fr;
+      }
+
+      .advanced-panel summary,
+      .section-head,
+      .result-row {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <nav class="tool-nav" aria-label="Tools">
+      <a class="tool-tab" href="./income.html"><span class="tool-tab-index">01</span><span>Income</span></a>
+      <a class="tool-tab is-active" href="./mortgage.html"><span class="tool-tab-index">02</span><span>Mortgage</span></a>
+    </nav>
+
+    <header class="hero">
+      <div class="hero-copy">
+        <h1>Mortgage Calculator</h1>
+      </div>
+      <button id="resetButton" class="secondary-btn" type="button">Reset to defaults</button>
+    </header>
+
+    <main class="surface">
+      <div class="surface-inner">
+        <section class="workspace-layout">
+          <div class="input-column">
+            <div class="section-head">
+              <div>
+                <h2>Core Inputs</h2>
+              </div>
+              <p>Keep the main loan inputs visible. Open advanced only when you need the rest.</p>
+            </div>
+
+            <div class="form-grid">
+              <div class="field">
+                <label for="homePrice">Home price</label>
+                <div class="control-shell" data-shell-for="homePrice">
+                  <span class="prefix">$</span>
+                  <input id="homePrice" type="text" inputmode="decimal" autocomplete="off" data-kind="currency" data-decimals="0">
+                </div>
+              </div>
+
+              <fieldset class="field span-2">
+                <legend>Down payment</legend>
+                <div class="segmented" role="group" aria-label="Down payment mode">
+                  <button id="downDollarButton" type="button" aria-pressed="false">Dollar amount</button>
+                  <button id="downPercentButton" type="button" aria-pressed="true">Percent</button>
+                </div>
+                <div class="control-shell" data-shell-for="downPayment">
+                  <span id="downPaymentPrefix" class="prefix">$</span>
+                  <input id="downPayment" type="text" inputmode="decimal" autocomplete="off" data-kind="currency" data-decimals="0">
+                  <span id="downPaymentSuffix" class="suffix" hidden>%</span>
+                </div>
+              </fieldset>
+
+            </div>
+
+            <section class="loan-options-section">
+              <div class="section-head">
+                <div>
+                  <h3>Loan Options</h3>
+                </div>
+              </div>
+              <div id="loanOptions" class="loan-options" role="list">
+                <article class="loan-option is-active" data-loan-option="fixed30">
+                  <div class="loan-option-header">
+                    <button class="loan-option-select" type="button" data-select-loan="fixed30" aria-expanded="true">
+                      <span class="loan-option-title">30-year fixed</span>
+                      <span class="loan-option-meta" data-loan-meta="fixed30">6.475% / 30y</span>
+                    </button>
+                    <button class="loan-option-compare" type="button" data-compare-loan="fixed30" aria-pressed="false">Compare</button>
+                  </div>
+                  <div class="loan-option-panel">
+                    <div class="loan-option-grid">
+                      <div class="field">
+                        <label for="rate_fixed30">Interest rate</label>
+                        <div class="control-shell" data-shell-for="rate_fixed30">
+                          <input id="rate_fixed30" type="text" inputmode="decimal" autocomplete="off" data-kind="percent" data-decimals="3">
+                          <span class="suffix">%</span>
+                        </div>
+                      </div>
+                      <div class="field">
+                        <label for="term_fixed30">Loan term</label>
+                        <div class="control-shell" data-shell-for="term_fixed30">
+                          <input id="term_fixed30" type="text" inputmode="numeric" autocomplete="off" data-kind="integer" data-decimals="0">
+                          <span class="suffix">years</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="loan-option" data-loan-option="arm76">
+                  <div class="loan-option-header">
+                    <button class="loan-option-select" type="button" data-select-loan="arm76" aria-expanded="false">
+                      <span class="loan-option-title">7/1 ARM</span>
+                      <span class="loan-option-meta" data-loan-meta="arm76">5.635% to 7.135% / 30y</span>
+                    </button>
+                    <button class="loan-option-compare" type="button" data-compare-loan="arm76" aria-pressed="true">Compare</button>
+                  </div>
+                  <div class="loan-option-panel" hidden>
+                    <div class="loan-option-grid">
+                      <div class="field">
+                        <label for="rate_arm76_initial">Initial rate</label>
+                        <div class="control-shell" data-shell-for="rate_arm76_initial">
+                          <input id="rate_arm76_initial" type="text" inputmode="decimal" autocomplete="off" data-kind="percent" data-decimals="3">
+                          <span class="suffix">%</span>
+                        </div>
+                      </div>
+                      <div class="field">
+                        <label for="rate_arm76_adjusted">Reset rate</label>
+                        <div class="control-shell" data-shell-for="rate_arm76_adjusted">
+                          <input id="rate_arm76_adjusted" type="text" inputmode="decimal" autocomplete="off" data-kind="percent" data-decimals="3" placeholder="5.635">
+                          <span class="suffix">%</span>
+                        </div>
+                      </div>
+                      <div class="field">
+                        <label for="term_arm76">Loan term</label>
+                        <div class="control-shell" data-shell-for="term_arm76">
+                          <input id="term_arm76" type="text" inputmode="numeric" autocomplete="off" data-kind="integer" data-decimals="0">
+                          <span class="suffix">years</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="loan-option" data-loan-option="arm106">
+                  <div class="loan-option-header">
+                    <button class="loan-option-select" type="button" data-select-loan="arm106" aria-expanded="false">
+                      <span class="loan-option-title">10/1 ARM</span>
+                      <span class="loan-option-meta" data-loan-meta="arm106">5.875% to 7.375% / 30y</span>
+                    </button>
+                    <button class="loan-option-compare" type="button" data-compare-loan="arm106" aria-pressed="false">Compare</button>
+                  </div>
+                  <div class="loan-option-panel" hidden>
+                    <div class="loan-option-grid">
+                      <div class="field">
+                        <label for="rate_arm106_initial">Initial rate</label>
+                        <div class="control-shell" data-shell-for="rate_arm106_initial">
+                          <input id="rate_arm106_initial" type="text" inputmode="decimal" autocomplete="off" data-kind="percent" data-decimals="3">
+                          <span class="suffix">%</span>
+                        </div>
+                      </div>
+                      <div class="field">
+                        <label for="rate_arm106_adjusted">Reset rate</label>
+                        <div class="control-shell" data-shell-for="rate_arm106_adjusted">
+                          <input id="rate_arm106_adjusted" type="text" inputmode="decimal" autocomplete="off" data-kind="percent" data-decimals="3" placeholder="5.875">
+                          <span class="suffix">%</span>
+                        </div>
+                      </div>
+                      <div class="field">
+                        <label for="term_arm106">Loan term</label>
+                        <div class="control-shell" data-shell-for="term_arm106">
+                          <input id="term_arm106" type="text" inputmode="numeric" autocomplete="off" data-kind="integer" data-decimals="0">
+                          <span class="suffix">years</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </section>
+
+            <details id="advancedDetails" class="advanced-panel">
+              <summary>
+                <div class="advanced-heading">
+                  <span class="advanced-title">Advanced assumptions</span>
+                </div>
+                <span class="advanced-chevron" aria-hidden="true"></span>
+              </summary>
+              <div class="advanced-body">
+                <div class="advanced-grid">
+                  <div class="field">
+                    <label for="propertyTaxRate">Property tax rate</label>
+                    <div class="control-shell" data-shell-for="propertyTaxRate">
+                      <input id="propertyTaxRate" type="text" inputmode="decimal" autocomplete="off" data-kind="percent" data-decimals="3">
+                      <span class="suffix">%</span>
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label for="insurancePerYear">Home insurance</label>
+                    <div class="control-shell" data-shell-for="insurancePerYear">
+                      <span class="prefix">$</span>
+                      <input id="insurancePerYear" type="text" inputmode="decimal" autocomplete="off" data-kind="currency" data-decimals="0">
+                      <span class="suffix">/ year</span>
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label for="hoaPerMonth">HOA</label>
+                    <div class="control-shell" data-shell-for="hoaPerMonth">
+                      <span class="prefix">$</span>
+                      <input id="hoaPerMonth" type="text" inputmode="decimal" autocomplete="off" data-kind="currency" data-decimals="0">
+                      <span class="suffix">/ month</span>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <div class="summary-column">
+            <div class="summary-strip">
+              <p class="summary-kicker">Estimated monthly payment</p>
+              <strong id="totalMonthlyPayment">$0</strong>
+              <span id="summaryNote">Selected loan option</span>
+            </div>
+
+            <div class="results-list" aria-live="polite">
+              <div class="result-row">
+                <span>Loan amount</span>
+                <strong id="loanAmountOutput">$0</strong>
+              </div>
+              <div class="result-row">
+                <span>Monthly principal and interest</span>
+                <strong id="principalInterestOutput">$0</strong>
+              </div>
+              <div class="result-row">
+                <span>Monthly property tax</span>
+                <strong id="propertyTaxOutput">$0</strong>
+              </div>
+              <div class="result-row">
+                <span>Monthly insurance</span>
+                <strong id="insuranceOutput">$0</strong>
+              </div>
+              <div class="result-row">
+                <span>Monthly HOA</span>
+                <strong id="hoaOutput">$0</strong>
+              </div>
+              <div class="result-row">
+                <span>Total interest over modeled period</span>
+                <strong id="totalInterestOutput">$0</strong>
+              </div>
+              <div class="result-row">
+                <span>Modeled payoff horizon</span>
+                <strong id="modelLengthOutput">0 years</strong>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-block">
+          <div class="section-head">
+            <div>
+              <h2>Charts</h2>
+            </div>
+          </div>
+          <div class="charts-grid">
+            <div class="chart-panel">
+              <div class="section-head">
+                <div>
+                  <h3>Balance Over Time</h3>
+                </div>
+              </div>
+              <svg id="balanceChart" viewBox="0 0 720 320" role="img" aria-label="Remaining balance over time chart"></svg>
+              <div class="chart-key">
+                <span><i class="swatch" style="background:#0c6a7c;"></i>Remaining balance</span>
+              </div>
+            </div>
+
+            <div class="chart-panel">
+              <div class="section-head">
+                <div>
+                  <h3>Principal vs Interest</h3>
+                </div>
+              </div>
+              <svg id="compositionChart" viewBox="0 0 720 320" role="img" aria-label="Principal versus interest by year chart"></svg>
+              <div class="chart-key">
+                <span><i class="swatch" style="background:#0c6a7c;"></i>Principal</span>
+                <span><i class="swatch" style="background:#d28a47;"></i>Interest</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-block">
+          <div class="section-head">
+            <div>
+              <h2>Comparison</h2>
+            </div>
+          </div>
+          <div class="compare-grid">
+            <article class="compare-panel">
+              <h3 id="comparisonHeading">Selected comparison</h3>
+              <table class="mini-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Metric</th>
+                    <th scope="col" id="comparisonPrimaryLabel">Selected</th>
+                    <th scope="col" id="comparisonSecondaryLabel">Compare</th>
+                  </tr>
+                </thead>
+                <tbody id="fixedComparisonBody"></tbody>
+              </table>
+            </article>
+          </div>
+        </section>
+
+        <section class="section-block">
+          <div class="section-head">
+            <div>
+              <h2>Amortization Schedule</h2>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="schedule">
+              <thead>
+                <tr>
+                  <th scope="col">Month</th>
+                  <th scope="col">Payment</th>
+                  <th scope="col">Principal</th>
+                  <th scope="col">Interest</th>
+                  <th scope="col">Remaining balance</th>
+                </tr>
+              </thead>
+              <tbody id="amortizationBody"></tbody>
+            </table>
+          </div>
+
+          <p class="footnote" id="footnoteText">Monthly payment values include principal, interest, taxes, insurance, and HOA when applicable.</p>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      const LOAN_ORDER = ["fixed30", "arm76", "arm106"];
+
+      const DEFAULTS = {
+        homePrice: 1250000,
+        downPaymentMode: "percent",
+        downPaymentValuePercent: 20,
+        propertyTaxRate: 1.18,
+        insurancePerYear: 1800,
+        hoaPerMonth: 0,
+        activeLoanType: "fixed30",
+        compareLoanType: "arm76"
+      };
+
+      const LOAN_DEFAULTS = {
+        fixed30: { label: "30-year fixed", kind: "fixed", term: 30, rate: 6.475 },
+        arm76: { label: "7/1 ARM", kind: "arm", fixedYears: 7, term: 30, initialRate: 5.635, adjustedRate: 7.135 },
+        arm106: { label: "10/1 ARM", kind: "arm", fixedYears: 10, term: 30, initialRate: 5.875, adjustedRate: 7.375 }
+      };
+
+      const inputConfigs = {
+        homePrice: { kind: "currency", decimals: 0, min: 1, max: 100000000 },
+        downPayment: { kind: "currency", decimals: 0, min: 0, max: 100000000 },
+        propertyTaxRate: { kind: "percent", decimals: 3, min: 0, max: 10 },
+        insurancePerYear: { kind: "currency", decimals: 0, min: 0, max: 1000000 },
+        hoaPerMonth: { kind: "currency", decimals: 0, min: 0, max: 100000 },
+        rate_fixed30: { kind: "percent", decimals: 3, min: 0, max: 25 },
+        term_fixed30: { kind: "integer", decimals: 0, min: 1, max: 50 },
+        rate_arm76_initial: { kind: "percent", decimals: 3, min: 0, max: 25 },
+        rate_arm76_adjusted: { kind: "percent", decimals: 3, min: 0, max: 25 },
+        term_arm76: { kind: "integer", decimals: 0, min: 1, max: 50 },
+        rate_arm106_initial: { kind: "percent", decimals: 3, min: 0, max: 25 },
+        rate_arm106_adjusted: { kind: "percent", decimals: 3, min: 0, max: 25 },
+        term_arm106: { kind: "integer", decimals: 0, min: 1, max: 50 }
+      };
+
+      const refs = {
+        homePrice: document.getElementById("homePrice"),
+        downPayment: document.getElementById("downPayment"),
+        propertyTaxRate: document.getElementById("propertyTaxRate"),
+        insurancePerYear: document.getElementById("insurancePerYear"),
+        hoaPerMonth: document.getElementById("hoaPerMonth"),
+        downDollarButton: document.getElementById("downDollarButton"),
+        downPercentButton: document.getElementById("downPercentButton"),
+        downPaymentPrefix: document.getElementById("downPaymentPrefix"),
+        downPaymentSuffix: document.getElementById("downPaymentSuffix"),
+        advancedDetails: document.getElementById("advancedDetails"),
+        loanOptions: document.getElementById("loanOptions"),
+        resetButton: document.getElementById("resetButton"),
+        totalMonthlyPayment: document.getElementById("totalMonthlyPayment"),
+        summaryNote: document.getElementById("summaryNote"),
+        loanAmountOutput: document.getElementById("loanAmountOutput"),
+        principalInterestOutput: document.getElementById("principalInterestOutput"),
+        propertyTaxOutput: document.getElementById("propertyTaxOutput"),
+        insuranceOutput: document.getElementById("insuranceOutput"),
+        hoaOutput: document.getElementById("hoaOutput"),
+        totalInterestOutput: document.getElementById("totalInterestOutput"),
+        modelLengthOutput: document.getElementById("modelLengthOutput"),
+        balanceChart: document.getElementById("balanceChart"),
+        compositionChart: document.getElementById("compositionChart"),
+        fixedComparisonBody: document.getElementById("fixedComparisonBody"),
+        comparisonHeading: document.getElementById("comparisonHeading"),
+        comparisonPrimaryLabel: document.getElementById("comparisonPrimaryLabel"),
+        comparisonSecondaryLabel: document.getElementById("comparisonSecondaryLabel"),
+        amortizationBody: document.getElementById("amortizationBody"),
+        footnoteText: document.getElementById("footnoteText")
+      };
+
+      const loanRefs = {
+        fixed30: {
+          article: document.querySelector('[data-loan-option="fixed30"]'),
+          button: document.querySelector('[data-select-loan="fixed30"]'),
+          compareButton: document.querySelector('[data-compare-loan="fixed30"]'),
+          meta: document.querySelector('[data-loan-meta="fixed30"]'),
+          panel: document.querySelector('[data-loan-option="fixed30"] .loan-option-panel'),
+          rate: document.getElementById("rate_fixed30"),
+          term: document.getElementById("term_fixed30")
+        },
+        arm76: {
+          article: document.querySelector('[data-loan-option="arm76"]'),
+          button: document.querySelector('[data-select-loan="arm76"]'),
+          compareButton: document.querySelector('[data-compare-loan="arm76"]'),
+          meta: document.querySelector('[data-loan-meta="arm76"]'),
+          panel: document.querySelector('[data-loan-option="arm76"] .loan-option-panel'),
+          initialRate: document.getElementById("rate_arm76_initial"),
+          adjustedRate: document.getElementById("rate_arm76_adjusted"),
+          term: document.getElementById("term_arm76")
+        },
+        arm106: {
+          article: document.querySelector('[data-loan-option="arm106"]'),
+          button: document.querySelector('[data-select-loan="arm106"]'),
+          compareButton: document.querySelector('[data-compare-loan="arm106"]'),
+          meta: document.querySelector('[data-loan-meta="arm106"]'),
+          panel: document.querySelector('[data-loan-option="arm106"] .loan-option-panel'),
+          initialRate: document.getElementById("rate_arm106_initial"),
+          adjustedRate: document.getElementById("rate_arm106_adjusted"),
+          term: document.getElementById("term_arm106")
+        }
+      };
+
+      const uiState = {
+        downPaymentMode: DEFAULTS.downPaymentMode,
+        activeLoanType: DEFAULTS.activeLoanType,
+        compareLoanType: DEFAULTS.compareLoanType,
+        lastInputs: null,
+        lastScenario: null
+      };
+
+      function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+      }
+
+      function roundTo(value, digits = 2) {
+        const factor = 10 ** digits;
+        return Math.round(value * factor) / factor;
+      }
+
+      function stripToNumber(rawValue) {
+        if (typeof rawValue !== "string") {
+          return Number.isFinite(rawValue) ? rawValue : NaN;
+        }
+
+        const normalized = rawValue.replace(/[^0-9.-]/g, "");
+        if (!normalized || normalized === "-" || normalized === "." || normalized === "-.") {
+          return NaN;
+        }
+
+        return Number.parseFloat(normalized);
+      }
+
+      function parseInputValue(input) {
+        return stripToNumber(input.value.trim());
+      }
+
+      function numberToEditableString(value, decimals) {
+        if (!Number.isFinite(value)) {
+          return "";
+        }
+
+        return decimals === 0 ? String(Math.round(value)) : String(roundTo(value, decimals));
+      }
+
+      function formatCurrency(value, digits = 0) {
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+          minimumFractionDigits: digits,
+          maximumFractionDigits: digits
+        }).format(Number.isFinite(value) ? value : 0);
+      }
+
+      function formatInputDisplay(value, config) {
+        if (!Number.isFinite(value)) {
+          return "";
+        }
+
+        if (config.kind === "currency") {
+          return new Intl.NumberFormat("en-US", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: config.decimals
+          }).format(value);
+        }
+
+        if (config.kind === "integer") {
+          return String(Math.round(value));
+        }
+
+        return String(roundTo(value, config.decimals));
+      }
+
+      function formatPercent(value, digits = 2) {
+        const safeValue = Number.isFinite(value) ? value : 0;
+        return `${roundTo(safeValue, digits)}%`;
+      }
+
+      function formatYears(value) {
+        const safeValue = Number.isFinite(value) ? Math.round(value) : 0;
+        return `${safeValue} ${safeValue === 1 ? "year" : "years"}`;
+      }
+
+      function isArmType(type) {
+        return LOAN_DEFAULTS[type]?.kind === "arm";
+      }
+
+      function setDownPaymentMode(mode, convertValue = true) {
+        if (uiState.downPaymentMode === mode && convertValue) {
+          return;
+        }
+
+        const homePrice = getSafeValue(refs.homePrice, inputConfigs.homePrice, DEFAULTS.homePrice);
+        const currentRaw = getSafeValue(refs.downPayment, inputConfigs.downPayment, 0);
+        const currentAmount = uiState.downPaymentMode === "percent"
+          ? (homePrice * currentRaw) / 100
+          : currentRaw;
+
+        uiState.downPaymentMode = mode;
+        refs.downDollarButton.setAttribute("aria-pressed", String(mode === "dollar"));
+        refs.downPercentButton.setAttribute("aria-pressed", String(mode === "percent"));
+        refs.downPaymentPrefix.hidden = mode !== "dollar";
+        refs.downPaymentSuffix.hidden = mode !== "percent";
+        refs.downPayment.dataset.kind = mode === "dollar" ? "currency" : "percent";
+
+        if (convertValue) {
+          const convertedValue = mode === "percent"
+            ? (homePrice > 0 ? (currentAmount / homePrice) * 100 : 0)
+            : currentAmount;
+
+          refs.downPayment.value = mode === "dollar"
+            ? formatInputDisplay(convertedValue, { kind: "currency", decimals: 0 })
+            : formatInputDisplay(convertedValue, { kind: "percent", decimals: 3 });
+        }
+
+        validateField(refs.downPayment);
+        recalculate();
+      }
+
+      function getSafeValue(input, config, fallback) {
+        const parsed = parseInputValue(input);
+        if (!Number.isFinite(parsed)) {
+          return fallback;
+        }
+
+        return clamp(parsed, config.min, config.max);
+      }
+
+      function getDownPaymentNumericValue(homePrice) {
+        const raw = parseInputValue(refs.downPayment);
+        const fallback = uiState.downPaymentMode === "percent"
+          ? DEFAULTS.downPaymentValuePercent
+          : (DEFAULTS.homePrice * DEFAULTS.downPaymentValuePercent) / 100;
+
+        const safeValue = Number.isFinite(raw) ? raw : fallback;
+        if (uiState.downPaymentMode === "percent") {
+          return clamp(safeValue, 0, 100);
+        }
+
+        return clamp(safeValue, 0, homePrice);
+      }
+
+      function getLoanInputFallback(id) {
+        const defaults = {
+          rate_fixed30: LOAN_DEFAULTS.fixed30.rate,
+          term_fixed30: LOAN_DEFAULTS.fixed30.term,
+          rate_arm76_initial: LOAN_DEFAULTS.arm76.initialRate,
+          rate_arm76_adjusted: LOAN_DEFAULTS.arm76.initialRate,
+          term_arm76: LOAN_DEFAULTS.arm76.term,
+          rate_arm106_initial: LOAN_DEFAULTS.arm106.initialRate,
+          rate_arm106_adjusted: LOAN_DEFAULTS.arm106.initialRate,
+          term_arm106: LOAN_DEFAULTS.arm106.term
+        };
+
+        return defaults[id] ?? DEFAULTS[id] ?? 0;
+      }
+
+      function readLoanOptions() {
+        const arm76InitialRate = getSafeValue(loanRefs.arm76.initialRate, inputConfigs.rate_arm76_initial, LOAN_DEFAULTS.arm76.initialRate);
+        const arm76AdjustedRaw = parseInputValue(loanRefs.arm76.adjustedRate);
+        const arm106InitialRate = getSafeValue(loanRefs.arm106.initialRate, inputConfigs.rate_arm106_initial, LOAN_DEFAULTS.arm106.initialRate);
+        const arm106AdjustedRaw = parseInputValue(loanRefs.arm106.adjustedRate);
+
+        return {
+          fixed30: {
+            kind: "fixed",
+            label: LOAN_DEFAULTS.fixed30.label,
+            rate: getSafeValue(loanRefs.fixed30.rate, inputConfigs.rate_fixed30, LOAN_DEFAULTS.fixed30.rate),
+            term: getSafeValue(loanRefs.fixed30.term, inputConfigs.term_fixed30, LOAN_DEFAULTS.fixed30.term)
+          },
+          arm76: {
+            kind: "arm",
+            label: LOAN_DEFAULTS.arm76.label,
+            fixedYears: LOAN_DEFAULTS.arm76.fixedYears,
+            initialRate: arm76InitialRate,
+            adjustedRate: Number.isFinite(arm76AdjustedRaw)
+              ? clamp(arm76AdjustedRaw, inputConfigs.rate_arm76_adjusted.min, inputConfigs.rate_arm76_adjusted.max)
+              : arm76InitialRate,
+            term: getSafeValue(loanRefs.arm76.term, inputConfigs.term_arm76, LOAN_DEFAULTS.arm76.term)
+          },
+          arm106: {
+            kind: "arm",
+            label: LOAN_DEFAULTS.arm106.label,
+            fixedYears: LOAN_DEFAULTS.arm106.fixedYears,
+            initialRate: arm106InitialRate,
+            adjustedRate: Number.isFinite(arm106AdjustedRaw)
+              ? clamp(arm106AdjustedRaw, inputConfigs.rate_arm106_adjusted.min, inputConfigs.rate_arm106_adjusted.max)
+              : arm106InitialRate,
+            term: getSafeValue(loanRefs.arm106.term, inputConfigs.term_arm106, LOAN_DEFAULTS.arm106.term)
+          }
+        };
+      }
+
+      function updateLoanMeta(type, loanOption) {
+        if (!loanRefs[type]?.meta || !loanOption) {
+          return;
+        }
+
+        loanRefs[type].meta.textContent = loanOption.kind === "arm"
+          ? (Math.abs(loanOption.adjustedRate - loanOption.initialRate) < 0.0005
+              ? `${formatPercent(loanOption.initialRate, 3)} / ${Math.round(loanOption.term)}y`
+              : `${formatPercent(loanOption.initialRate, 3)} to ${formatPercent(loanOption.adjustedRate, 3)} / ${Math.round(loanOption.term)}y`)
+          : `${formatPercent(loanOption.rate, 3)} / ${Math.round(loanOption.term)}y`;
+      }
+
+      function updateAllLoanMeta(loanOptions) {
+        LOAN_ORDER.forEach((type) => updateLoanMeta(type, loanOptions[type]));
+      }
+
+      function selectLoanOption(type) {
+        if (!LOAN_DEFAULTS[type]) {
+          return;
+        }
+
+        uiState.activeLoanType = type;
+        LOAN_ORDER.forEach((loanType) => {
+          const isActive = loanType === type;
+          loanRefs[loanType].article.classList.toggle("is-active", isActive);
+          loanRefs[loanType].button.setAttribute("aria-expanded", String(isActive));
+          loanRefs[loanType].panel.hidden = !isActive;
+        });
+      }
+
+      function selectCompareLoan(type) {
+        if (!LOAN_DEFAULTS[type]) {
+          return;
+        }
+
+        uiState.compareLoanType = type;
+        LOAN_ORDER.forEach((loanType) => {
+          loanRefs[loanType].article.classList.toggle("is-compare", loanType === type);
+          loanRefs[loanType].compareButton.setAttribute("aria-pressed", String(loanType === type));
+        });
+      }
+
+      function normalizeInputs() {
+        const homePrice = getSafeValue(refs.homePrice, inputConfigs.homePrice, DEFAULTS.homePrice);
+        const downPaymentRaw = getDownPaymentNumericValue(homePrice);
+        const downPaymentAmount = uiState.downPaymentMode === "percent"
+          ? clamp((homePrice * downPaymentRaw) / 100, 0, homePrice)
+          : clamp(downPaymentRaw, 0, homePrice);
+
+        return {
+          homePrice,
+          downPaymentMode: uiState.downPaymentMode,
+          downPaymentInput: downPaymentRaw,
+          downPaymentAmount,
+          propertyTaxRate: getSafeValue(refs.propertyTaxRate, inputConfigs.propertyTaxRate, DEFAULTS.propertyTaxRate),
+          insurancePerYear: getSafeValue(refs.insurancePerYear, inputConfigs.insurancePerYear, DEFAULTS.insurancePerYear),
+          hoaPerMonth: getSafeValue(refs.hoaPerMonth, inputConfigs.hoaPerMonth, DEFAULTS.hoaPerMonth),
+          activeLoanType: uiState.activeLoanType,
+          compareLoanType: uiState.compareLoanType,
+          loanOptions: readLoanOptions()
+        };
+      }
+
+      function calculateMonthlyPayment(principal, annualRate, totalMonths) {
+        if (principal <= 0 || totalMonths <= 0) {
+          return 0;
+        }
+
+        const monthlyRate = annualRate / 100 / 12;
+        if (monthlyRate === 0) {
+          return principal / totalMonths;
+        }
+
+        return principal * (monthlyRate / (1 - Math.pow(1 + monthlyRate, -totalMonths)));
+      }
+
+      function appendScheduleSegment(schedule, options) {
+        const {
+          balance: startingBalance,
+          annualRate,
+          payment,
+          segmentMonths,
+          startMonth,
+          monthlyTax,
+          monthlyInsurance,
+          monthlyHoa,
+          homePrice
+        } = options;
+
+        let balance = startingBalance;
+        let totalInterest = 0;
+        const monthlyRate = annualRate / 100 / 12;
+
+        for (let offset = 0; offset < segmentMonths && balance > 0.005; offset += 1) {
+          const interest = monthlyRate === 0 ? 0 : balance * monthlyRate;
+          let principal = payment - interest;
+
+          if (principal > balance) {
+            principal = balance;
+          }
+
+          if (principal < 0) {
+            principal = 0;
+          }
+
+          const fullPayment = principal + interest + monthlyTax + monthlyInsurance + monthlyHoa;
+          balance = Math.max(0, balance - principal);
+          totalInterest += interest;
+
+          schedule.push({
+            month: startMonth + offset,
+            payment: fullPayment,
+            principal,
+            interest,
+            balance
+          });
+        }
+
+        return {
+          balance,
+          totalInterest
+        };
+      }
+
+      function generateFixedSchedule(params) {
+        const {
+          loanAmount,
+          annualRate,
+          totalMonths,
+          monthlyTax,
+          monthlyInsurance,
+          monthlyHoa,
+          homePrice
+        } = params;
+
+        const schedule = [];
+        const payment = calculateMonthlyPayment(loanAmount, annualRate, totalMonths);
+        const result = appendScheduleSegment(schedule, {
+          balance: loanAmount,
+          annualRate,
+          payment,
+          segmentMonths: totalMonths,
+          startMonth: 1,
+          monthlyTax,
+          monthlyInsurance,
+          monthlyHoa,
+          homePrice
+        });
+
+        return {
+          schedule,
+          payment,
+          totalInterest: result.totalInterest,
+          modeledMonths: schedule.length
+        };
+      }
+
+      function generateArmSchedule(params) {
+        const {
+          loanAmount,
+          totalMonths,
+          initialRate,
+          adjustedRate,
+          resetYears,
+          monthlyTax,
+          monthlyInsurance,
+          monthlyHoa,
+          homePrice
+        } = params;
+
+        const schedule = [];
+        const initialMonths = Math.min(resetYears * 12, totalMonths);
+        const initialPayment = calculateMonthlyPayment(loanAmount, initialRate, totalMonths);
+
+        const initialResult = appendScheduleSegment(schedule, {
+          balance: loanAmount,
+          annualRate: initialRate,
+          payment: initialPayment,
+          segmentMonths: initialMonths,
+          startMonth: 1,
+          monthlyTax,
+          monthlyInsurance,
+          monthlyHoa,
+          homePrice
+        });
+
+        let totalInterest = initialResult.totalInterest;
+        let resetPayment = initialPayment;
+        let finalBalance = initialResult.balance;
+
+        const remainingMonths = Math.max(totalMonths - schedule.length, 0);
+        if (remainingMonths > 0 && finalBalance > 0.005) {
+          resetPayment = calculateMonthlyPayment(finalBalance, adjustedRate, remainingMonths);
+
+          const adjustedResult = appendScheduleSegment(schedule, {
+            balance: finalBalance,
+            annualRate: adjustedRate,
+            payment: resetPayment,
+            segmentMonths: remainingMonths,
+            startMonth: initialMonths + 1,
+            monthlyTax,
+            monthlyInsurance,
+            monthlyHoa,
+            homePrice
+          });
+
+          totalInterest += adjustedResult.totalInterest;
+        }
+
+        return {
+          schedule,
+          payment: initialPayment,
+          resetPayment,
+          totalInterest,
+          modeledMonths: schedule.length
+        };
+      }
+
+      function yearlyComposition(schedule) {
+        const years = [];
+
+        schedule.forEach((row) => {
+          const yearIndex = Math.floor((row.month - 1) / 12);
+          if (!years[yearIndex]) {
+            years[yearIndex] = {
+              year: yearIndex + 1,
+              principal: 0,
+              interest: 0
+            };
+          }
+
+          years[yearIndex].principal += row.principal;
+          years[yearIndex].interest += row.interest;
+        });
+
+        return years;
+      }
+
+      function buildScenario(inputs, selectedType = inputs.activeLoanType) {
+        const loanOption = inputs.loanOptions[selectedType] || inputs.loanOptions[DEFAULTS.activeLoanType];
+        const loanAmount = Math.max(0, inputs.homePrice - inputs.downPaymentAmount);
+        const monthlyTax = (inputs.homePrice * (inputs.propertyTaxRate / 100)) / 12;
+        const monthlyInsurance = inputs.insurancePerYear / 12;
+        const monthlyHoa = inputs.hoaPerMonth;
+        const totalMonths = Math.max(1, Math.round(loanOption.term * 12));
+        const type = selectedType;
+        const armMode = loanOption.kind === "arm";
+
+        let scheduleData;
+        let primaryRate = armMode ? loanOption.initialRate : loanOption.rate;
+        let armDetails = null;
+
+        if (armMode) {
+          scheduleData = generateArmSchedule({
+            loanAmount,
+            totalMonths,
+            initialRate: loanOption.initialRate,
+            adjustedRate: loanOption.adjustedRate,
+            resetYears: loanOption.fixedYears,
+            monthlyTax,
+            monthlyInsurance,
+            monthlyHoa,
+            homePrice: inputs.homePrice
+          });
+
+          armDetails = {
+            resetYears: loanOption.fixedYears,
+            adjustedRate: loanOption.adjustedRate,
+            resetPayment: scheduleData.resetPayment
+          };
+        } else {
+          scheduleData = generateFixedSchedule({
+            loanAmount,
+            annualRate: loanOption.rate,
+            totalMonths,
+            monthlyTax,
+            monthlyInsurance,
+            monthlyHoa,
+            homePrice: inputs.homePrice
+          });
+        }
+
+        const firstRow = scheduleData.schedule[0];
+        const totalMonthlyPayment = firstRow ? firstRow.payment : 0;
+        return {
+          inputs,
+          type,
+          typeLabel: loanOption.label,
+          isArm: armMode,
+          primaryRate,
+          loanAmount,
+          monthlyTax,
+          monthlyInsurance,
+          monthlyHoa,
+          principalInterest: scheduleData.payment,
+          totalMonthlyPayment,
+          totalInterest: scheduleData.totalInterest,
+          schedule: scheduleData.schedule,
+          modeledMonths: scheduleData.modeledMonths,
+          armDetails,
+          yearlyBreakdown: yearlyComposition(scheduleData.schedule)
+        };
+      }
+
+      function validateField(input) {
+        const shell = document.querySelector(`[data-shell-for="${input.id}"]`);
+        if (!shell) {
+          return true;
+        }
+
+        let isValid = true;
+        const config = inputConfigs[input.id];
+
+        if (input.id === "downPayment") {
+          const parsed = parseInputValue(input);
+          if (!Number.isFinite(parsed)) {
+            isValid = false;
+          } else if (uiState.downPaymentMode === "percent") {
+            isValid = parsed >= 0 && parsed <= 100;
+          } else {
+            const homePrice = getSafeValue(refs.homePrice, inputConfigs.homePrice, DEFAULTS.homePrice);
+            isValid = parsed >= 0 && parsed <= homePrice;
+          }
+        } else if (input.id === "rate_arm76_adjusted" || input.id === "rate_arm106_adjusted") {
+          const parsed = parseInputValue(input);
+          isValid = input.value.trim() === "" || (Number.isFinite(parsed) && parsed >= config.min && parsed <= config.max);
+        } else if (config) {
+          const parsed = parseInputValue(input);
+          isValid = Number.isFinite(parsed) && parsed >= config.min && parsed <= config.max;
+        }
+
+        shell.classList.toggle("invalid", !isValid);
+        input.setAttribute("aria-invalid", String(!isValid));
+        return isValid;
+      }
+
+      function validateAllInputs() {
+        [
+          refs.homePrice,
+          refs.downPayment,
+          refs.propertyTaxRate,
+          refs.insurancePerYear,
+          refs.hoaPerMonth,
+          loanRefs.fixed30.rate,
+          loanRefs.fixed30.term,
+          loanRefs.arm76.initialRate,
+          loanRefs.arm76.adjustedRate,
+          loanRefs.arm76.term,
+          loanRefs.arm106.initialRate,
+          loanRefs.arm106.adjustedRate,
+          loanRefs.arm106.term
+        ].forEach(validateField);
+      }
+
+      function renderOutputs(scenario) {
+        refs.totalMonthlyPayment.textContent = formatCurrency(scenario.totalMonthlyPayment);
+        refs.loanAmountOutput.textContent = formatCurrency(scenario.loanAmount);
+        refs.principalInterestOutput.textContent = formatCurrency(scenario.principalInterest);
+        refs.propertyTaxOutput.textContent = formatCurrency(scenario.monthlyTax);
+        refs.insuranceOutput.textContent = formatCurrency(scenario.monthlyInsurance);
+        refs.hoaOutput.textContent = formatCurrency(scenario.monthlyHoa);
+        refs.totalInterestOutput.textContent = formatCurrency(scenario.totalInterest);
+        refs.modelLengthOutput.textContent = formatYears(Math.ceil(scenario.modeledMonths / 12));
+
+        if (scenario.isArm && scenario.armDetails) {
+          refs.summaryNote.textContent = `${scenario.typeLabel} approximation`;
+          refs.footnoteText.textContent = "ARM schedules use one initial fixed-payment period and then one reset rate for the remaining term. Monthly payment values include taxes, insurance, and HOA when applicable.";
+        } else {
+          refs.summaryNote.textContent = "Selected loan option";
+          refs.footnoteText.textContent = "Monthly payment values include principal, interest, taxes, insurance, and HOA when applicable.";
+        }
+
+      }
+
+      function makeEmptyChart(svg, message) {
+        svg.innerHTML = `
+          <rect x="18" y="18" width="684" height="284" fill="rgba(255,255,255,0.75)" stroke="rgba(16,33,47,0.08)" />
+          <text x="360" y="168" text-anchor="middle" fill="#576675" font-size="18" font-family="Avenir Next, Segoe UI, sans-serif">${message}</text>
+        `;
+      }
+
+      function buildLinePath(points) {
+        return points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(" ");
+      }
+
+      function getChartFrame() {
+        const width = 720;
+        const height = 320;
+        const margin = { top: 24, right: 24, bottom: 58, left: 88 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        return {
+          width,
+          height,
+          margin,
+          innerWidth,
+          innerHeight,
+          plotLeft: margin.left,
+          plotTop: margin.top,
+          plotRight: margin.left + innerWidth,
+          plotBottom: margin.top + innerHeight
+        };
+      }
+
+      function renderBalanceChart(scenario) {
+        const svg = refs.balanceChart;
+        const schedule = scenario.schedule;
+
+        if (!schedule.length || scenario.loanAmount <= 0) {
+          makeEmptyChart(svg, "Enter a loan amount to draw the balance curve.");
+          return;
+        }
+
+        const { width, height, margin, innerWidth, innerHeight, plotLeft, plotTop, plotRight, plotBottom } = getChartFrame();
+        const totalMonths = schedule.length;
+        const maxBalance = scenario.loanAmount;
+
+        const points = [{ month: 0, balance: scenario.loanAmount }, ...schedule.map((row) => ({ month: row.month, balance: row.balance }))].map((point) => ({
+          x: plotLeft + (point.month / totalMonths) * innerWidth,
+          y: plotTop + ((maxBalance - point.balance) / maxBalance) * innerHeight
+        }));
+
+        const areaPath = `${buildLinePath(points)} L ${plotRight} ${plotBottom} L ${plotLeft} ${plotBottom} Z`;
+        const linePath = buildLinePath(points);
+        const tickValues = [0, 0.25, 0.5, 0.75, 1].map((fraction) => Math.round(totalMonths * fraction));
+        const uniqueTicks = [...new Set(tickValues)];
+
+        const horizontalGrid = [0, 0.25, 0.5, 0.75, 1].map((fraction) => {
+          const y = plotTop + innerHeight * fraction;
+          const balance = maxBalance * (1 - fraction);
+          return `
+            <line x1="${plotLeft}" y1="${y}" x2="${plotRight}" y2="${y}" stroke="rgba(16,33,47,0.08)" stroke-dasharray="4 8" />
+            <text x="${plotLeft - 12}" y="${y + 5}" text-anchor="end" fill="#576675" font-size="12">${formatCurrency(balance)}</text>
+          `;
+        }).join("");
+
+        const xTicks = uniqueTicks.map((month) => {
+          const x = plotLeft + (month / totalMonths) * innerWidth;
+          const years = month / 12;
+          return `
+            <line x1="${x}" y1="${plotBottom}" x2="${x}" y2="${plotBottom + 6}" stroke="rgba(16,33,47,0.16)" />
+            <text x="${x}" y="${height - 12}" text-anchor="middle" fill="#576675" font-size="12">${years.toFixed(years % 1 === 0 ? 0 : 1)}y</text>
+          `;
+        }).join("");
+
+        svg.innerHTML = `
+          <defs>
+            <linearGradient id="balanceArea" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="rgba(12,106,124,0.32)" />
+              <stop offset="100%" stop-color="rgba(12,106,124,0.03)" />
+            </linearGradient>
+          </defs>
+          <rect x="${plotLeft}" y="${plotTop}" width="${innerWidth}" height="${innerHeight}" fill="rgba(255,255,255,0.7)" stroke="rgba(16,33,47,0.08)" />
+          ${horizontalGrid}
+          <path d="${areaPath}" fill="url(#balanceArea)"></path>
+          <path d="${linePath}" fill="none" stroke="#0c6a7c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
+          <line x1="${plotLeft}" y1="${plotBottom}" x2="${plotRight}" y2="${plotBottom}" stroke="rgba(16,33,47,0.16)" />
+          <line x1="${plotLeft}" y1="${plotTop}" x2="${plotLeft}" y2="${plotBottom}" stroke="rgba(16,33,47,0.16)" />
+          <text x="${plotLeft}" y="${plotTop - 6}" fill="#576675" font-size="12">Remaining balance</text>
+          ${xTicks}
+        `;
+      }
+
+      function renderCompositionChart(scenario) {
+        const svg = refs.compositionChart;
+        const breakdown = scenario.yearlyBreakdown;
+
+        if (!breakdown.length) {
+          makeEmptyChart(svg, "Enter a loan amount to draw the payment mix.");
+          return;
+        }
+
+        const { width, height, margin, innerWidth, innerHeight, plotLeft, plotTop, plotRight, plotBottom } = getChartFrame();
+        const maxTotal = Math.max(...breakdown.map((year) => year.principal + year.interest), 1);
+        const step = innerWidth / breakdown.length;
+        const barWidth = Math.max(Math.min(step * 0.72, 42), 8);
+
+        const bars = breakdown.map((year, index) => {
+          const x = plotLeft + index * step + ((step - barWidth) / 2);
+          const total = year.principal + year.interest;
+          const totalHeight = (total / maxTotal) * innerHeight;
+          const principalHeight = total > 0 ? (year.principal / maxTotal) * innerHeight : 0;
+          const interestHeight = totalHeight - principalHeight;
+          const y = plotBottom - totalHeight;
+          const principalY = plotBottom - principalHeight;
+          const shouldLabel = breakdown.length <= 12 || index === 0 || (year.year % 5 === 0) || index === breakdown.length - 1;
+
+          return `
+            <g>
+              <title>Year ${year.year}: ${formatCurrency(year.principal)} principal, ${formatCurrency(year.interest)} interest</title>
+              <rect x="${x}" y="${y}" width="${barWidth}" height="${Math.max(interestHeight, 0)}" fill="#d28a47"></rect>
+              <rect x="${x}" y="${principalY}" width="${barWidth}" height="${Math.max(principalHeight, 0)}" fill="#0c6a7c"></rect>
+              ${shouldLabel ? `<text x="${x + barWidth / 2}" y="${height - 14}" text-anchor="middle" fill="#576675" font-size="12">${year.year}</text>` : ""}
+            </g>
+          `;
+        }).join("");
+
+        const yLabels = [0, 0.5, 1].map((fraction) => {
+          const value = maxTotal * fraction;
+          const y = plotBottom - innerHeight * fraction;
+          return `
+            <line x1="${plotLeft}" y1="${y}" x2="${plotRight}" y2="${y}" stroke="rgba(16,33,47,0.08)" stroke-dasharray="4 8" />
+            <text x="${plotLeft - 12}" y="${y + 5}" text-anchor="end" fill="#576675" font-size="12">${formatCurrency(value)}</text>
+          `;
+        }).join("");
+
+        svg.innerHTML = `
+          <rect x="${plotLeft}" y="${plotTop}" width="${innerWidth}" height="${innerHeight}" fill="rgba(255,255,255,0.7)" stroke="rgba(16,33,47,0.08)" />
+          ${yLabels}
+          <line x1="${plotLeft}" y1="${plotBottom}" x2="${plotRight}" y2="${plotBottom}" stroke="rgba(16,33,47,0.16)" />
+          <line x1="${plotLeft}" y1="${plotTop}" x2="${plotLeft}" y2="${plotBottom}" stroke="rgba(16,33,47,0.16)" />
+          ${bars}
+          <text x="${plotLeft}" y="${plotTop - 6}" fill="#576675" font-size="12">Annual payment mix</text>
+        `;
+      }
+
+      function renderCharts(scenario) {
+        renderBalanceChart(scenario);
+        renderCompositionChart(scenario);
+      }
+
+      function renderScheduleTable(scenario) {
+        if (!scenario.schedule.length) {
+          refs.amortizationBody.innerHTML = `<tr><td colspan="5"><div class="empty-state">No amortization schedule yet.</div></td></tr>`;
+          return;
+        }
+
+        refs.amortizationBody.innerHTML = scenario.schedule.map((row) => `
+          <tr>
+            <td>${row.month}</td>
+            <td>${formatCurrency(row.payment, 2)}</td>
+            <td>${formatCurrency(row.principal, 2)}</td>
+            <td>${formatCurrency(row.interest, 2)}</td>
+            <td>${formatCurrency(row.balance, 2)}</td>
+          </tr>
+        `).join("");
+      }
+
+      function buildComparisonRows(leftScenario, rightScenario) {
+        return [
+          ["Monthly payment", formatCurrency(leftScenario.totalMonthlyPayment), formatCurrency(rightScenario.totalMonthlyPayment)],
+          ["Principal and interest", formatCurrency(leftScenario.principalInterest), formatCurrency(rightScenario.principalInterest)],
+          ["Rate", formatPercent(leftScenario.primaryRate, 3), formatPercent(rightScenario.primaryRate, 3)],
+          ["Total interest", formatCurrency(leftScenario.totalInterest), formatCurrency(rightScenario.totalInterest)]
+        ].map((row) => `
+          <tr>
+            <td>${row[0]}</td>
+            <td>${row[1]}</td>
+            <td>${row[2]}</td>
+          </tr>
+        `).join("");
+      }
+
+      function renderComparisons(inputs, scenario) {
+        const compareType = inputs.compareLoanType;
+        const compareScenario = buildScenario(inputs, compareType);
+        const activeLabel = scenario.typeLabel;
+        const compareLabel = compareScenario.typeLabel;
+
+        refs.comparisonHeading.textContent = `${activeLabel} vs ${compareLabel}`;
+        refs.comparisonPrimaryLabel.textContent = activeLabel;
+        refs.comparisonSecondaryLabel.textContent = compareLabel;
+        refs.fixedComparisonBody.innerHTML = buildComparisonRows(scenario, compareScenario);
+      }
+
+      function recalculate() {
+        validateAllInputs();
+        const inputs = normalizeInputs();
+        const scenario = buildScenario(inputs);
+
+        uiState.lastInputs = inputs;
+        uiState.lastScenario = scenario;
+
+        updateAllLoanMeta(inputs.loanOptions);
+        renderOutputs(scenario);
+        renderCharts(scenario);
+        renderComparisons(inputs, scenario);
+        renderScheduleTable(scenario);
+      }
+
+      function handleFocus(event) {
+        const input = event.target;
+        const config = inputConfigs[input.id];
+        if (!config) {
+          return;
+        }
+
+        const parsed = parseInputValue(input);
+        if (!Number.isFinite(parsed)) {
+          return;
+        }
+
+        const decimals = config.kind === "integer" ? 0 : config.decimals;
+        input.value = numberToEditableString(parsed, decimals);
+      }
+
+      function handleBlur(event) {
+        const input = event.target;
+        const config = inputConfigs[input.id];
+        if (!config) {
+          return;
+        }
+
+        let safeValue;
+        if (input.id === "downPayment") {
+          const homePrice = uiState.lastInputs?.homePrice ?? DEFAULTS.homePrice;
+          safeValue = getDownPaymentNumericValue(homePrice);
+          input.value = uiState.downPaymentMode === "dollar"
+            ? formatInputDisplay(safeValue, { kind: "currency", decimals: 0 })
+            : formatInputDisplay(safeValue, { kind: "percent", decimals: 3 });
+        } else if (input.id === "rate_arm76_adjusted" || input.id === "rate_arm106_adjusted") {
+          const parsed = parseInputValue(input);
+          input.value = Number.isFinite(parsed) ? formatInputDisplay(clamp(parsed, config.min, config.max), config) : "";
+        } else {
+          safeValue = getSafeValue(input, config, getLoanInputFallback(input.id));
+          input.value = formatInputDisplay(safeValue, config);
+        }
+
+        validateField(input);
+        recalculate();
+      }
+
+      function applyDefaults() {
+        refs.homePrice.value = formatInputDisplay(DEFAULTS.homePrice, inputConfigs.homePrice);
+        refs.propertyTaxRate.value = formatInputDisplay(DEFAULTS.propertyTaxRate, inputConfigs.propertyTaxRate);
+        refs.insurancePerYear.value = formatInputDisplay(DEFAULTS.insurancePerYear, inputConfigs.insurancePerYear);
+        refs.hoaPerMonth.value = formatInputDisplay(DEFAULTS.hoaPerMonth, inputConfigs.hoaPerMonth);
+        refs.advancedDetails.open = false;
+        uiState.downPaymentMode = DEFAULTS.downPaymentMode;
+        uiState.activeLoanType = DEFAULTS.activeLoanType;
+        uiState.compareLoanType = DEFAULTS.compareLoanType;
+        setDownPaymentMode(DEFAULTS.downPaymentMode, false);
+        refs.downPayment.value = formatInputDisplay(DEFAULTS.downPaymentValuePercent, { kind: "percent", decimals: 3 });
+        loanRefs.fixed30.rate.value = formatInputDisplay(LOAN_DEFAULTS.fixed30.rate, inputConfigs.rate_fixed30);
+        loanRefs.fixed30.term.value = formatInputDisplay(LOAN_DEFAULTS.fixed30.term, inputConfigs.term_fixed30);
+        loanRefs.arm76.initialRate.value = formatInputDisplay(LOAN_DEFAULTS.arm76.initialRate, inputConfigs.rate_arm76_initial);
+        loanRefs.arm76.adjustedRate.value = "";
+        loanRefs.arm76.term.value = formatInputDisplay(LOAN_DEFAULTS.arm76.term, inputConfigs.term_arm76);
+        loanRefs.arm106.initialRate.value = formatInputDisplay(LOAN_DEFAULTS.arm106.initialRate, inputConfigs.rate_arm106_initial);
+        loanRefs.arm106.adjustedRate.value = "";
+        loanRefs.arm106.term.value = formatInputDisplay(LOAN_DEFAULTS.arm106.term, inputConfigs.term_arm106);
+        selectLoanOption(DEFAULTS.activeLoanType);
+        selectCompareLoan(DEFAULTS.compareLoanType);
+      }
+
+      function attachEvents() {
+        Object.keys(inputConfigs).forEach((id) => {
+          const node = document.getElementById(id);
+          if (!(node instanceof HTMLInputElement)) {
+            return;
+          }
+
+          node.addEventListener("focus", handleFocus);
+          node.addEventListener("blur", handleBlur);
+          node.addEventListener("input", () => {
+            validateField(node);
+            recalculate();
+          });
+        });
+
+        LOAN_ORDER.forEach((type) => {
+          loanRefs[type].button.addEventListener("click", () => {
+            selectLoanOption(type);
+            recalculate();
+          });
+          loanRefs[type].compareButton.addEventListener("click", () => {
+            selectCompareLoan(type);
+            recalculate();
+          });
+        });
+
+        refs.downDollarButton.addEventListener("click", () => setDownPaymentMode("dollar"));
+        refs.downPercentButton.addEventListener("click", () => setDownPaymentMode("percent"));
+        refs.resetButton.addEventListener("click", () => {
+          applyDefaults();
+          recalculate();
+        });
+      }
+
+      applyDefaults();
+      attachEvents();
+      recalculate();
+    })();
+  </script>
+</body>
+</html>
