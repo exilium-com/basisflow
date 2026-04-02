@@ -1078,7 +1078,6 @@
             <div class="summary-strip">
               <p class="summary-kicker">Estimated monthly payment</p>
               <strong id="totalMonthlyPayment">$0</strong>
-              <span id="summaryNote">Selected loan option</span>
             </div>
 
             <div class="results-list" aria-live="polite">
@@ -1202,6 +1201,7 @@
   <script>
     (() => {
       const COOKIE_NAME = "finance_tools_mortgage_v1";
+      const SUMMARY_COOKIE_NAME = "finance_tools_mortgage_summary_v1";
       const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
       const LOAN_ORDER = ["fixed30", "arm76", "arm106"];
 
@@ -1252,7 +1252,6 @@
         loanOptions: document.getElementById("loanOptions"),
         resetButton: document.getElementById("resetButton"),
         totalMonthlyPayment: document.getElementById("totalMonthlyPayment"),
-        summaryNote: document.getElementById("summaryNote"),
         loanAmountOutput: document.getElementById("loanAmountOutput"),
         principalInterestOutput: document.getElementById("principalInterestOutput"),
         propertyTaxOutput: document.getElementById("propertyTaxOutput"),
@@ -1350,6 +1349,37 @@
           rate_arm106_adjusted: loanRefs.arm106.adjustedRate.value,
           term_arm106: loanRefs.arm106.term.value
         }));
+      }
+
+      function saveSummary(scenario) {
+        const yearlyLoan = scenario.yearlyBreakdown.map((row) => {
+          const monthIndex = Math.min(row.year * 12, scenario.schedule.length) - 1;
+          const endingBalance = monthIndex >= 0 ? scenario.schedule[monthIndex].balance : scenario.loanAmount;
+          return {
+            year: row.year,
+            principal: row.principal,
+            interest: row.interest,
+            endingBalance
+          };
+        });
+
+        const payload = JSON.stringify({
+          type: scenario.type,
+          typeLabel: scenario.typeLabel,
+          isArm: scenario.isArm,
+          homePrice: scenario.inputs.homePrice,
+          currentEquity: scenario.inputs.homePrice - scenario.loanAmount,
+          loanAmount: scenario.loanAmount,
+          totalMonthlyPayment: scenario.totalMonthlyPayment,
+          principalInterest: scenario.principalInterest,
+          monthlyTax: scenario.monthlyTax,
+          monthlyInsurance: scenario.monthlyInsurance,
+          monthlyHoa: scenario.monthlyHoa,
+          totalInterest: scenario.totalInterest,
+          yearlyLoan
+        });
+        setCookie(SUMMARY_COOKIE_NAME, payload);
+        localStorage.setItem(SUMMARY_COOKIE_NAME, payload);
       }
 
       function clamp(value, min, max) {
@@ -1899,10 +1929,8 @@
         refs.modelLengthOutput.textContent = formatYears(Math.ceil(scenario.modeledMonths / 12));
 
         if (scenario.isArm && scenario.armDetails) {
-          refs.summaryNote.textContent = `${scenario.typeLabel} approximation`;
           refs.footnoteText.textContent = "ARM schedules use one initial fixed-payment period and then one reset rate for the remaining term. Monthly payment values include taxes, insurance, and HOA when applicable.";
         } else {
-          refs.summaryNote.textContent = "Selected loan option";
           refs.footnoteText.textContent = "Monthly payment values include principal, interest, taxes, insurance, and HOA when applicable.";
         }
 
@@ -2113,6 +2141,7 @@
         renderCharts(scenario);
         renderComparisons(inputs, scenario);
         renderScheduleTable(scenario);
+        saveSummary(scenario);
         saveState();
       }
 

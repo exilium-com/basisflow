@@ -427,6 +427,7 @@
   <script>
     (() => {
       const COOKIE_NAME = "finance_tools_income_v1";
+      const SUMMARY_COOKIE_NAME = "finance_tools_income_summary_v1";
       const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
       const defaults = {
@@ -502,6 +503,21 @@
           includeCaSdi: refs.includeCaSdi.value,
           taxAssumptionsOpen: refs.taxAssumptions.open
         }));
+      }
+
+      function saveSummary(inputs, results) {
+        const payload = JSON.stringify({
+          grossSalary: inputs.grossSalary,
+          annualTakeHome: results.annualTakeHome,
+          monthlyTakeHome: results.monthlyTakeHome,
+          totalTaxes: results.totalTaxes,
+          employee401k: inputs.employee401k,
+          employerMatch: results.employerMatch,
+          megaBackdoor: results.mega,
+          hsaContribution: inputs.hsaContribution
+        });
+        setCookie(SUMMARY_COOKIE_NAME, payload);
+        localStorage.setItem(SUMMARY_COOKIE_NAME, payload);
       }
 
       function usd(value) {
@@ -658,6 +674,7 @@
         const inputs = readInputs();
         const results = calculate(inputs);
         render(inputs, results);
+        saveSummary(inputs, results);
         saveState();
       }
 

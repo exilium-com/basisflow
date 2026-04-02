@@ -489,14 +489,14 @@
                 <div class="field">
                   <label for="baselineGrowthRate">Baseline growth</label>
                   <div class="control-shell">
-                    <input id="baselineGrowthRate" type="number" min="0" step="0.1" placeholder="7.0">
+                    <input id="baselineGrowthRate" type="number" min="0" step="0.1">
                     <span class="suffix">%</span>
                   </div>
                 </div>
                 <div class="field">
                   <label for="inflationRate">Inflation</label>
                   <div class="control-shell">
-                    <input id="inflationRate" type="number" min="0" step="0.1" placeholder="2.5">
+                    <input id="inflationRate" type="number" min="0" step="0.1">
                     <span class="suffix">%</span>
                   </div>
                 </div>
@@ -514,7 +514,7 @@
                 <div class="field">
                   <label for="horizonYears">Projection horizon</label>
                   <div class="control-shell">
-                    <input id="horizonYears" type="number" min="1" max="60" step="1" placeholder="20">
+                    <input id="horizonYears" type="number" min="1" max="60" step="1">
                     <span class="suffix">years</span>
                   </div>
                 </div>
@@ -522,7 +522,7 @@
                   <label for="incomeBaseline">Taxable income baseline</label>
                   <div class="control-shell">
                     <span class="prefix">$</span>
-                    <input id="incomeBaseline" type="number" min="0" step="1000" placeholder="180000">
+                    <input id="incomeBaseline" type="number" min="0" step="1000">
                   </div>
                 </div>
               </div>
@@ -551,7 +551,6 @@
           <div class="summary-strip">
             <p class="summary-kicker">Gross Ending Value</p>
             <strong id="grossHeadlineValue">$0</strong>
-            <p class="summary-note" id="summaryNote">Projected in-account value across all asset buckets.</p>
           </div>
 
           <div class="results-list">
@@ -607,7 +606,7 @@
             <thead>
               <tr>
                 <th>Year</th>
-                <th>Total liquid</th>
+                <th>Gross value</th>
                 <th>Embedded tax</th>
               </tr>
             </thead>
@@ -619,8 +618,8 @@
   </div>
 
   <template id="assetRowTemplate">
-    <article class="asset-row">
-      <button class="remove-bucket-button" type="button" data-action="remove-bucket" aria-label="Remove asset">X</button>
+    <article class="asset-row" data-item-row>
+      <button class="remove-bucket-button" type="button" data-action="remove-item" aria-label="Remove asset">X</button>
       <div class="asset-row-header">
         <div class="field">
           <label>Asset name</label>
@@ -632,7 +631,7 @@
           <label>Current value</label>
           <div class="control-shell">
             <span class="prefix">$</span>
-            <input type="number" data-field="current" step="1000" min="0">
+            <input type="number" data-field="current" step="1000" min="0" placeholder="0">
           </div>
         </div>
       </div>
@@ -644,9 +643,11 @@
   </template>
 
   <script src="./shared-tax-config.js"></script>
+  <script src="./shared-dynamic-list.js"></script>
   <script>
     (() => {
       const COOKIE_NAME = "finance_tools_savings_v1";
+      const SUMMARY_COOKIE_NAME = "finance_tools_assets_summary_v1";
       const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
       const TYPE_DEFAULTS = {
@@ -666,13 +667,13 @@
       };
 
       const DEFAULT_STATE = {
-        horizonYears: "",
-        incomeBaseline: "",
-        inflationRate: "",
+        horizonYears: "20",
+        incomeBaseline: "180000",
+        inflationRate: "2.5",
         displayMode: "nominal",
         growthOpen: false,
         advancedOpen: false,
-        baselineGrowthRate: "",
+        baselineGrowthRate: "7.0",
         buckets: [
           { id: crypto.randomUUID(), taxFree: false, name: "", current: "", contribution: "", growth: "", basis: "", detailsOpen: false },
           { id: crypto.randomUUID(), taxFree: true, name: "", current: "", contribution: "", growth: "", basis: "", detailsOpen: false }
@@ -698,7 +699,6 @@
         embeddedTaxValue: document.getElementById("embeddedTaxValue"),
         basisProtectedValue: document.getElementById("basisProtectedValue"),
         horizonValue: document.getElementById("horizonValue"),
-        summaryNote: document.getElementById("summaryNote"),
         bucketTable: document.getElementById("bucketTable"),
         projectionTable: document.getElementById("projectionTable"),
         growthChart: document.getElementById("growthChart"),
@@ -720,6 +720,27 @@
 
       function saveState() {
         setCookie(COOKIE_NAME, JSON.stringify(state));
+      }
+
+      function saveSummary(inputs, results) {
+        const payload = JSON.stringify({
+          currentTotal: results.totals.currentTotal,
+          annualContributionTotal: results.totals.annualContributionTotal,
+          grossEndingValue: results.totals.grossEndingValue,
+          embeddedTax: results.totals.embeddedTax,
+          basisProtected: results.totals.basisProtected,
+          baselineGrowthRate: inputs.baselineGrowthRate,
+          inflationRate: inputs.inflationRate,
+          horizonYears: inputs.horizonYears,
+          bucketCount: inputs.buckets.length,
+          projection: results.projection.map((row) => ({
+            year: row.year,
+            grossValue: row.grossValue,
+            embeddedTax: row.embeddedTax
+          }))
+        });
+        setCookie(SUMMARY_COOKIE_NAME, payload);
+        localStorage.setItem(SUMMARY_COOKIE_NAME, payload);
       }
 
       function normalizeBucket(rawBucket) {
@@ -800,12 +821,15 @@
       function buildFieldMarkup(bucket, field) {
         const defaults = TYPE_DEFAULTS[bucket.taxFree ? "tax_free" : "taxable"];
         const growthPlaceholder = readNumber(state.baselineGrowthRate, defaults.growth);
+        const numericPlaceholder = field.key === "growth"
+          ? growthPlaceholder
+          : 0;
         if (field.type === "checkbox") {
           return `
             <div class="field">
               <label>${field.label}</label>
               <div class="control-shell">
-                <input type="checkbox" data-field="${field.key}"${bucket.taxFree ? " checked" : ""}>
+                <input type="checkbox" data-field="${field.key}" data-rerender="true"${bucket.taxFree ? " checked" : ""}>
               </div>
             </div>
           `;
@@ -816,7 +840,7 @@
             <label>${field.label}</label>
             <div class="control-shell">
               ${field.prefix ? `<span class="prefix">${field.prefix}</span>` : ""}
-              <input type="number" data-field="${field.key}" step="${field.step}" min="0" value="${escapeHtml(bucket[field.key] ?? "")}"${field.placeholderForTaxMode ? ` placeholder="${escapeHtml(growthPlaceholder)}"` : ""}>
+              <input type="number" data-field="${field.key}" step="${field.step}" min="0" value="${escapeHtml(bucket[field.key] ?? "")}" placeholder="${escapeHtml(field.placeholderForTaxMode ? growthPlaceholder : numericPlaceholder)}">
               ${field.suffix ? `<span class="suffix">${field.suffix}</span>` : ""}
             </div>
           </div>
@@ -824,53 +848,26 @@
       }
 
       function renderAssetList() {
-        refs.assetList.innerHTML = "";
+        FinanceDynamicList.render({
+          container: refs.assetList,
+          template: refs.assetRowTemplate,
+          items: state.buckets,
+          prepareRow({ fragment, item }) {
+            const nameInput = fragment.querySelector('[data-field="name"]');
+            const currentInput = fragment.querySelector('[data-field="current"]');
+            const details = fragment.querySelector("[data-options]");
+            const fieldsWrap = fragment.querySelector("[data-fields]");
 
-        state.buckets.forEach((bucket) => {
-          const fragment = refs.assetRowTemplate.content.cloneNode(true);
-          const row = fragment.querySelector(".asset-row");
-          const nameInput = fragment.querySelector('[data-field="name"]');
-          const currentInput = fragment.querySelector('[data-field="current"]');
-          const details = fragment.querySelector("[data-options]");
-          const fieldsWrap = fragment.querySelector("[data-fields]");
-          const removeButton = fragment.querySelector('[data-action="remove-bucket"]');
-
-          row.dataset.bucketId = bucket.id;
-          nameInput.value = bucket.name;
-          currentInput.value = bucket.current;
-          details.open = bucket.detailsOpen;
-          fieldsWrap.innerHTML = getFieldDefs(bucket).map((field) => buildFieldMarkup(bucket, field)).join("");
-
-          nameInput.addEventListener("input", (event) => {
-            updateBucket(bucket.id, { name: event.target.value }, false);
-          });
-
-          currentInput.addEventListener("input", (event) => {
-            updateBucket(bucket.id, { current: event.target.value }, false);
-          });
-
-          fieldsWrap.querySelectorAll('input[type="number"]').forEach((input) => {
-            input.addEventListener("input", (event) => {
-              updateBucket(bucket.id, { [event.target.dataset.field]: event.target.value }, false);
-            });
-          });
-
-          fieldsWrap.querySelectorAll('input[type="checkbox"]').forEach((input) => {
-            input.addEventListener("change", (event) => {
-              updateBucket(bucket.id, { [event.target.dataset.field]: event.target.checked }, true);
-            });
-          });
-
-          details.addEventListener("toggle", () => {
-            updateBucket(bucket.id, { detailsOpen: details.open }, false);
-          });
-
-          removeButton.addEventListener("click", () => {
-            state.buckets = state.buckets.filter((item) => item.id !== bucket.id);
+            nameInput.value = item.name;
+            currentInput.value = item.current;
+            details.open = item.detailsOpen;
+            fieldsWrap.innerHTML = getFieldDefs(item).map((field) => buildFieldMarkup(item, field)).join("");
+          },
+          onPatch: updateBucket,
+          onRemove(bucketId) {
+            state.buckets = state.buckets.filter((item) => item.id !== bucketId);
             renderPage();
-          });
-
-          refs.assetList.appendChild(fragment);
+          }
         });
       }
 
@@ -1034,9 +1031,6 @@
         refs.embeddedTaxValue.textContent = usd(toDisplayValue(results.totals.embeddedTax, endingYear, inputs));
         refs.basisProtectedValue.textContent = usd(toDisplayValue(results.totals.basisProtected, endingYear, inputs));
         refs.horizonValue.textContent = `${inputs.horizonYears} years`;
-        refs.summaryNote.textContent = inputs.displayMode === "real"
-          ? `${results.buckets.length} asset bucket${results.buckets.length === 1 ? "" : "s"} modeled in today's dollars before liquidation tax.`
-          : `${results.buckets.length} asset bucket${results.buckets.length === 1 ? "" : "s"} modeled in nominal dollars before liquidation tax.`;
         refs.nominalModeButton.setAttribute("aria-pressed", String(inputs.displayMode === "nominal"));
         refs.realModeButton.setAttribute("aria-pressed", String(inputs.displayMode === "real"));
 
@@ -1052,7 +1046,7 @@
         refs.projectionTable.innerHTML = results.projection.map((row) => `
           <tr>
             <td>${row.year}</td>
-            <td>${usd(toDisplayValue(row.totalLiquid, row.year, inputs))}</td>
+            <td>${usd(toDisplayValue(row.grossValue, row.year, inputs))}</td>
             <td>${usd(toDisplayValue(row.embeddedTax, row.year, inputs))}</td>
           </tr>
         `).join("");
@@ -1164,6 +1158,7 @@
         const results = calculate(inputs);
         renderOutputs(inputs, results);
         renderGrowthChart(inputs, results);
+        saveSummary(inputs, results);
         saveState();
       }
 
