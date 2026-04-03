@@ -1,9 +1,21 @@
-#!/usr/bin/env python3
-
+import argparse
+from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-import argparse
-import os
+
+
+class SpaHandler(SimpleHTTPRequestHandler):
+    def __init__(self, *args, directory=None, **kwargs):
+        super().__init__(*args, directory=directory, **kwargs)
+
+    def send_head(self):
+        requested_path = Path(self.path.split("?", 1)[0].split("#", 1)[0])
+        path = Path(self.translate_path(self.path))
+        if requested_path.suffix and path.exists():
+            return super().send_head()
+
+        self.path = "/index.html"
+        return super().send_head()
 
 
 def parse_args():
@@ -27,10 +39,14 @@ def parse_args():
 def main():
     args = parse_args()
     root = Path(__file__).resolve().parent
-    os.chdir(root)
+    dist = root / "dist"
 
-    server = ThreadingHTTPServer((args.host, args.port), SimpleHTTPRequestHandler)
-    print(f"Serving {root} at http://{args.host}:{args.port}/")
+    if not dist.exists():
+        raise SystemExit("dist/ not found. Run `npm run build` first, or use `npm run dev` for the Vite dev server.")
+
+    handler = partial(SpaHandler, directory=str(dist))
+    server = ThreadingHTTPServer((args.host, args.port), handler)
+    print(f"Serving {dist} at http://{args.host}:{args.port}/")
 
     try:
         server.serve_forever()

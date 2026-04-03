@@ -1,13 +1,22 @@
-# Finance Tools Notes
+# Finance Tools Guide
 
 ## Scope
+
 - Current tools in this thread:
-  - `mortgage.html`
-  - `income.html`
-- Shared chrome/styles were refactored into:
-  - `shared-tools.css`
+  - `/mortgage`
+  - `/income`
+  - `/assets`
+  - `/expenses`
+  - `/projection`
+  - `/taxes`
+- App architecture is now:
+  - single-entry React/Vite app
+  - React Router routes instead of per-tool HTML files
+  - shared UI primitives under `src/components/`
+  - shared styling constants under `src/lib/ui.js`
 
 ## User Preferences
+
 - This is a local tool suite, not a marketing site.
 - Keep the UI dense, readable, and utilitarian.
 - Avoid decorative filler:
@@ -20,7 +29,21 @@
 - Avoid massive side whitespace.
 - Keep layouts compact and direct.
 
+## Engineering Principles
+
+- Before abstracting, identify the canonical case and make everything conform to it first.
+  - Only introduce a broader abstraction when there is a repeated, durable reason not to.
+- Every simplification should reduce future decisions.
+  - Good cleanup makes the next edit more obvious by reducing modes, flags, styling choices, and places where the same concern can live.
+- Shared components should remove decisions from call sites, not relocate them.
+  - If a page still needs one-off variants, selector blobs, or special-case props, the shared primitive is probably not pulling its weight.
+- Preserve behavioral invariants during refactors.
+  - Code cleanup is not a win if it changes focus behavior, calculation semantics, displayed defaults, toggle meaning, or other interaction contracts.
+- Verify the real workflow, not just the edited file.
+  - Cross-page data flow, persistence, imported summaries, and shared config changes matter as much as local rendering.
+
 ## Interaction / Process Preferences
+
 - Edit files directly.
 - Make incremental edits.
 - Do not use wrapper shell snippets, python one-offs, awk tricks, or `node -e` for simple inspection or calculation.
@@ -29,9 +52,11 @@
 - When fixing UI issues, inspect the exact file sections and patch the actual cause instead of guessing.
 
 ## Shared Styling Direction
-- Both tools should feel like one suite.
-- Shared palette/page chrome should live in `shared-tools.css`.
-- Keep app-specific styles inline in each HTML file only when they are truly specific to that tool.
+
+- All tools should feel like one suite.
+- Shared palette/page chrome should live in React-owned styling primitives, not HTML style blocks.
+- Prefer named shared style constants or opinionated shared components over repeated inline utility strings.
+- Keep tool-specific styling local only when it is truly specific to that tool.
 - Current shared pieces:
   - palette
   - page shell
@@ -40,61 +65,41 @@
   - header chrome
   - shared button/tab styling
   - shared surface container styling
+  - shared field shells
+  - shared segmented toggles
+  - shared disclosure/item cards
+  - shared summary/result list patterns
 
-## Top Nav
+## Product Constraints
+
 - Use the top nav bar as the actual tool switcher.
-- Do not duplicate old header links if the nav already provides switching.
 - Keep the nav simple.
 - Small hover motion is acceptable.
 - Avoid over-styled “juiced” chrome.
+- Mortgage is a row-based comparison tool.
+  - Each loan row owns its own values.
+  - Clicking a row makes it active.
+  - A separate compare control selects the comparison row.
+  - Current loan set is `30-year fixed`, `7/1 ARM`, and `10/1 ARM`.
+  - ARM reset rate is optional; blank means “same as initial”.
+  - If a blank value is still modeled, show the numeric fallback visibly as a placeholder.
+- Income is annual-first take-home modeling.
+  - Monthly numbers are secondary views, not the primary framing.
+  - Backdoor Roth IRA should not be treated as monthly cashflow.
+  - HSA is a direct contribution input.
+  - Mega backdoor must not crowd out employer match.
+- Time-based modeling belongs on Projection.
+  - Keep per-year growth, overrides, horizon, and projection visuals on the Projection page rather than scattering them across input pages.
+- Advanced or less-frequent assumptions should live behind disclosure sections.
+- Use one consistent plotting frame for charts so axes, labels, and marks line up across tools.
 
-## Mortgage Tool Findings
-- Loan comparison is row-based.
-- Each loan row owns its own values.
-- Clicking a row makes it active.
-- A separate compare control selects the comparison row.
-- Current loan set:
-  - `30-year fixed`
-  - `7/1 ARM`
-  - `10/1 ARM`
-- Removed from the tool:
-  - `15-year fixed`
-  - `5/6 ARM`
-  - PMI controls / PMI calculation
-  - planned sale snapshot
-- ARM behavior:
-  - reset rate is optional
-  - blank reset rate means “same as initial”
-  - placeholder should show the numeric initial-rate value, not text like `same`
-- ARM input row should fit on one line:
-  - initial rate
-  - reset rate
-  - term
-- Chart layout issues came from inconsistent plot geometry; use one plotting frame for axes/labels/marks.
-- The estimated monthly payment block should not clip/trail off and should have clean top/bottom edges.
+## Tax And Modeling Assumptions
 
-## Income Tool Findings
-- Purpose is monthly take-home / cashflow, not total annual savings planning.
-- Backdoor Roth IRA was removed because the user front-loads it and does not want it treated as monthly cashflow.
-- HSA is a direct contribution input.
-- HSA slider max should match the single-filer limit being used.
-- Savings controls should be sliders in a 2x2 grid:
-  - employee 401(k)
-  - employer match rate
-  - mega backdoor amount
-  - HSA contribution
-- Mega backdoor must not crowd out employer match.
-  - Cap mega by remaining room after employee 401(k) plus employer match.
-- Tax assumptions belong in a collapsed section.
-- Limits can live in that collapsed section too.
-- Remove empty-looking rows caused by doubled section/child dividers.
-
-## Tax / Calculation Assumptions Captured In Thread
 - Employer match should be modeled as applying to the regular employee 401(k) deferral, not mega backdoor.
-- California bracket values in `income.html` were updated to the user-provided schedule during the thread.
 - HSA is treated as pre-tax for federal income tax and FICA in the calculator logic.
 
 ## Editing Guardrails
+
 - When changing shared styles, avoid breaking the app-specific layouts.
 - Prefer minimal, targeted visual changes.
 - If the user reacts negatively to a styling direction, revert that specific pass instead of defending it.

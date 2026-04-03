@@ -1,0 +1,10 @@
+{
+  "plugins": [
+    "prettier-plugin-tailwindcss",
+    "prettier-plugin-classnames",
+    "prettier-plugin-merge"
+  ],
+  "printWidth": 80,
+  "tailwindStylesheet": "./src/styles/base.css",
+  "tailwindFunctions": ["clsx", "cx", "cva"]
+}

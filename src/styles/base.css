@@ -1,0 +1,174 @@
+@import "tailwindcss";
+
+:root {
+  --sand: #efe4d3;
+  --sand-soft: #efe6d8;
+  --paper: #fbf7ef;
+  --paper-soft: #fffdf9;
+  --sea: #d8e5df;
+  --sea-soft: #dfe9e4;
+  --ink: #14252f;
+  --ink-soft: #566773;
+  --line: #14252f1f;
+  --line-soft: #14252f14;
+  --white: #ffffff;
+  --white-soft: #ffffffd9;
+  --surface: #faf6efd6;
+  --teal: #0d6a73;
+  --teal-soft: #0d6a731f;
+  --clay: #c56b3d;
+  --clay-soft: #c56b3d61;
+  --danger: #b03e2e80;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--ink);
+    font-family:
+      "Optima", "Avenir Next", "Gill Sans", "Trebuchet MS", sans-serif;
+    background: linear-gradient(
+      135deg,
+      var(--sand-soft) 0%,
+      var(--paper) 58%,
+      var(--sea-soft) 100%
+    );
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 0;
+    width: 14px;
+    pointer-events: none;
+    background: var(--teal);
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  h1,
+  h2,
+  h3,
+  p {
+    margin: 0;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family:
+      "Baskerville", "Iowan Old Style", "Palatino Linotype", "Book Antiqua",
+      serif;
+    letter-spacing: -0.03em;
+    line-height: 0.98;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 4vw, 2.8rem);
+  }
+
+  summary {
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+
+  th,
+  td {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--line-soft);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  td:not(:first-child),
+  th:not(:first-child) {
+    text-align: right;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--ink-soft);
+  }
+}
+
+@layer utilities {
+  .slider-input {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 2px;
+    padding: 0;
+    border: 0;
+    background: var(--line);
+    outline: none;
+  }
+
+  .slider-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 9999px;
+    border: 2px solid var(--teal);
+    background: #fff;
+    cursor: pointer;
+  }
+
+  .slider-input::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 9999px;
+    border: 2px solid var(--teal);
+    background: #fff;
+    cursor: pointer;
+  }
+
+  .slider-input::-moz-range-track {
+    height: 2px;
+    background: var(--line);
+    border: 0;
+  }
+}
