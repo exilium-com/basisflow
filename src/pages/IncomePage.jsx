@@ -238,7 +238,6 @@ export function IncomePage() {
                 label="Gross salary"
                 htmlFor="grossSalary"
                 prefix="$"
-                labelClassName="text-sm font-semibold normal-case tracking-normal text-(--ink-soft)"
                 min="0"
                 step="1000"
                 value={state.grossSalary}
@@ -254,7 +253,6 @@ export function IncomePage() {
               <SliderField
                 id="employee401k"
                 label="Employee 401(k)"
-                labelClassName="text-sm font-semibold normal-case tracking-normal text-(--ink-soft)"
                 valueLabel={usd(inputs.employee401k)}
                 min="0"
                 max="24500"
@@ -267,7 +265,6 @@ export function IncomePage() {
               <SliderField
                 id="matchRate"
                 label="Employer match rate"
-                labelClassName="text-sm font-semibold normal-case tracking-normal text-(--ink-soft)"
                 valueLabel={`${Math.round(inputs.matchRate)}%`}
                 min="0"
                 max="100"
@@ -280,7 +277,6 @@ export function IncomePage() {
               <SliderField
                 id="megaBackdoorInput"
                 label="Mega backdoor amount"
-                labelClassName="text-sm font-semibold normal-case tracking-normal text-(--ink-soft)"
                 valueLabel={usd(results.mega)}
                 min="0"
                 max={Math.max(0, Math.round(results.availableMegaRoom))}
@@ -296,7 +292,6 @@ export function IncomePage() {
               <SliderField
                 id="hsaContribution"
                 label="HSA contribution"
-                labelClassName="text-sm font-semibold normal-case tracking-normal text-(--ink-soft)"
                 valueLabel={usd(inputs.hsaContribution)}
                 min="0"
                 max="4400"
@@ -369,7 +364,6 @@ export function IncomePage() {
                 label="401(k) annual additions limit"
                 htmlFor="annualAdditions"
                 prefix="$"
-                labelClassName="text-sm font-semibold normal-case tracking-normal text-(--ink-soft)"
                 min="0"
                 step="100"
                 value={state.annualAdditions}
@@ -381,7 +375,6 @@ export function IncomePage() {
                 label="Federal standard deduction"
                 htmlFor="federalStandardDeduction"
                 prefix="$"
-                labelClassName="text-sm font-semibold normal-case tracking-normal text-(--ink-soft)"
                 min="0"
                 step="50"
                 value={state.federalStandardDeduction}
@@ -393,7 +386,6 @@ export function IncomePage() {
                 label="California standard deduction"
                 htmlFor="caStandardDeduction"
                 prefix="$"
-                labelClassName="text-sm font-semibold normal-case tracking-normal text-(--ink-soft)"
                 min="0"
                 step="50"
                 value={state.caStandardDeduction}
@@ -405,7 +397,6 @@ export function IncomePage() {
                 label="CA SDI rate"
                 htmlFor="caSdiRate"
                 suffix="%"
-                labelClassName="text-sm font-semibold normal-case tracking-normal text-(--ink-soft)"
                 min="0"
                 max="10"
                 step="0.1"
@@ -417,7 +408,6 @@ export function IncomePage() {
               <SelectField
                 label="CA SDI"
                 htmlFor="includeCaSdi"
-                labelClassName="text-sm font-semibold normal-case tracking-normal text-(--ink-soft)"
                 value={state.includeCaSdi}
                 onChange={(event) =>
                   updateField("includeCaSdi", event.target.value)

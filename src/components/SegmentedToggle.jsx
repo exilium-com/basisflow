@@ -4,9 +4,9 @@ import { cx } from "../lib/cx";
 const toggleClassName =
   "inline-flex h-10 items-center gap-1 border border-(--line) bg-(--white-soft) p-1";
 const segmentClassName =
-  "h-8 rounded-sm border border-transparent bg-transparent px-3 text-xs font-bold uppercase tracking-wide text-(--ink) transition duration-150 hover:bg-(--teal-soft) focus-visible:outline-none";
+  "h-8 rounded-sm border border-transparent bg-transparent px-3 text-sm font-bold text-(--ink) transition duration-150 hover:bg-(--teal-soft) focus-visible:outline-none";
 const activeSegmentClassName =
-  "!border-(--teal) !bg-(--teal-soft) !text-(--teal)";
+  "!border-(--teal) !bg-(--teal-tint) !text-(--teal)";
 
 export function SegmentedToggle({
   options,

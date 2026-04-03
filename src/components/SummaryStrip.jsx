@@ -2,17 +2,21 @@ import React from "react";
 
 export function SummaryStrip({ kicker, value, note = null }) {
   return (
-    <div className="border-b border-(--line) pb-4">
-      <p className="mb-2 text-xs font-extrabold uppercase tracking-widest text-(--ink-soft)">
+    <div className="grid gap-2 border-b border-(--line) pb-4">
+      <p
+        className="text-xs font-extrabold tracking-widest text-(--ink-soft)
+          uppercase"
+      >
         {kicker}
       </p>
-      <strong className="block break-words font-serif text-5xl leading-none tracking-tight text-(--teal) md:text-6xl">
+      <strong
+        className="block font-serif text-5xl leading-none tracking-tight text-(--teal)
+          md:text-6xl"
+      >
         {value}
       </strong>
       {note ? (
-        <p className="mt-3 max-w-prose leading-relaxed text-(--ink-soft)">
-          {note}
-        </p>
+        <p className="max-w-prose pt-1 leading-relaxed text-(--ink-soft)">{note}</p>
       ) : null}
     </div>
   );

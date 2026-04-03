@@ -79,6 +79,96 @@ const NUMERIC_DEFAULTS = {
   hoaPerMonth: 0,
 };
 
+const LOAN_FORM_FIELDS = {
+  fixed30: [
+    {
+      field: "rate",
+      label: "Interest rate",
+      htmlFor: "rate_fixed30",
+      suffix: "%",
+      step: "0.001",
+    },
+    {
+      field: "term",
+      label: "Loan term",
+      htmlFor: "term_fixed30",
+      suffix: "years",
+      step: "1",
+    },
+  ],
+  arm76: [
+    {
+      field: "initialRate",
+      label: "Initial rate",
+      htmlFor: "rate_arm76_initial",
+      suffix: "%",
+      step: "0.001",
+    },
+    {
+      field: "adjustedRate",
+      label: "Reset rate",
+      htmlFor: "rate_arm76_adjusted",
+      suffix: "%",
+      step: "0.001",
+      placeholderFrom: "initialRate",
+    },
+    {
+      field: "term",
+      label: "Loan term",
+      htmlFor: "term_arm76",
+      suffix: "years",
+      step: "1",
+    },
+  ],
+  arm106: [
+    {
+      field: "initialRate",
+      label: "Initial rate",
+      htmlFor: "rate_arm106_initial",
+      suffix: "%",
+      step: "0.001",
+    },
+    {
+      field: "adjustedRate",
+      label: "Reset rate",
+      htmlFor: "rate_arm106_adjusted",
+      suffix: "%",
+      step: "0.001",
+      placeholderFrom: "initialRate",
+    },
+    {
+      field: "term",
+      label: "Loan term",
+      htmlFor: "term_arm106",
+      suffix: "years",
+      step: "1",
+    },
+  ],
+};
+
+const ADVANCED_FIELDS = [
+  {
+    field: "propertyTaxRate",
+    label: "Property tax rate",
+    suffix: "%",
+    step: "0.001",
+  },
+  {
+    field: "insurancePerYear",
+    label: "Home insurance",
+    prefix: "$",
+    suffix: "/ year",
+    step: "1",
+  },
+  {
+    field: "hoaPerMonth",
+    label: "HOA",
+    prefix: "$",
+    suffix: "/ month",
+    step: "1",
+  },
+];
+
 function createDefaultState() {
   return {
     homePrice: String(NUMERIC_DEFAULTS.homePrice),
@@ -964,7 +1054,6 @@ function CompositionChart({ scenario }) {
 }
 
 function LoanOptionCard({
-  type,
   option,
   active,
   compareSelected,
@@ -978,7 +1067,7 @@ function LoanOptionCard({
   const metaTextClassName =
     "whitespace-nowrap text-sm font-bold text-(--ink-soft)";
   const compareButtonClassName =
-    "min-w-24 border-0 border-l border-l-(--line-soft) bg-transparent px-4 py-0 text-xs font-bold uppercase tracking-wide text-(--ink-soft)";
+    "min-w-24 border-0 border-l border-l-(--line-soft) bg-transparent px-4 py-0 text-sm font-bold text-(--ink-soft)";
   const detailBodyClassName =
     "border-t border-t-(--line-soft) px-4 pt-3 pb-4";
 
@@ -1176,17 +1265,17 @@ export function MortgagePage() {
   ];
 
   const comparisonLabelClassName =
-    "border-b border-b-(--line-soft) py-2.5 text-left text-sm font-semibold text-(--ink-soft)";
+    "border-b border-b-(--line-soft) py-3 text-left text-sm text-(--ink)";
   const loanOptionFieldsClassName = "grid grid-cols-3 gap-4 max-md:grid-cols-1";
   const advancedGridClassName =
     "grid grid-cols-2 gap-x-4 gap-y-5 max-md:grid-cols-1";
-  const comparisonGridClassName = "grid gap-4 lg:grid-cols-2";
   const sidebarControlsClassName = "grid gap-4";
   const downPaymentFieldClassName = "grid min-w-0 gap-1";
   const chartSectionBodyClassName = "grid gap-4";
-  const comparisonArticleClassName = "relative overflow-hidden border-0 bg-transparent";
+  const comparisonArticleClassName =
+    "border border-(--line-soft) bg-(--white-soft) px-4 pt-4 pb-2";
   const comparisonValueClassName =
-    "border-b border-b-(--line-soft) py-2.5 text-right text-sm";
+    "border-b border-b-(--line-soft) py-3 text-right text-base font-semibold text-(--ink)";
 
   function updateState(patch) {
     setState((current) => ({ ...current, ...patch }));
@@ -1300,6 +1389,51 @@ export function MortgagePage() {
     setState(createDefaultState());
   }
 
+  function renderLoanOptionCard(loanType) {
+    const loanConfig = LOAN_DEFAULTS[loanType];
+    const loanInputs = inputs.loanOptions[loanType];
+    const loanState = state.loanOptions[loanType];
+    const loanValidation = validation.loanOptions[loanType];
+
+    return (
+      <LoanOptionCard
+        key={loanType}
+        option={loanConfig}
+        active={state.activeLoanType === loanType}
+        compareSelected={state.compareLoanType === loanType}
+        meta={getLoanMeta(loanInputs)}
+        onSelect={() => updateState({ activeLoanType: loanType })}
+        onCompare={() => updateState({ compareLoanType: loanType })}
+      >
+        <div className={loanOptionFieldsClassName}>
+          {LOAN_FORM_FIELDS[loanType].map((config) => (
+            <NumberField
+              key={config.field}
+              label={config.label}
+              htmlFor={config.htmlFor}
+              prefix={config.prefix}
+              suffix={config.suffix}
+              invalid={loanValidation[config.field]}
+              value={loanState[config.field]}
+              min={LOAN_FIELD_CONFIGS[loanType][config.field].min}
+              max={LOAN_FIELD_CONFIGS[loanType][config.field].max}
+              step={config.step}
+              placeholder={
+                config.placeholderFrom
+                  ? String(loanInputs[config.placeholderFrom])
+                  : undefined
+              }
+              onChange={(event) =>
+                updateLoanField(loanType, config.field, event.target.value)
+              }
+              onBlur={commitLoanField.bind(null, loanType, config.field)}
+            />
+          ))}
+        </div>
+      </LoanOptionCard>
+    );
+  }
+
   return (
     <PageShell
       actions={
@@ -1335,46 +1469,38 @@ export function MortgagePage() {
 
                   <div className={downPaymentFieldClassName}>
                     <div className={fieldLabelClass}>Down payment</div>
-                    <SegmentedToggle
-                      ariaLabel="Down payment mode"
-                      value={state.downPaymentMode}
-                      onChange={handleDownPaymentMode}
-                      options={[
-                        { value: "dollar", label: "Dollar amount" },
-                        { value: "percent", label: "Percent" },
-                      ]}
-                    />
-                    {state.downPaymentMode === "dollar" ? (
+                    <div className="flex items-start gap-2">
+                      <SegmentedToggle
+                        ariaLabel="Down payment mode"
+                        className="shrink-0"
+                        value={state.downPaymentMode}
+                        onChange={handleDownPaymentMode}
+                        options={[
+                          { value: "dollar", label: "$" },
+                          { value: "percent", label: "%" },
+                        ]}
+                      />
                       <NumberField
                         label={null}
                         htmlFor="downPayment"
-                        prefix="$"
+                        className="min-w-0 flex-1"
                         invalid={validation.downPayment}
                         value={state.downPayment}
                         min="0"
-                        max={inputs.homePrice}
-                        step="1"
+                        max={
+                          state.downPaymentMode === "dollar"
+                            ? inputs.homePrice
+                            : 100
+                        }
+                        step={
+                          state.downPaymentMode === "dollar" ? "1" : "0.001"
+                        }
                         onChange={(event) =>
                           updateState({ downPayment: event.target.value })
                         }
                         onBlur={commitDownPayment}
                       />
-                    ) : (
-                      <NumberField
-                        label={null}
-                        htmlFor="downPayment"
-                        suffix="%"
-                        invalid={validation.downPayment}
-                        value={state.downPayment}
-                        min="0"
-                        max="100"
-                        step="0.001"
-                        onChange={(event) =>
-                          updateState({ downPayment: event.target.value })
-                        }
-                        onBlur={commitDownPayment}
-                      />
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1384,178 +1510,7 @@ export function MortgagePage() {
         >
           <Section title="Loan Options">
             <div className="grid gap-2.5" role="list">
-              <LoanOptionCard
-                type="fixed30"
-                option={LOAN_DEFAULTS.fixed30}
-                active={state.activeLoanType === "fixed30"}
-                compareSelected={state.compareLoanType === "fixed30"}
-                meta={getLoanMeta(inputs.loanOptions.fixed30)}
-                onSelect={() => updateState({ activeLoanType: "fixed30" })}
-                onCompare={() => updateState({ compareLoanType: "fixed30" })}
-              >
-                <div className={loanOptionFieldsClassName}>
-                  <NumberField
-                    label="Interest rate"
-                    htmlFor="rate_fixed30"
-                    suffix="%"
-                    invalid={validation.loanOptions.fixed30.rate}
-                    value={state.loanOptions.fixed30.rate}
-                    min={LOAN_FIELD_CONFIGS.fixed30.rate.min}
-                    max={LOAN_FIELD_CONFIGS.fixed30.rate.max}
-                    step="0.001"
-                    onChange={(event) =>
-                      updateLoanField("fixed30", "rate", event.target.value)
-                    }
-                    onBlur={commitLoanField.bind(null, "fixed30", "rate")}
-                  />
-                  <NumberField
-                    label="Loan term"
-                    htmlFor="term_fixed30"
-                    suffix="years"
-                    invalid={validation.loanOptions.fixed30.term}
-                    value={state.loanOptions.fixed30.term}
-                    min={LOAN_FIELD_CONFIGS.fixed30.term.min}
-                    max={LOAN_FIELD_CONFIGS.fixed30.term.max}
-                    step="1"
-                    onChange={(event) =>
-                      updateLoanField("fixed30", "term", event.target.value)
-                    }
-                    onBlur={commitLoanField.bind(null, "fixed30", "term")}
-                  />
-                </div>
-              </LoanOptionCard>
-
-              <LoanOptionCard
-                type="arm76"
-                option={LOAN_DEFAULTS.arm76}
-                active={state.activeLoanType === "arm76"}
-                compareSelected={state.compareLoanType === "arm76"}
-                meta={getLoanMeta(inputs.loanOptions.arm76)}
-                onSelect={() => updateState({ activeLoanType: "arm76" })}
-                onCompare={() => updateState({ compareLoanType: "arm76" })}
-              >
-                <div className={loanOptionFieldsClassName}>
-                  <NumberField
-                    label="Initial rate"
-                    htmlFor="rate_arm76_initial"
-                    suffix="%"
-                    invalid={validation.loanOptions.arm76.initialRate}
-                    value={state.loanOptions.arm76.initialRate}
-                    min={LOAN_FIELD_CONFIGS.arm76.initialRate.min}
-                    max={LOAN_FIELD_CONFIGS.arm76.initialRate.max}
-                    step="0.001"
-                    onChange={(event) =>
-                      updateLoanField(
-                        "arm76",
-                        "initialRate",
-                        event.target.value,
-                      )
-                    }
-                    onBlur={commitLoanField.bind(null, "arm76", "initialRate")}
-                  />
-                  <NumberField
-                    label="Reset rate"
-                    htmlFor="rate_arm76_adjusted"
-                    suffix="%"
-                    invalid={validation.loanOptions.arm76.adjustedRate}
-                    value={state.loanOptions.arm76.adjustedRate}
-                    min={LOAN_FIELD_CONFIGS.arm76.adjustedRate.min}
-                    max={LOAN_FIELD_CONFIGS.arm76.adjustedRate.max}
-                    step="0.001"
-                    placeholder={String(inputs.loanOptions.arm76.initialRate)}
-                    onChange={(event) =>
-                      updateLoanField(
-                        "arm76",
-                        "adjustedRate",
-                        event.target.value,
-                      )
-                    }
-                    onBlur={commitLoanField.bind(null, "arm76", "adjustedRate")}
-                  />
-                  <NumberField
-                    label="Loan term"
-                    htmlFor="term_arm76"
-                    suffix="years"
-                    invalid={validation.loanOptions.arm76.term}
-                    value={state.loanOptions.arm76.term}
-                    min={LOAN_FIELD_CONFIGS.arm76.term.min}
-                    max={LOAN_FIELD_CONFIGS.arm76.term.max}
-                    step="1"
-                    onChange={(event) =>
-                      updateLoanField("arm76", "term", event.target.value)
-                    }
-                    onBlur={commitLoanField.bind(null, "arm76", "term")}
-                  />
-                </div>
-              </LoanOptionCard>
-
-              <LoanOptionCard
-                type="arm106"
-                option={LOAN_DEFAULTS.arm106}
-                active={state.activeLoanType === "arm106"}
-                compareSelected={state.compareLoanType === "arm106"}
-                meta={getLoanMeta(inputs.loanOptions.arm106)}
-                onSelect={() => updateState({ activeLoanType: "arm106" })}
-                onCompare={() => updateState({ compareLoanType: "arm106" })}
-              >
-                <div className={loanOptionFieldsClassName}>
-                  <NumberField
-                    label="Initial rate"
-                    htmlFor="rate_arm106_initial"
-                    suffix="%"
-                    invalid={validation.loanOptions.arm106.initialRate}
-                    value={state.loanOptions.arm106.initialRate}
-                    min={LOAN_FIELD_CONFIGS.arm106.initialRate.min}
-                    max={LOAN_FIELD_CONFIGS.arm106.initialRate.max}
-                    step="0.001"
-                    onChange={(event) =>
-                      updateLoanField(
-                        "arm106",
-                        "initialRate",
-                        event.target.value,
-                      )
-                    }
-                    onBlur={commitLoanField.bind(null, "arm106", "initialRate")}
-                  />
-                  <NumberField
-                    label="Reset rate"
-                    htmlFor="rate_arm106_adjusted"
-                    suffix="%"
-                    invalid={validation.loanOptions.arm106.adjustedRate}
-                    value={state.loanOptions.arm106.adjustedRate}
-                    min={LOAN_FIELD_CONFIGS.arm106.adjustedRate.min}
-                    max={LOAN_FIELD_CONFIGS.arm106.adjustedRate.max}
-                    step="0.001"
-                    placeholder={String(inputs.loanOptions.arm106.initialRate)}
-                    onChange={(event) =>
-                      updateLoanField(
-                        "arm106",
-                        "adjustedRate",
-                        event.target.value,
-                      )
-                    }
-                    onBlur={commitLoanField.bind(
-                      null,
-                      "arm106",
-                      "adjustedRate",
-                    )}
-                  />
-                  <NumberField
-                    label="Loan term"
-                    htmlFor="term_arm106"
-                    suffix="years"
-                    invalid={validation.loanOptions.arm106.term}
-                    value={state.loanOptions.arm106.term}
-                    min={LOAN_FIELD_CONFIGS.arm106.term.min}
-                    max={LOAN_FIELD_CONFIGS.arm106.term.max}
-                    step="1"
-                    onChange={(event) =>
-                      updateLoanField("arm106", "term", event.target.value)
-                    }
-                    onBlur={commitLoanField.bind(null, "arm106", "term")}
-                  />
-                </div>
-              </LoanOptionCard>
+              {LOAN_ORDER.map(renderLoanOptionCard)}
             </div>
           </Section>
 
@@ -1566,50 +1521,24 @@ export function MortgagePage() {
             onToggle={(open) => updateState({ advancedOpen: open })}
           >
             <div className={advancedGridClassName}>
-              <NumberField
-                label="Property tax rate"
-                htmlFor="propertyTaxRate"
-                suffix="%"
-                invalid={validation.propertyTaxRate}
-                value={state.propertyTaxRate}
-                min={FIELD_CONFIGS.propertyTaxRate.min}
-                max={FIELD_CONFIGS.propertyTaxRate.max}
-                step="0.001"
-                onChange={(event) =>
-                  updateState({ propertyTaxRate: event.target.value })
-                }
-                onBlur={commitTopField.bind(null, "propertyTaxRate")}
-              />
-              <NumberField
-                label="Home insurance"
-                htmlFor="insurancePerYear"
-                prefix="$"
-                suffix="/ year"
-                invalid={validation.insurancePerYear}
-                value={state.insurancePerYear}
-                min={FIELD_CONFIGS.insurancePerYear.min}
-                max={FIELD_CONFIGS.insurancePerYear.max}
-                step="1"
-                onChange={(event) =>
-                  updateState({ insurancePerYear: event.target.value })
-                }
-                onBlur={commitTopField.bind(null, "insurancePerYear")}
-              />
-              <NumberField
-                label="HOA"
-                htmlFor="hoaPerMonth"
-                prefix="$"
-                suffix="/ month"
-                invalid={validation.hoaPerMonth}
-                value={state.hoaPerMonth}
-                min={FIELD_CONFIGS.hoaPerMonth.min}
-                max={FIELD_CONFIGS.hoaPerMonth.max}
-                step="1"
-                onChange={(event) =>
-                  updateState({ hoaPerMonth: event.target.value })
-                }
-                onBlur={commitTopField.bind(null, "hoaPerMonth")}
-              />
+              {ADVANCED_FIELDS.map((config) => (
+                <NumberField
+                  key={config.field}
+                  label={config.label}
+                  htmlFor={config.field}
+                  prefix={config.prefix}
+                  suffix={config.suffix}
+                  invalid={validation[config.field]}
+                  value={state[config.field]}
+                  min={FIELD_CONFIGS[config.field].min}
+                  max={FIELD_CONFIGS[config.field].max}
+                  step={config.step}
+                  onChange={(event) =>
+                    updateState({ [config.field]: event.target.value })
+                  }
+                  onBlur={commitTopField.bind(null, config.field)}
+                />
+              ))}
             </div>
           </AdvancedPanel>
 
@@ -1633,28 +1562,30 @@ export function MortgagePage() {
             </div>
           </Section>
 
-          <Section title="Comparison" divider>
-            <div className={comparisonGridClassName}>
+          {state.activeLoanType !== state.compareLoanType ? (
+            <Section title="Comparison" divider>
               <article className={comparisonArticleClassName}>
-                <h3 className="mb-3 text-xl font-bold">{`${scenario.typeLabel} vs ${compareScenario.typeLabel}`}</h3>
+                <p className="mb-3 text-sm leading-relaxed text-(--ink-soft)">
+                  {`${scenario.typeLabel} against ${compareScenario.typeLabel}`}
+                </p>
                 <table className="w-full border-collapse">
                   <thead>
                     <tr>
                       <th
                         scope="col"
-                        className="border-b border-b-(--line-soft) py-2.5 text-left text-xs font-extrabold uppercase tracking-wide text-(--ink)"
+                        className="border-b border-b-(--line-soft) py-2.5 text-left text-xs font-extrabold uppercase tracking-wide text-(--ink-soft)"
                       >
                         Metric
                       </th>
                       <th
                         scope="col"
-                        className="border-b border-b-(--line-soft) py-2.5 text-right text-xs font-extrabold uppercase tracking-wide text-(--ink)"
+                        className="border-b border-b-(--line-soft) py-2.5 text-right text-xs font-extrabold uppercase tracking-wide text-(--ink-soft)"
                       >
                         {scenario.typeLabel}
                       </th>
                       <th
                         scope="col"
-                        className="border-b border-b-(--line-soft) py-2.5 text-right text-xs font-extrabold uppercase tracking-wide text-(--ink)"
+                        className="border-b border-b-(--line-soft) py-2.5 text-right text-xs font-extrabold uppercase tracking-wide text-(--ink-soft)"
                       >
                         {compareScenario.typeLabel}
                       </th>
@@ -1663,20 +1594,16 @@ export function MortgagePage() {
                   <tbody>
                     {comparisonRows.map((row) => (
                       <tr key={row.label}>
-                        <td className={comparisonLabelClassName}>
-                          {row.label}
-                        </td>
+                        <td className={comparisonLabelClassName}>{row.label}</td>
                         <td className={comparisonValueClassName}>{row.left}</td>
-                        <td className={comparisonValueClassName}>
-                          {row.right}
-                        </td>
+                        <td className={comparisonValueClassName}>{row.right}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </article>
-            </div>
-          </Section>
+            </Section>
+          ) : null}
         </WorkspaceLayout>
       </main>
     </PageShell>

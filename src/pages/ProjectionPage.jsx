@@ -726,18 +726,16 @@ export function ProjectionPage() {
 
   return (
     <PageShell
-        actions={
-          <div className="flex flex-wrap items-center gap-3">
-            <DisplayToggle
-              value={state.displayMode}
-              onChange={(mode) => updateState({ displayMode: mode })}
-            />
-            <ActionButton onClick={reset}>
-              Reset
-            </ActionButton>
-          </div>
-        }
-      >
+      actions={
+        <div className="flex flex-wrap items-center gap-3">
+          <DisplayToggle
+            value={state.displayMode}
+            onChange={(mode) => updateState({ displayMode: mode })}
+          />
+          <ActionButton onClick={reset}>Reset</ActionButton>
+        </div>
+      }
+    >
       <main className={surfaceClass}>
         <WorkspaceLayout
           summary={
@@ -759,10 +757,14 @@ export function ProjectionPage() {
                       <div className="flex items-baseline justify-between gap-3">
                         <span className={fieldLabelClass}>Current year</span>
                         <span className={fieldLabelClass}>
-                        {selectedYearLabel}
+                          {selectedYearLabel}
                         </span>
                       </div>
-                      <div className="flex min-h-10 items-center border border-(--line) border-l-4 border-l-(--teal-soft) bg-(--white) px-3">
+                      <div
+                        className="flex min-h-10 items-center border border-l-4
+                          border-(--line) border-l-(--teal-soft) bg-(--white)
+                          px-3"
+                      >
                         <input
                           type="range"
                           min="0"
@@ -803,7 +805,6 @@ export function ProjectionPage() {
                   <NumberField
                     label="Inflation"
                     htmlFor="inflationRate"
-                    labelClassName="text-(--ink-soft)"
                     suffix="%"
                     min="0"
                     step="0.1"
@@ -815,7 +816,6 @@ export function ProjectionPage() {
                   <NumberField
                     label="Baseline asset growth"
                     htmlFor="assetGrowthRate"
-                    labelClassName="text-(--ink-soft)"
                     suffix="%"
                     min="0"
                     step="0.1"
@@ -827,7 +827,6 @@ export function ProjectionPage() {
                   <NumberField
                     label="Baseline expense growth"
                     htmlFor="expenseGrowthRate"
-                    labelClassName="text-(--ink-soft)"
                     suffix="%"
                     min="-20"
                     step="0.1"
@@ -839,7 +838,6 @@ export function ProjectionPage() {
                   <NumberField
                     label="Take-home growth"
                     htmlFor="takeHomeGrowthRate"
-                    labelClassName="text-(--ink-soft)"
                     suffix="%"
                     min="-10"
                     step="0.1"
@@ -851,7 +849,6 @@ export function ProjectionPage() {
                   <NumberField
                     label="Home appreciation"
                     htmlFor="homeAppreciationRate"
-                    labelClassName="text-(--ink-soft)"
                     suffix="%"
                     min="-10"
                     step="0.1"
@@ -863,7 +860,6 @@ export function ProjectionPage() {
                   <NumberField
                     label="Reserve cash yield"
                     htmlFor="cashYieldRate"
-                    labelClassName="text-(--ink-soft)"
                     suffix="%"
                     min="-10"
                     step="0.1"
@@ -878,86 +874,89 @@ export function ProjectionPage() {
           }
         >
           <Section title="Free Cash Allocation">
-          <div className="grid gap-2.5">
-            {assetInputs.buckets.map((bucket) => (
-              <RowItem
-                key={bucket.id}
-                    headerClassName="grid items-start gap-4 lg:grid-cols-3"
-                detailsTitle="Asset overrides"
-                detailsSummary={getAssetOverrideSummary(bucket)}
-                detailsOpen={Boolean(
-                  state.assetOverrides?.[bucket.id]?.detailsOpen,
-                )}
-                onToggleDetails={(open) =>
-                  toggleAssetOverrideDetails(bucket.id, open)
-                }
-                    detailsContentClassName="grid gap-3 sm:grid-cols-2"
-                header={
-                      <>
-                        <div className="min-w-0">
-                          <div className={snapshotLabelClass}>{bucket.label}</div>
-                        </div>
+            <div className="grid gap-2.5">
+              {assetInputs.buckets.map((bucket) => (
+                <RowItem
+                  key={bucket.id}
+                  headerClassName="grid items-start gap-4 lg:grid-cols-3"
+                  detailsTitle="Asset overrides"
+                  detailsSummary={getAssetOverrideSummary(bucket)}
+                  detailsOpen={Boolean(
+                    state.assetOverrides?.[bucket.id]?.detailsOpen,
+                  )}
+                  onToggleDetails={(open) =>
+                    toggleAssetOverrideDetails(bucket.id, open)
+                  }
+                  detailsContentClassName="grid gap-3 sm:grid-cols-2"
+                  header={
+                    <>
+                      <div className="min-w-0">
+                        <div className={snapshotLabelClass}>{bucket.label}</div>
+                      </div>
                       <div>
-                        <div className="text-xs font-extrabold uppercase tracking-wide text-(--ink-soft)">
+                        <div
+                          className="text-xs font-extrabold tracking-wide
+                            text-(--ink-soft) uppercase"
+                        >
                           Current value
                         </div>
-                      <div className={snapshotValueClass}>
-                        {usd(bucket.current)}
+                        <div className={snapshotValueClass}>
+                          {usd(bucket.current)}
+                        </div>
                       </div>
-                    </div>
-                    <NumberField
-                      label="Free cash %"
-                      suffix="%"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value={state.allocations?.[bucket.id] ?? "0"}
-                      onChange={(event) =>
-                        updateAllocation(bucket.id, event.target.value)
-                      }
-                    />
-                  </>
-                }
-              >
-                <NumberField
-                  label="Annual add"
-                  htmlFor={`assetContribution-${bucket.id}`}
-                  prefix="$"
-                  min="0"
-                  step="500"
-                  compact
-                  labelClassName="text-xs font-extrabold uppercase tracking-wide text-(--ink-soft)"
-                  value={state.assetOverrides?.[bucket.id]?.contribution ?? ""}
-                  placeholder="0"
-                  onChange={(event) =>
-                    updateAssetOverride(bucket.id, {
-                      contribution: event.target.value,
-                    })
+                      <NumberField
+                        label="Free cash %"
+                        suffix="%"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={state.allocations?.[bucket.id] ?? "0"}
+                        onChange={(event) =>
+                          updateAllocation(bucket.id, event.target.value)
+                        }
+                      />
+                    </>
                   }
-                />
-                <NumberField
-                  label="Growth override"
-                  htmlFor={`assetGrowth-${bucket.id}`}
-                  suffix="%"
-                  min="0"
-                  step="0.1"
-                  compact
-                  labelClassName="text-xs font-extrabold uppercase tracking-wide text-(--ink-soft)"
-                  value={state.assetOverrides?.[bucket.id]?.growth ?? ""}
-                  placeholder={state.assetGrowthRate}
-                  onChange={(event) =>
-                    updateAssetOverride(bucket.id, {
-                      growth: event.target.value,
-                    })
-                  }
-                />
-              </RowItem>
-            ))}
-          </div>
+                >
+                  <NumberField
+                    label="Annual add"
+                    htmlFor={`assetContribution-${bucket.id}`}
+                    prefix="$"
+                    min="0"
+                    step="500"
+                    compact
+                    value={
+                      state.assetOverrides?.[bucket.id]?.contribution ?? ""
+                    }
+                    placeholder="0"
+                    onChange={(event) =>
+                      updateAssetOverride(bucket.id, {
+                        contribution: event.target.value,
+                      })
+                    }
+                  />
+                  <NumberField
+                    label="Growth override"
+                    htmlFor={`assetGrowth-${bucket.id}`}
+                    suffix="%"
+                    min="0"
+                    step="0.1"
+                    compact
+                    value={state.assetOverrides?.[bucket.id]?.growth ?? ""}
+                    placeholder={state.assetGrowthRate}
+                    onChange={(event) =>
+                      updateAssetOverride(bucket.id, {
+                        growth: event.target.value,
+                      })
+                    }
+                  />
+                </RowItem>
+              ))}
+            </div>
 
-          <div className="text-sm leading-relaxed text-(--ink-soft)">
-            {allocationNote}
-          </div>
+            <div className="text-sm leading-relaxed text-(--ink-soft)">
+              {allocationNote}
+            </div>
           </Section>
 
           <Section title="Expense Growth Overrides" divider>
@@ -983,7 +982,10 @@ export function ProjectionPage() {
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs font-extrabold uppercase tracking-wide text-(--ink-soft)">
+                        <div
+                          className="text-xs font-extrabold tracking-wide
+                            text-(--ink-soft) uppercase"
+                        >
                           Amount
                         </div>
                         <div className={snapshotValueClass}>
@@ -991,7 +993,10 @@ export function ProjectionPage() {
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs font-extrabold uppercase tracking-wide text-(--ink-soft)">
+                        <div
+                          className="text-xs font-extrabold tracking-wide
+                            text-(--ink-soft) uppercase"
+                        >
                           Cadence
                         </div>
                         <div className={snapshotValueClass}>
@@ -1010,7 +1015,6 @@ export function ProjectionPage() {
                     min="-20"
                     step="0.1"
                     compact
-                    labelClassName="text-xs font-extrabold uppercase tracking-wide text-(--ink-soft)"
                     value={
                       state.expenseOverrides?.[expense.id]?.growthRate ?? ""
                     }
@@ -1084,11 +1088,11 @@ export function ProjectionPage() {
                 { label: "Reserve cash", color: "#566773" },
               ]}
             >
-                <NetWorthChart
-                  inputs={projectionInputs}
-                  results={results}
-                  currentYear={projectionInputs.currentYear}
-                />
+              <NetWorthChart
+                inputs={projectionInputs}
+                results={results}
+                currentYear={projectionInputs.currentYear}
+              />
             </ChartPanel>
           </Section>
 
@@ -1100,11 +1104,11 @@ export function ProjectionPage() {
                 { label: "Embedded tax", color: "#d28a47" },
               ]}
             >
-                <AssetTaxChart
-                  inputs={projectionInputs}
-                  results={results}
-                  currentYear={projectionInputs.currentYear}
-                />
+              <AssetTaxChart
+                inputs={projectionInputs}
+                results={results}
+                currentYear={projectionInputs.currentYear}
+              />
             </ChartPanel>
           </Section>
 

@@ -16,14 +16,14 @@ export function RowItem({
   const defaultHeaderPadding = onRemove
     ? "px-4 pt-3 pb-3 pr-12"
     : "px-4 pt-3 pb-3";
-  const removeButtonClassName =
-    "absolute top-2 right-3 z-10 border-0 bg-transparent p-0 text-xs font-extrabold leading-none text-(--ink-soft) transition hover:text-(--ink) focus-visible:outline-none";
 
   return (
     <article className="relative border border-(--line) bg-(--white-soft)">
       {onRemove ? (
         <button
-          className={removeButtonClassName}
+          className="absolute top-2 right-3 z-10 border-0 bg-transparent p-0
+            text-xs leading-none font-extrabold text-(--ink-soft) transition
+            hover:text-(--ink) focus-visible:outline-none"
           type="button"
           aria-label={removeLabel}
           onClick={onRemove}

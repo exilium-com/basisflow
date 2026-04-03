@@ -5,7 +5,10 @@ import { cx } from "../lib/cx";
 
 export function PageShell({ actions = null, children }) {
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-3 sm:px-4">
+    <div
+      className="mx-auto flex min-h-screen w-full max-w-screen-2xl flex-col px-3
+        sm:px-4"
+    >
       <nav
         className="mt-3 mb-3 flex flex-wrap gap-2 border-b border-(--line) pb-3"
         aria-label="Tools"
@@ -15,14 +18,20 @@ export function PageShell({ actions = null, children }) {
             key={item.key}
             className={({ isActive }) =>
               cx(
-                "inline-flex h-10 items-center gap-2 border border-(--line) bg-(--white-soft) px-3 text-xs font-extrabold uppercase tracking-wide text-(--ink) no-underline transition duration-150 hover:-translate-y-px hover:bg-(--white) focus-visible:-translate-y-px focus-visible:bg-(--white) focus-visible:outline-none",
-                isActive && "border-(--teal) bg-(--teal-soft)",
+                `inline-flex h-10 items-center gap-2 border border-(--line)
+                bg-(--white-soft) px-3 text-xs font-extrabold tracking-wide
+                text-(--ink) uppercase no-underline transition duration-150
+                hover:-translate-y-px hover:bg-(--white)
+                focus-visible:-translate-y-px focus-visible:bg-(--white)
+                focus-visible:outline-none`,
+                isActive &&
+                  "!border-(--teal) !bg-(--teal-tint) !text-(--teal)",
               )
             }
             to={item.to}
             end={item.to === "/"}
           >
-            <span className="text-xs text-(--ink-soft)">{item.index}</span>
+            <span className="text-xs opacity-70">{item.index}</span>
             <span>{item.label}</span>
           </NavLink>
         ))}

@@ -16,6 +16,7 @@
   --surface: #faf6efd6;
   --teal: #0d6a73;
   --teal-soft: #0d6a731f;
+  --teal-tint: #dcebec;
   --clay: #c56b3d;
   --clay-soft: #c56b3d61;
   --danger: #b03e2e80;
@@ -28,6 +29,7 @@
 
   html {
     scroll-behavior: smooth;
+    scrollbar-gutter: stable;
   }
 
   body {
@@ -36,12 +38,7 @@
     color: var(--ink);
     font-family:
       "Optima", "Avenir Next", "Gill Sans", "Trebuchet MS", sans-serif;
-    background: linear-gradient(
-      135deg,
-      var(--sand-soft) 0%,
-      var(--paper) 58%,
-      var(--sea-soft) 100%
-    );
+    background: var(--paper);
   }
 
   body::before {

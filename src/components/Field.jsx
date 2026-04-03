@@ -2,7 +2,7 @@ import React from "react";
 import { cx } from "../lib/cx";
 
 export const fieldLabelClass =
-  "text-xs font-extrabold uppercase tracking-wide text-(--ink)";
+  "text-sm text-(--ink-soft)";
 
 const inputBaseClassName =
   "w-full min-w-0 border-0 bg-transparent p-0 text-base font-semibold text-(--ink) outline-none";

@@ -57,6 +57,17 @@
 - Shared palette/page chrome should live in React-owned styling primitives, not HTML style blocks.
 - Prefer named shared style constants or opinionated shared components over repeated inline utility strings.
 - Keep tool-specific styling local only when it is truly specific to that tool.
+- Typography and emphasis should follow one consistent taxonomy:
+  - Use `ink` for anything the user is expected to actually read or compare.
+    - Examples: field values, primary headings, row titles, table values, chart titles, active control labels, and important summary numbers.
+  - Use `ink-soft` for supporting context, never the main payload.
+    - Examples: field labels, helper copy, secondary metadata, legends, suffix/prefix text, disclosure summaries, and explanatory notes.
+  - Use small caps / uppercase only for UI chrome and structural labels.
+    - Examples: field labels, summary kickers, toggle labels, nav labels, table headers, and disclosure labels.
+  - Use normal title case for real names and content labels.
+    - Examples: section titles, chart titles, and button text.
+  - Use sentence case for body copy and explanatory text.
+  - Never use uppercase for user-entered names or asset/expense names.
 - Current shared pieces:
   - palette
   - page shell
