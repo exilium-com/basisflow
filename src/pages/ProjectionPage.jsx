@@ -3,11 +3,12 @@ import { AdvancedPanel } from "../components/AdvancedPanel";
 import { ActionButton } from "../components/ActionButton";
 import { ChartPanel } from "../components/ChartPanel";
 import { DisplayToggle } from "../components/DisplayToggle";
-import { NumberField, fieldLabelClass } from "../components/Field";
+import { NumberField, SelectField, fieldLabelClass } from "../components/Field";
 import { PageShell } from "../components/PageShell";
 import { ResultList } from "../components/ResultList";
 import { RowItem } from "../components/RowItem";
 import { Section } from "../components/Section";
+import { SegmentedToggle } from "../components/SegmentedToggle";
 import { SummaryStrip } from "../components/SummaryStrip";
 import { WorkspaceLayout } from "../components/WorkspaceLayout";
 import { buildLinePath, getChartFrame } from "../lib/chart";
@@ -25,6 +26,7 @@ import {
 import { clamp, usd } from "../lib/format";
 import { loadStoredJson } from "../lib/storage";
 import {
+  buildIncomeDirectedContributions,
   calculateProjection,
   createDefaultProjectionState,
   normalizeProjectionInputs,
@@ -541,9 +543,14 @@ export function ProjectionPage() {
       normalizeExpenseInputs(projectionExpenseState, state.expenseGrowthRate),
     [projectionExpenseState, state.expenseGrowthRate],
   );
+  const incomeDirectedContributions = useMemo(
+    () => buildIncomeDirectedContributions(incomeSummary),
+    [incomeSummary],
+  );
   const projectionInputs = useMemo(
-    () => normalizeProjectionInputs(state, assetInputs),
-    [state, assetInputs],
+    () =>
+      normalizeProjectionInputs(state, assetInputs, incomeDirectedContributions),
+    [state, assetInputs, incomeDirectedContributions],
   );
   const assetSnapshot = useMemo(
     () => calculateAssetSnapshot(assetInputs, taxConfig),
@@ -578,7 +585,26 @@ export function ProjectionPage() {
       ...current,
       allocations: {
         ...current.allocations,
-        [bucketId]: value,
+        [bucketId]: {
+          mode:
+            current.allocations?.[bucketId]?.mode === "amount"
+              ? "amount"
+              : "percent",
+          value,
+        },
+      },
+    }));
+  }
+
+  function updateAllocationMode(bucketId, mode) {
+    setState((current) => ({
+      ...current,
+      allocations: {
+        ...current.allocations,
+        [bucketId]: {
+          mode: mode === "amount" ? "amount" : "percent",
+          value: current.allocations?.[bucketId]?.value ?? "0",
+        },
       },
     }));
   }
@@ -621,12 +647,13 @@ export function ProjectionPage() {
     }));
   }
 
-  const allocationTotal = projectionInputs.allocationTotal;
-  const normalizedAllocationTotal = Math.min(allocationTotal, 100);
+  const allocationPercentTotal = projectionInputs.allocationPercentTotal;
+  const normalizedAllocationPercentTotal = Math.min(allocationPercentTotal, 100);
+  const allocationAmountTotal = projectionInputs.allocationAmountTotal;
   const allocationNote =
-    allocationTotal > 100
-      ? `Allocation entries total ${allocationTotal.toFixed(1)}%. Extra free cash is scaled down proportionally to 100%.`
-      : `Unallocated free cash stays in reserve cash. Current unallocated share: ${(100 - normalizedAllocationTotal).toFixed(1)}%.`;
+    allocationPercentTotal > 100
+      ? `Percent allocations total ${allocationPercentTotal.toFixed(1)}%. Remaining free cash is scaled down proportionally to 100% after fixed dollar allocations.`
+      : `Fixed dollar allocations apply first. Unallocated remainder stays in reserve cash. Current unallocated percent share: ${(100 - normalizedAllocationPercentTotal).toFixed(1)}%. Fixed dollar total: ${usd(allocationAmountTotal)}.`;
 
   const selectedRow =
     projectionInputs.currentYear === 0
@@ -644,8 +671,20 @@ export function ProjectionPage() {
             results.fixedMortgageAnnual -
             results.annualExpenseTotal,
           allocatedFreeCash: 0,
-          assetsGross: assetSnapshot.totals.currentTotal,
-          assetEmbeddedTax: assetSnapshot.totals.currentEmbeddedTax,
+          rsuGross:
+            Number.isFinite(incomeSummary.rsuGrossNextYear)
+              ? incomeSummary.rsuGrossNextYear
+              : 0,
+          rsuNet:
+            Number.isFinite(incomeSummary.rsuNetNextYear)
+              ? incomeSummary.rsuNetNextYear
+              : 0,
+          bucketSnapshots: results.currentAssetSnapshots,
+          bucketSnapshotsById: results.currentAssetSnapshotsById,
+          expenseSnapshots: results.currentExpenseSnapshots,
+          expenseSnapshotsById: results.currentExpenseSnapshotsById,
+          assetsGross: results.currentAssetsGross,
+          assetEmbeddedTax: results.currentAssetEmbeddedTax,
           homeEquity: Number.isFinite(mortgageSummary.currentEquity)
             ? mortgageSummary.currentEquity
             : 0,
@@ -665,7 +704,7 @@ export function ProjectionPage() {
       label: "Gross assets",
       value: usd(
         toDisplayValue(
-          selectedRow.assetsGross ?? assetSnapshot.totals.currentTotal,
+          selectedRow.assetsGross ?? results.currentAssetsGross,
           projectionInputs.currentYear,
           projectionInputs,
         ),
@@ -695,8 +734,27 @@ export function ProjectionPage() {
       label: "Asset embedded tax",
       value: usd(
         toDisplayValue(
-          selectedRow.assetEmbeddedTax ??
-            assetSnapshot.totals.currentEmbeddedTax,
+          selectedRow.assetEmbeddedTax ?? results.currentAssetEmbeddedTax,
+          projectionInputs.currentYear,
+          projectionInputs,
+        ),
+      ),
+    },
+    {
+      label: "RSU gross vest",
+      value: usd(
+        toDisplayValue(
+          selectedRow.rsuGross ?? 0,
+          projectionInputs.currentYear,
+          projectionInputs,
+        ),
+      ),
+    },
+    {
+      label: "RSU net vest",
+      value: usd(
+        toDisplayValue(
+          selectedRow.rsuNet ?? 0,
           projectionInputs.currentYear,
           projectionInputs,
         ),
@@ -723,33 +781,40 @@ export function ProjectionPage() {
 
   const snapshotLabelClass = "font-bold text-(--ink)";
   const snapshotValueClass = "mt-1 font-bold text-(--ink)";
-
   return (
     <PageShell
-      actions={
-        <div className="flex flex-wrap items-center gap-3">
-          <DisplayToggle
-            value={state.displayMode}
-            onChange={(mode) => updateState({ displayMode: mode })}
-          />
-          <ActionButton onClick={reset}>Reset</ActionButton>
-        </div>
-      }
+      actions={<ActionButton onClick={reset}>Reset</ActionButton>}
     >
       <main className={surfaceClass}>
         <WorkspaceLayout
           summary={
             <>
-              <SummaryStrip
-                kicker={`Net Worth ${selectedYearLabel === "Today" ? "Today" : `In ${selectedYearLabel}`}`}
-                value={usd(
-                  toDisplayValue(
-                    selectedRow.netWorth ?? results.ending.netWorth,
-                    projectionInputs.currentYear,
-                    projectionInputs,
-                  ),
-                )}
-              />
+              <div className="grid gap-2 border-b border-(--line) pb-4">
+                <p
+                  className="text-xs font-extrabold tracking-widest
+                    text-(--ink-soft) uppercase"
+                >
+                  {`Net Worth ${selectedYearLabel === "Today" ? "Today" : `In ${selectedYearLabel}`}`}
+                </p>
+                <div className="flex items-end justify-between gap-4">
+                  <strong
+                    className="block font-serif text-5xl leading-none tracking-tight
+                      text-(--teal) md:text-6xl"
+                  >
+                    {usd(
+                      toDisplayValue(
+                        selectedRow.netWorth ?? results.ending.netWorth,
+                        projectionInputs.currentYear,
+                        projectionInputs,
+                      ),
+                    )}
+                  </strong>
+                  <DisplayToggle
+                    value={state.displayMode}
+                    onChange={(mode) => updateState({ displayMode: mode })}
+                  />
+                </div>
+              </div>
               <div className="mt-4 border-b border-(--line) pb-4">
                 <div className="flex flex-col gap-4 md:flex-row md:items-start">
                   <div className="flex flex-1 justify-center">
@@ -825,6 +890,17 @@ export function ProjectionPage() {
                     }
                   />
                   <NumberField
+                    label="RSU stock growth"
+                    htmlFor="rsuStockGrowthRate"
+                    suffix="%"
+                    min="-50"
+                    step="0.1"
+                    value={state.rsuStockGrowthRate}
+                    onChange={(event) =>
+                      updateState({ rsuStockGrowthRate: event.target.value })
+                    }
+                  />
+                  <NumberField
                     label="Baseline expense growth"
                     htmlFor="expenseGrowthRate"
                     suffix="%"
@@ -857,6 +933,23 @@ export function ProjectionPage() {
                       updateState({ homeAppreciationRate: event.target.value })
                     }
                   />
+                  <SelectField
+                    label="Down payment funded by"
+                    htmlFor="mortgageFundingBucketId"
+                    value={state.mortgageFundingBucketId}
+                    onChange={(event) =>
+                      updateState({
+                        mortgageFundingBucketId: event.target.value,
+                      })
+                    }
+                  >
+                    <option value="">None</option>
+                    {assetInputs.buckets.map((bucket) => (
+                      <option key={bucket.id} value={bucket.id}>
+                        {bucket.label}
+                      </option>
+                    ))}
+                  </SelectField>
                   <NumberField
                     label="Reserve cash yield"
                     htmlFor="cashYieldRate"
@@ -878,7 +971,7 @@ export function ProjectionPage() {
               {assetInputs.buckets.map((bucket) => (
                 <RowItem
                   key={bucket.id}
-                  headerClassName="grid items-start gap-4 lg:grid-cols-3"
+                  headerClassName="grid items-start gap-4 lg:grid-cols-4"
                   detailsTitle="Asset overrides"
                   detailsSummary={getAssetOverrideSummary(bucket)}
                   detailsOpen={Boolean(
@@ -904,17 +997,96 @@ export function ProjectionPage() {
                           {usd(bucket.current)}
                         </div>
                       </div>
-                      <NumberField
-                        label="Free cash %"
-                        suffix="%"
-                        min="0"
-                        max="100"
-                        step="1"
-                        value={state.allocations?.[bucket.id] ?? "0"}
-                        onChange={(event) =>
-                          updateAllocation(bucket.id, event.target.value)
-                        }
-                      />
+                      {projectionInputs.currentYear !== 0 ? (
+                        <div>
+                          <div
+                            className="text-xs font-extrabold tracking-wide
+                              text-(--ink-soft) uppercase"
+                          >
+                            {selectedYearLabel}
+                          </div>
+                          <div className={snapshotValueClass}>
+                            {usd(
+                              toDisplayValue(
+                                selectedRow.bucketSnapshotsById?.[bucket.id]
+                                  ?.balance ?? bucket.current,
+                                projectionInputs.currentYear,
+                                projectionInputs,
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div aria-hidden="true" />
+                      )}
+                      <div className="grid min-w-0 gap-1">
+                        <div className={fieldLabelClass}>Allocation</div>
+                        <div className="flex items-start gap-2">
+                          {(
+                            results.incomeDirectedContributions?.[bucket.id] ?? 0
+                          ) > 0 ? (
+                            <SegmentedToggle
+                              ariaLabel={`${bucket.label} allocation mode`}
+                              className="shrink-0"
+                              value="amount"
+                              onChange={() => {}}
+                              options={[{ value: "amount", label: "$" }]}
+                            />
+                          ) : (
+                            <SegmentedToggle
+                              ariaLabel={`${bucket.label} allocation mode`}
+                              className="shrink-0"
+                              value={
+                                state.allocations?.[bucket.id]?.mode ?? "percent"
+                              }
+                              onChange={(mode) =>
+                                updateAllocationMode(bucket.id, mode)
+                              }
+                              options={[
+                                { value: "amount", label: "$" },
+                                { value: "percent", label: "%" },
+                              ]}
+                            />
+                          )}
+                          <NumberField
+                            label={null}
+                            className="min-w-0 flex-1"
+                            htmlFor={`allocation-${bucket.id}`}
+                            min="0"
+                            max={
+                              (state.allocations?.[bucket.id]?.mode ??
+                                "percent") === "percent"
+                                ? "100"
+                                : undefined
+                            }
+                            step={
+                              (state.allocations?.[bucket.id]?.mode ??
+                                "percent") === "percent"
+                                ? "1"
+                                : "500"
+                            }
+                            value={
+                              (
+                                results.incomeDirectedContributions?.[bucket.id] ??
+                                0
+                              ) > 0
+                                ? String(
+                                    results.incomeDirectedContributions[bucket.id],
+                                  )
+                                : (state.allocations?.[bucket.id]?.value ?? "0")
+                            }
+                            disabled={
+                              (
+                                results.incomeDirectedContributions?.[bucket.id] ??
+                                0
+                              ) > 0
+                            }
+                            onChange={(event) =>
+                              updateAllocation(bucket.id, event.target.value)
+                            }
+                          />
+                        </div>
+                      </div>
                     </>
                   }
                 >
@@ -964,7 +1136,7 @@ export function ProjectionPage() {
               {expenseInputs.expenses.map((expense) => (
                 <RowItem
                   key={expense.id}
-                  headerClassName="grid items-start gap-4 lg:grid-cols-3"
+                  headerClassName="grid items-start gap-4 lg:grid-cols-4"
                   detailsTitle="Expense overrides"
                   detailsSummary={getExpenseOverrideSummary(expense)}
                   detailsOpen={Boolean(
@@ -986,12 +1158,34 @@ export function ProjectionPage() {
                           className="text-xs font-extrabold tracking-wide
                             text-(--ink-soft) uppercase"
                         >
-                          Amount
+                          Current amount
                         </div>
                         <div className={snapshotValueClass}>
                           {usd(expense.amount)}
                         </div>
                       </div>
+                      {projectionInputs.currentYear !== 0 ? (
+                        <div>
+                          <div
+                            className="text-xs font-extrabold tracking-wide
+                              text-(--ink-soft) uppercase"
+                          >
+                            {selectedYearLabel}
+                          </div>
+                          <div className={snapshotValueClass}>
+                            {usd(
+                              toDisplayValue(
+                                selectedRow.expenseSnapshotsById?.[expense.id]
+                                  ?.amount ?? expense.amount,
+                                projectionInputs.currentYear,
+                                projectionInputs,
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div aria-hidden="true" />
+                      )}
                       <div>
                         <div
                           className="text-xs font-extrabold tracking-wide
@@ -1000,9 +1194,13 @@ export function ProjectionPage() {
                           Cadence
                         </div>
                         <div className={snapshotValueClass}>
-                          {expense.frequency === "annual"
-                            ? "Annual"
-                            : "Monthly"}
+                          {selectedRow.expenseSnapshotsById?.[expense.id]
+                            ?.cadenceLabel ??
+                            (expense.frequency === "annual"
+                              ? "Annual"
+                              : expense.frequency === "one_off"
+                                ? "One-off"
+                                : "Monthly")}
                         </div>
                       </div>
                     </>
@@ -1049,15 +1247,18 @@ export function ProjectionPage() {
                         ? incomeSummary.annualTakeHome
                         : 0) || 0,
                     )}{" "}
-                    annual take-home
+                    base annual take-home
+                    {Number.isFinite(incomeSummary.rsuNetNextYear) &&
+                    incomeSummary.rsuNetNextYear > 0
+                      ? ` + ${usd(incomeSummary.rsuNetNextYear)} next-12m RSU net`
+                      : ""}
                   </td>
                 </tr>
                 <tr>
                   <td>Assets</td>
                   <td>{usd(assetSnapshot.totals.currentTotal)}</td>
                   <td>
-                    {usd(assetSnapshot.totals.annualContributionTotal)} annual
-                    additions
+                    {usd(results.baseAssetPlan)} annual additions
                   </td>
                 </tr>
                 <tr>

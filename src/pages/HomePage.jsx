@@ -6,16 +6,16 @@ import { pageSectionClass, surfaceClass } from "../lib/ui";
 
 const TOOL_ROWS = [
   {
-    key: "income",
-    title: "Income Calculator",
-    description:
-      "Annual take-home estimate with California single-filer assumptions, 401(k), employer match, mega backdoor, and HSA inputs.",
-  },
-  {
     key: "assets",
     title: "Assets Calculator",
     description:
       "Bucket editor for current balances, tax-free vs taxable treatment, and taxable basis.",
+  },
+  {
+    key: "income",
+    title: "Income Calculator",
+    description:
+      "Annual take-home estimate with California single-filer assumptions, 401(k), employer match, mega backdoor, and HSA inputs.",
   },
   {
     key: "mortgage",
@@ -50,7 +50,7 @@ export function HomePage() {
         <section className={pageSectionClass}>
           <div className="border-b border-(--line-soft) pb-4">
             <p className="mt-2 max-w-prose leading-relaxed text-(--ink-soft)">
-              Local calculators for income, assets, mortgage, expenses,
+              Local calculators for assets, income, mortgage, expenses,
               projection, and shared tax assumptions. Use the first four pages
               to define inputs, then move to Projection for the long-run model.
             </p>

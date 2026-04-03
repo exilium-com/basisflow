@@ -69,6 +69,7 @@ export function ExpensesPage() {
           name: "",
           amount: "0",
           frequency: "monthly",
+          oneOffYear: "",
           growthRate: "",
           detailsOpen: false,
         },
@@ -149,6 +150,13 @@ export function ExpensesPage() {
                         <NumberField
                           label="Amount"
                           prefix="$"
+                          suffix={
+                            expense.frequency === "annual"
+                              ? "/year"
+                              : expense.frequency === "one_off"
+                                ? ""
+                                : "/month"
+                          }
                           min="0"
                           step="50"
                           placeholder="0"
@@ -175,9 +183,24 @@ export function ExpensesPage() {
                         options={[
                           { value: "monthly", label: "Monthly" },
                           { value: "annual", label: "Annual" },
+                          { value: "one_off", label: "One-off" },
                         ]}
                       />
                     </Field>
+                    {expense.frequency === "one_off" ? (
+                      <NumberField
+                        label="Relative year"
+                        htmlFor={`oneOffYear-${expense.id}`}
+                        min="1"
+                        step="1"
+                        value={expense.oneOffYear ?? ""}
+                        onChange={(event) =>
+                          updateExpense(expense.id, {
+                            oneOffYear: event.target.value,
+                          })
+                        }
+                      />
+                    ) : null}
                   </RowItem>
                 );
               })}

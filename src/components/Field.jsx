@@ -71,6 +71,7 @@ export function InputFrame({
 export function TextField({
   label,
   htmlFor,
+  type = "text",
   prefix = null,
   suffix = null,
   invalid = false,
@@ -95,7 +96,7 @@ export function TextField({
       >
         <input
           id={htmlFor}
-          type="text"
+          type={type}
           className={cx(inputBaseClassName, inputClassName)}
           {...inputProps}
         />

@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { ActionButton } from "../components/ActionButton";
-import { Section } from "../components/Section";
-import { TextAreaField } from "../components/Field";
+import { NumberField, TextAreaField } from "../components/Field";
 import { PageShell } from "../components/PageShell";
+import { Section } from "../components/Section";
 import { loadTaxConfig, resetTaxConfig, saveTaxConfig } from "../lib/taxConfig";
 import { surfaceClass } from "../lib/ui";
 
@@ -11,6 +11,16 @@ export function TaxConfigPage() {
   const [federalBrackets, setFederalBrackets] = useState(
     JSON.stringify(initialConfig.federalBrackets, null, 2),
   );
+  const [annualAdditionsLimit, setAnnualAdditionsLimit] = useState(
+    String(initialConfig.annualAdditionsLimit),
+  );
+  const [federalStandardDeduction, setFederalStandardDeduction] = useState(
+    String(initialConfig.federalStandardDeduction),
+  );
+  const [stateStandardDeduction, setStateStandardDeduction] = useState(
+    String(initialConfig.stateStandardDeduction),
+  );
+  const [caSdiRate, setCaSdiRate] = useState(String(initialConfig.caSdiRate));
   const [stateBrackets, setStateBrackets] = useState(
     JSON.stringify(initialConfig.stateBrackets, null, 2),
   );
@@ -20,6 +30,10 @@ export function TaxConfigPage() {
   const [status, setStatus] = useState("");
 
   function applyConfig(config) {
+    setAnnualAdditionsLimit(String(config.annualAdditionsLimit));
+    setFederalStandardDeduction(String(config.federalStandardDeduction));
+    setStateStandardDeduction(String(config.stateStandardDeduction));
+    setCaSdiRate(String(config.caSdiRate));
     setFederalBrackets(JSON.stringify(config.federalBrackets, null, 2));
     setStateBrackets(JSON.stringify(config.stateBrackets, null, 2));
     setLongTermCapitalGains(
@@ -30,6 +44,10 @@ export function TaxConfigPage() {
   function handleApply() {
     try {
       const config = saveTaxConfig({
+        annualAdditionsLimit: Number(annualAdditionsLimit),
+        federalStandardDeduction: Number(federalStandardDeduction),
+        stateStandardDeduction: Number(stateStandardDeduction),
+        caSdiRate: Number(caSdiRate),
         federalBrackets: JSON.parse(federalBrackets),
         stateBrackets: JSON.parse(stateBrackets),
         longTermCapitalGains: JSON.parse(longTermCapitalGains),
@@ -60,10 +78,52 @@ export function TaxConfigPage() {
           <Section title="Tax Config">
             <p className="leading-relaxed text-(--ink-soft)">
               Each array is saved to local storage and reused across the suite,
-              including income, assets, and projection. Use <code>null</code>{" "}
-              for the top bracket.
+              including income, assets, and projection. Use <code>null</code> for
+              the top bracket.
             </p>
             <div className="mt-4 grid grid-cols-2 gap-4 max-md:grid-cols-1">
+              <NumberField
+                label="401(k) annual additions limit"
+                htmlFor="annualAdditionsLimit"
+                prefix="$"
+                min="0"
+                step="100"
+                value={annualAdditionsLimit}
+                onChange={(event) =>
+                  setAnnualAdditionsLimit(event.target.value)
+                }
+              />
+              <NumberField
+                label="Federal standard deduction"
+                htmlFor="federalStandardDeduction"
+                prefix="$"
+                min="0"
+                step="50"
+                value={federalStandardDeduction}
+                onChange={(event) =>
+                  setFederalStandardDeduction(event.target.value)
+                }
+              />
+              <NumberField
+                label="California standard deduction"
+                htmlFor="stateStandardDeduction"
+                prefix="$"
+                min="0"
+                step="50"
+                value={stateStandardDeduction}
+                onChange={(event) =>
+                  setStateStandardDeduction(event.target.value)
+                }
+              />
+              <NumberField
+                label="CA SDI rate"
+                htmlFor="caSdiRate"
+                suffix="%"
+                min="0"
+                step="0.1"
+                value={caSdiRate}
+                onChange={(event) => setCaSdiRate(event.target.value)}
+              />
               <TextAreaField
                 label="Federal brackets"
                 htmlFor="federalBrackets"

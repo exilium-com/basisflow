@@ -8,6 +8,7 @@ export function createDefaultExpenseState() {
         name: "Essentials",
         amount: "0",
         frequency: "monthly",
+        oneOffYear: "",
         growthRate: "",
         detailsOpen: false,
       },
@@ -16,6 +17,7 @@ export function createDefaultExpenseState() {
         name: "Lifestyle",
         amount: "0",
         frequency: "monthly",
+        oneOffYear: "",
         growthRate: "",
         detailsOpen: false,
       },
@@ -24,6 +26,7 @@ export function createDefaultExpenseState() {
         name: "Irregular / Travel",
         amount: "0",
         frequency: "monthly",
+        oneOffYear: "",
         growthRate: "",
         detailsOpen: false,
       },
@@ -32,6 +35,7 @@ export function createDefaultExpenseState() {
         name: "Other",
         amount: "0",
         frequency: "monthly",
+        oneOffYear: "",
         growthRate: "",
         detailsOpen: false,
       },
@@ -53,7 +57,14 @@ export function normalizeExpense(rawExpense) {
         : typeof rawExpense?.monthly === "string"
           ? rawExpense.monthly
           : "0",
-    frequency: rawExpense?.frequency === "annual" ? "annual" : "monthly",
+    frequency:
+      rawExpense?.frequency === "annual"
+        ? "annual"
+        : rawExpense?.frequency === "one_off"
+          ? "one_off"
+          : "monthly",
+    oneOffYear:
+      typeof rawExpense?.oneOffYear === "string" ? rawExpense.oneOffYear : "",
     growthRate:
       typeof rawExpense?.growthRate === "string" ? rawExpense.growthRate : "",
     detailsOpen: Boolean(rawExpense?.detailsOpen),
@@ -92,14 +103,23 @@ export function normalizeExpenseInputs(state, baselineGrowthRate = 2.5) {
     baselineGrowthRate: baselineGrowthValue / 100,
     expenses: state.expenses.map((expense) => {
       const amount = Math.max(0, readNumber(expense.amount, 0));
-      const frequency = expense.frequency === "annual" ? "annual" : "monthly";
+      const frequency =
+        expense.frequency === "annual"
+          ? "annual"
+          : expense.frequency === "one_off"
+            ? "one_off"
+            : "monthly";
+      const oneOffYear = Math.max(1, Math.round(readNumber(expense.oneOffYear, 1)));
       return {
         ...expense,
         label: expense.name.trim() || "Untitled expense",
         amount,
         frequency,
-        monthlyEquivalent: frequency === "annual" ? amount / 12 : amount,
-        annualBase: frequency === "annual" ? amount : amount * 12,
+        oneOffYear,
+        monthlyEquivalent:
+          frequency === "annual" ? amount / 12 : frequency === "monthly" ? amount : 0,
+        annualBase:
+          frequency === "annual" ? amount : frequency === "monthly" ? amount * 12 : 0,
         growthRate: readNumber(expense.growthRate, baselineGrowthValue) / 100,
       };
     }),
@@ -109,7 +129,12 @@ export function normalizeExpenseInputs(state, baselineGrowthRate = 2.5) {
 export function getAnnualNonHousingExpenses(expenses, year) {
   return expenses.reduce(
     (sum, expense) =>
-      sum + expense.annualBase * Math.pow(1 + expense.growthRate, year - 1),
+      sum +
+      (expense.frequency === "one_off"
+        ? expense.oneOffYear === year
+          ? expense.amount
+          : 0
+        : expense.annualBase * Math.pow(1 + expense.growthRate, year - 1)),
     0,
   );
 }

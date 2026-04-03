@@ -4,6 +4,9 @@ import { cx } from "../lib/cx";
 export function RowItem({
   header,
   headerClassName = "",
+  action = null,
+  selected = false,
+  onSelect,
   removeLabel,
   onRemove,
   detailsTitle,
@@ -18,7 +21,14 @@ export function RowItem({
     : "px-4 pt-3 pb-3";
 
   return (
-    <article className="relative border border-(--line) bg-(--white-soft)">
+    <article
+      className={cx(
+        "relative border border-(--line) bg-(--white-soft)",
+        selected && "border-(--teal) bg-(--white)",
+        onSelect && "cursor-pointer",
+      )}
+      onClick={onSelect}
+    >
       {onRemove ? (
         <button
           className="absolute top-2 right-3 z-10 border-0 bg-transparent p-0
@@ -32,10 +42,23 @@ export function RowItem({
         </button>
       ) : null}
 
-      <div className={cx(defaultHeaderPadding, headerClassName)}>{header}</div>
+      <div className={defaultHeaderPadding}>
+        <div className="flex items-start justify-between gap-3">
+          <div className={cx("min-w-0 flex-1", headerClassName)}>{header}</div>
+          {action ? (
+            <div
+              className="flex-none"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {action}
+            </div>
+          ) : null}
+        </div>
+      </div>
 
       <details
         open={detailsOpen}
+        onClick={(event) => event.stopPropagation()}
         onToggle={(event) => onToggleDetails?.(event.currentTarget.open)}
       >
         <summary

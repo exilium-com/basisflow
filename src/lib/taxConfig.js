@@ -1,6 +1,10 @@
 export const STORAGE_KEY = "finance_tools_tax_config_v1";
 
 export const DEFAULT_CONFIG = {
+  annualAdditionsLimit: 72000,
+  federalStandardDeduction: 16100,
+  stateStandardDeduction: 5706,
+  caSdiRate: 1.3,
   federalBrackets: [
     { top: 12400, rate: 10 },
     { top: 50400, rate: 12 },
@@ -70,6 +74,22 @@ export function normalizeConfig(rawConfig) {
   const fallback = cloneDefaultConfig();
 
   return {
+    annualAdditionsLimit: Number.isFinite(Number(rawConfig?.annualAdditionsLimit))
+      ? Math.max(0, Number(rawConfig.annualAdditionsLimit))
+      : fallback.annualAdditionsLimit,
+    federalStandardDeduction: Number.isFinite(
+      Number(rawConfig?.federalStandardDeduction),
+    )
+      ? Math.max(0, Number(rawConfig.federalStandardDeduction))
+      : fallback.federalStandardDeduction,
+    stateStandardDeduction: Number.isFinite(
+      Number(rawConfig?.stateStandardDeduction),
+    )
+      ? Math.max(0, Number(rawConfig.stateStandardDeduction))
+      : fallback.stateStandardDeduction,
+    caSdiRate: Number.isFinite(Number(rawConfig?.caSdiRate))
+      ? Math.max(0, Number(rawConfig.caSdiRate))
+      : fallback.caSdiRate,
     federalBrackets: normalizeBracketList(
       rawConfig?.federalBrackets,
       fallback.federalBrackets,

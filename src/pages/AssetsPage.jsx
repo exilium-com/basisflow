@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { ActionButton } from "../components/ActionButton";
 import { CheckboxField, NumberField, TextField } from "../components/Field";
 import { PageShell } from "../components/PageShell";
@@ -8,9 +8,7 @@ import { Section } from "../components/Section";
 import { SummaryStrip } from "../components/SummaryStrip";
 import { WorkspaceLayout } from "../components/WorkspaceLayout";
 import { usd } from "../lib/format";
-import { loadStoredJson, saveJson } from "../lib/storage";
 import {
-  calculateAssetSnapshot,
   createBlankBucket,
   createDefaultAssetsState,
   normalizeAssetInputs,
@@ -20,17 +18,10 @@ import {
   createDefaultProjectionState,
   normalizeProjectionState,
 } from "../lib/projectionModel";
-import {
-  loadTaxConfig,
-  STORAGE_KEY as TAX_STORAGE_KEY,
-} from "../lib/taxConfig";
+import { loadStoredJson } from "../lib/storage";
 import { useStoredState } from "../hooks/useStoredState";
 import { surfaceClass } from "../lib/ui";
-import {
-  ASSETS_STATE_KEY,
-  ASSETS_SUMMARY_KEY,
-  PROJECTION_STATE_KEY,
-} from "../lib/storageKeys";
+import { ASSETS_STATE_KEY, PROJECTION_STATE_KEY } from "../lib/storageKeys";
 
 export function AssetsPage() {
   const [state, setState] = useStoredState(
@@ -42,31 +33,6 @@ export function AssetsPage() {
       preferLocalStorage: true,
     },
   );
-  const [taxVersion, setTaxVersion] = useState(0);
-
-  useEffect(() => {
-    function refreshTaxVersion(event) {
-      if (!event || event.key === TAX_STORAGE_KEY) {
-        setTaxVersion((current) => current + 1);
-      }
-    }
-
-    function handleVisibility() {
-      if (!document.hidden) {
-        setTaxVersion((current) => current + 1);
-      }
-    }
-
-    window.addEventListener("storage", refreshTaxVersion);
-    window.addEventListener("pageshow", refreshTaxVersion);
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      window.removeEventListener("storage", refreshTaxVersion);
-      window.removeEventListener("pageshow", refreshTaxVersion);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, []);
 
   const projectionState = useMemo(
     () =>
@@ -81,30 +47,20 @@ export function AssetsPage() {
     () => normalizeAssetInputs(state, projectionState.assetGrowthRate),
     [state, projectionState.assetGrowthRate],
   );
-  const taxConfig = useMemo(() => loadTaxConfig(), [taxVersion]);
-  const results = useMemo(
-    () => calculateAssetSnapshot(inputs, taxConfig),
-    [inputs, taxConfig],
+  const totals = useMemo(
+    () => ({
+      currentTotal: inputs.buckets.reduce((sum, bucket) => sum + bucket.current, 0),
+      taxableCurrentTotal: inputs.buckets.reduce(
+        (sum, bucket) => sum + (bucket.taxFree ? 0 : bucket.current),
+        0,
+      ),
+      taxFreeCurrentTotal: inputs.buckets.reduce(
+        (sum, bucket) => sum + (bucket.taxFree ? bucket.current : 0),
+        0,
+      ),
+    }),
+    [inputs],
   );
-
-  useEffect(() => {
-    saveJson(ASSETS_SUMMARY_KEY, {
-      currentTotal: results.totals.currentTotal,
-      annualContributionTotal: results.totals.annualContributionTotal,
-      baselineGrowthRate: inputs.baselineGrowthRate,
-      bucketCount: inputs.buckets.length,
-      currentEmbeddedTax: results.totals.currentEmbeddedTax,
-      buckets: inputs.buckets.map((bucket) => ({
-        id: bucket.id,
-        label: bucket.label,
-        taxFree: bucket.taxFree,
-        current: bucket.current,
-        contribution: bucket.contribution,
-        growth: bucket.growth,
-        basis: bucket.basis,
-      })),
-    });
-  }, [inputs, results]);
 
   function updateBucket(bucketId, patch) {
     setState((current) => ({
@@ -148,18 +104,10 @@ export function AssetsPage() {
   }
 
   const summaryItems = [
-    { label: "Taxable assets", value: usd(results.totals.taxableCurrentTotal) },
+    { label: "Taxable assets", value: usd(totals.taxableCurrentTotal) },
     {
       label: "Tax-free assets",
-      value: usd(results.totals.taxFreeCurrentTotal),
-    },
-    {
-      label: "Current embedded tax",
-      value: usd(results.totals.currentEmbeddedTax),
-    },
-    {
-      label: "After-tax value today",
-      value: usd(results.totals.afterTaxCurrentTotal),
+      value: usd(totals.taxFreeCurrentTotal),
     },
     { label: "Bucket count", value: String(inputs.buckets.length) },
   ];
@@ -178,7 +126,7 @@ export function AssetsPage() {
             <>
               <SummaryStrip
                 kicker="Current Asset Total"
-                value={usd(results.totals.currentTotal)}
+                value={usd(totals.currentTotal)}
               />
               <ResultList items={summaryItems} />
             </>
@@ -264,17 +212,13 @@ export function AssetsPage() {
                 <tr>
                   <th>Bucket</th>
                   <th>Current value</th>
-                  <th>Embedded tax</th>
-                  <th>After-tax value</th>
                 </tr>
               </thead>
               <tbody>
-                {results.buckets.map((bucket) => (
+                {inputs.buckets.map((bucket) => (
                   <tr key={bucket.id}>
                     <td>{bucket.label}</td>
-                    <td>{usd(bucket.balance)}</td>
-                    <td>{usd(bucket.taxDue)}</td>
-                    <td>{usd(bucket.afterTax)}</td>
+                    <td>{usd(bucket.current)}</td>
                   </tr>
                 ))}
               </tbody>

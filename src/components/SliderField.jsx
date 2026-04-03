@@ -13,20 +13,22 @@ export function SliderField({
   return (
     <Field
       label={null}
-      className={cx(
-        "gap-2 border border-(--line-soft) bg-(--white-soft) p-3",
-        className,
-      )}
+      className={cx("gap-1", className)}
     >
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="flex min-h-5 items-center justify-between gap-3">
         <label className={cx(fieldLabelClass, labelClassName)} htmlFor={id}>
           {label}
         </label>
-        <span className="whitespace-nowrap text-base font-bold text-(--ink)">
+        <span className="whitespace-nowrap text-sm leading-5 text-(--ink)">
           {valueLabel}
         </span>
       </div>
-      <input id={id} className="slider-input" type="range" {...inputProps} />
+      <div
+        className="flex min-h-10 items-center border border-l-4 border-(--line)
+          border-l-(--teal-soft) bg-(--white) px-3"
+      >
+        <input id={id} className="slider-input w-full" type="range" {...inputProps} />
+      </div>
     </Field>
   );
 }

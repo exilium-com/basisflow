@@ -1,50 +1,151 @@
 import React, { useEffect, useMemo } from "react";
 import { ActionButton } from "../components/ActionButton";
-import { PageShell } from "../components/PageShell";
 import { AdvancedPanel } from "../components/AdvancedPanel";
 import { MetricGrid } from "../components/MetricGrid";
+import {
+  NumberField,
+  SelectField,
+  TextField,
+  fieldLabelClass,
+} from "../components/Field";
+import { PageShell } from "../components/PageShell";
+import { RowItem } from "../components/RowItem";
 import { Section } from "../components/Section";
-import { NumberField, SelectField } from "../components/Field";
+import { SegmentedToggle } from "../components/SegmentedToggle";
 import { SliderField } from "../components/SliderField";
+import { SummaryStrip } from "../components/SummaryStrip";
+import { WorkspaceLayout } from "../components/WorkspaceLayout";
 import { useStoredState } from "../hooks/useStoredState";
-import { clamp, readNumber, usd } from "../lib/format";
-import { saveJson } from "../lib/storage";
-import { computeProgressiveTax, loadTaxConfig } from "../lib/taxConfig";
+import { readNumber, usd } from "../lib/format";
+import {
+  calculateIncome,
+  getAnnualSalaryTotal,
+} from "../lib/incomeModel";
+import { loadStoredJson, saveJson } from "../lib/storage";
+import { loadTaxConfig } from "../lib/taxConfig";
+import {
+  createDefaultAssetsState,
+  defaultLabelForBucket,
+  normalizeAssetsState,
+} from "../lib/assetsModel";
 import { INCOME_STATE_KEY, INCOME_SUMMARY_KEY } from "../lib/storageKeys";
-import { pageSectionClass, surfaceClass } from "../lib/ui";
+import { surfaceClass } from "../lib/ui";
+import { ASSETS_STATE_KEY } from "../lib/storageKeys";
+
+function createSalaryItem(overrides = {}) {
+  return {
+    id: crypto.randomUUID(),
+    type: "salary",
+    name: "Salary",
+    amount: "255000",
+    frequency: "annual",
+    detailsOpen: false,
+    ...overrides,
+  };
+}
+
+function createRsuItem(overrides = {}) {
+  return {
+    id: crypto.randomUUID(),
+    type: "rsu",
+    name: "RSU grant",
+    grantAmount: "0",
+    refresherAmount: "0",
+    vestingYears: "4",
+    detailsOpen: false,
+    ...overrides,
+  };
+}
 
 const DEFAULTS = {
-  grossSalary: "255000",
+  incomeItems: [createSalaryItem()],
   employee401k: "24500",
-  annualAdditions: "72000",
   matchRate: "50",
+  iraContribution: "7000",
   megaBackdoorInput: "35250",
   hsaContribution: "4400",
-  federalStandardDeduction: "16100",
-  caStandardDeduction: "5706",
-  caSdiRate: "1.3",
-  includeCaSdi: "yes",
-  taxAssumptionsOpen: false,
+  retirementBucketId: "",
+  iraBucketId: "",
+  megaBucketId: "",
+  hsaBucketId: "",
+  incomeParametersOpen: false,
 };
 
+function normalizeIncomeItem(item) {
+  if (item?.type === "rsu") {
+    return createRsuItem({
+      id: typeof item?.id === "string" ? item.id : crypto.randomUUID(),
+      name: typeof item?.name === "string" ? item.name : "RSU grant",
+      grantAmount:
+        typeof item?.grantAmount === "string" ? item.grantAmount : "0",
+      refresherAmount:
+        typeof item?.refresherAmount === "string" ? item.refresherAmount : "0",
+      vestingYears:
+        typeof item?.vestingYears === "string" ? item.vestingYears : "4",
+      detailsOpen: Boolean(item?.detailsOpen),
+    });
+  }
+
+  return createSalaryItem({
+    id: typeof item?.id === "string" ? item.id : crypto.randomUUID(),
+    name: typeof item?.name === "string" ? item.name : "Salary",
+    amount: typeof item?.amount === "string" ? item.amount : "0",
+    frequency: item?.frequency === "monthly" ? "monthly" : "annual",
+    detailsOpen: Boolean(item?.detailsOpen),
+  });
+}
+
 function normalizeState(parsed, fallback) {
+  const hasDynamicItems =
+    Array.isArray(parsed?.incomeItems) && parsed.incomeItems.length > 0;
+  const migratedItems = hasDynamicItems
+    ? parsed.incomeItems.map((item) => normalizeIncomeItem(item))
+    : [
+        createSalaryItem({
+          amount:
+            typeof parsed?.grossSalary === "string"
+              ? parsed.grossSalary
+              : fallback.incomeItems[0].amount,
+        }),
+      ];
+
+  const legacyRsuGrantAmount =
+    typeof parsed?.rsuGrantAmount === "string" ? parsed.rsuGrantAmount : "0";
+  const legacyRsuRefresherAmount =
+    typeof parsed?.rsuRefresherAmount === "string"
+      ? parsed.rsuRefresherAmount
+      : "0";
+  const shouldMigrateLegacyRsu =
+    !hasDynamicItems &&
+    (readNumber(legacyRsuGrantAmount, 0) > 0 ||
+      readNumber(legacyRsuRefresherAmount, 0) > 0);
+
   return {
-    grossSalary:
-      typeof parsed?.grossSalary === "string"
-        ? parsed.grossSalary
-        : fallback.grossSalary,
+    incomeItems: shouldMigrateLegacyRsu
+      ? [
+          ...migratedItems,
+          createRsuItem({
+            grantAmount: legacyRsuGrantAmount,
+            refresherAmount: legacyRsuRefresherAmount,
+            vestingYears:
+              typeof parsed?.rsuVestingYears === "string"
+                ? parsed.rsuVestingYears
+                : "4",
+          }),
+        ]
+      : migratedItems,
     employee401k:
       typeof parsed?.employee401k === "string"
         ? parsed.employee401k
         : fallback.employee401k,
-    annualAdditions:
-      typeof parsed?.annualAdditions === "string"
-        ? parsed.annualAdditions
-        : fallback.annualAdditions,
     matchRate:
       typeof parsed?.matchRate === "string"
         ? parsed.matchRate
         : fallback.matchRate,
+    iraContribution:
+      typeof parsed?.iraContribution === "string"
+        ? parsed.iraContribution
+        : fallback.iraContribution,
     megaBackdoorInput:
       typeof parsed?.megaBackdoorInput === "string"
         ? parsed.megaBackdoorInput
@@ -53,111 +154,35 @@ function normalizeState(parsed, fallback) {
       typeof parsed?.hsaContribution === "string"
         ? parsed.hsaContribution
         : fallback.hsaContribution,
-    federalStandardDeduction:
-      typeof parsed?.federalStandardDeduction === "string"
-        ? parsed.federalStandardDeduction
-        : fallback.federalStandardDeduction,
-    caStandardDeduction:
-      typeof parsed?.caStandardDeduction === "string"
-        ? parsed.caStandardDeduction
-        : fallback.caStandardDeduction,
-    caSdiRate:
-      typeof parsed?.caSdiRate === "string"
-        ? parsed.caSdiRate
-        : fallback.caSdiRate,
-    includeCaSdi: parsed?.includeCaSdi === "no" ? "no" : "yes",
-    taxAssumptionsOpen: Boolean(parsed?.taxAssumptionsOpen),
+    retirementBucketId:
+      typeof parsed?.retirementBucketId === "string"
+        ? parsed.retirementBucketId
+        : fallback.retirementBucketId,
+    iraBucketId:
+      typeof parsed?.iraBucketId === "string"
+        ? parsed.iraBucketId
+        : fallback.iraBucketId,
+    megaBucketId:
+      typeof parsed?.megaBucketId === "string"
+        ? parsed.megaBucketId
+        : fallback.megaBucketId,
+    hsaBucketId:
+      typeof parsed?.hsaBucketId === "string"
+        ? parsed.hsaBucketId
+        : fallback.hsaBucketId,
+    incomeParametersOpen: Boolean(parsed?.incomeParametersOpen),
   };
 }
 
-function computeFederalTax(taxableIncome) {
-  return computeProgressiveTax(taxableIncome, loadTaxConfig().federalBrackets);
-}
+function renderIncomeSummary(item, annualizedSalary) {
+  if (item.type === "salary") {
+    return item.frequency === "monthly"
+      ? `${usd(annualizedSalary)} / year`
+      : "Annual";
+  }
 
-function computeCaliforniaTax(taxableIncome) {
-  return computeProgressiveTax(taxableIncome, loadTaxConfig().stateBrackets);
-}
-
-function computeFica(grossSalary, hsaPayrollAmount) {
-  const ficaWages = Math.max(0, grossSalary - hsaPayrollAmount);
-  const socialSecurityWageBase = 184500;
-  const socialSecurity = Math.min(ficaWages, socialSecurityWageBase) * 0.062;
-  const medicare = ficaWages * 0.0145;
-  const additionalMedicare = Math.max(0, ficaWages - 200000) * 0.009;
-
-  return {
-    socialSecurity,
-    medicare,
-    additionalMedicare,
-    total: socialSecurity + medicare + additionalMedicare,
-  };
-}
-
-function computeSavings(inputs) {
-  const matchRate = clamp(inputs.matchRate / 100, 0, 5);
-  const employee401k = Math.max(0, inputs.employee401k);
-  const annualAdditions = Math.max(0, inputs.annualAdditions);
-  const employerMatch = employee401k * matchRate;
-  const availableMegaRoom = Math.max(
-    0,
-    annualAdditions - employee401k - employerMatch,
-  );
-  const mega = clamp(
-    Math.max(0, inputs.megaBackdoorInput),
-    0,
-    availableMegaRoom,
-  );
-
-  return {
-    employerMatch,
-    mega,
-    availableMegaRoom,
-  };
-}
-
-function calculate(inputs) {
-  const savings = computeSavings(inputs);
-  const federalAdjustedGross = Math.max(
-    0,
-    inputs.grossSalary - inputs.employee401k - inputs.hsaContribution,
-  );
-  const federalTaxableIncome = Math.max(
-    0,
-    federalAdjustedGross - inputs.federalStandardDeduction,
-  );
-  const federalTax = computeFederalTax(federalTaxableIncome);
-
-  const californiaAdjustedGross = Math.max(
-    0,
-    inputs.grossSalary - inputs.employee401k,
-  );
-  const californiaTaxableIncome = Math.max(
-    0,
-    californiaAdjustedGross - inputs.caStandardDeduction,
-  );
-  const californiaTax = computeCaliforniaTax(californiaTaxableIncome);
-
-  const fica = computeFica(inputs.grossSalary, inputs.hsaContribution);
-  const caSdi = inputs.includeCaSdi ? inputs.grossSalary * inputs.caSdiRate : 0;
-  const totalTaxes = federalTax + californiaTax + fica.total + caSdi;
-
-  const annualTakeHome =
-    inputs.grossSalary -
-    inputs.employee401k -
-    inputs.hsaContribution -
-    savings.mega -
-    totalTaxes;
-
-  return {
-    ...savings,
-    federalTax,
-    californiaTax,
-    fica,
-    caSdi,
-    totalTaxes,
-    annualTakeHome,
-    monthlyTakeHome: annualTakeHome / 12,
-  };
+  const vestYears = Math.max(1, Math.round(readNumber(item.vestingYears, 4)));
+  return `${vestYears} year vest`;
 }
 
 export function IncomePage() {
@@ -167,48 +192,139 @@ export function IncomePage() {
     preferLocalStorage: true,
   });
 
+  const salaryItems = useMemo(
+    () =>
+      state.incomeItems
+        .filter((item) => item.type === "salary")
+        .map((item) => ({
+          id: item.id,
+          name: item.name,
+          amount: readNumber(item.amount, 0),
+          frequency: item.frequency === "monthly" ? "monthly" : "annual",
+        })),
+    [state.incomeItems],
+  );
+  const rsuItems = useMemo(
+    () =>
+      state.incomeItems
+        .filter((item) => item.type === "rsu")
+        .map((item) => ({
+          id: item.id,
+          name: item.name,
+          grantAmount: readNumber(item.grantAmount, 0),
+          refresherAmount: readNumber(item.refresherAmount, 0),
+          vestingYears: readNumber(item.vestingYears, 4),
+        })),
+    [state.incomeItems],
+  );
   const inputs = useMemo(
     () => ({
-      grossSalary: readNumber(state.grossSalary, 0),
+      salaryItems,
+      rsuItems,
       employee401k: readNumber(state.employee401k, 0),
-      annualAdditions: readNumber(state.annualAdditions, 0),
       matchRate: readNumber(state.matchRate, 0),
+      iraContribution: readNumber(state.iraContribution, 0),
       megaBackdoorInput: readNumber(state.megaBackdoorInput, 0),
       hsaContribution: readNumber(state.hsaContribution, 0),
-      federalStandardDeduction: readNumber(state.federalStandardDeduction, 0),
-      caStandardDeduction: readNumber(state.caStandardDeduction, 0),
-      caSdiRate: readNumber(state.caSdiRate, 0) / 100,
-      includeCaSdi: state.includeCaSdi === "yes",
     }),
-    [state],
+    [salaryItems, rsuItems, state],
   );
+  const taxConfig = useMemo(() => loadTaxConfig(), []);
+  const assetOptions = useMemo(() => {
+    const rawAssetsState =
+      loadStoredJson(ASSETS_STATE_KEY, true) ?? createDefaultAssetsState();
+    const assetState = normalizeAssetsState(
+      rawAssetsState,
+      createDefaultAssetsState(),
+    );
 
-  const results = useMemo(() => calculate(inputs), [inputs]);
+    return assetState.buckets.map((bucket) => ({
+      id: bucket.id,
+      label: defaultLabelForBucket(bucket),
+    }));
+  }, []);
+  const results = useMemo(
+    () => calculateIncome(inputs, taxConfig),
+    [inputs, taxConfig],
+  );
 
   useEffect(() => {
     saveJson(INCOME_SUMMARY_KEY, {
-      grossSalary: inputs.grossSalary,
+      grossSalary: results.grossSalary,
       annualTakeHome: results.annualTakeHome,
       monthlyTakeHome: results.monthlyTakeHome,
       totalTaxes: results.totalTaxes,
       employee401k: inputs.employee401k,
       employerMatch: results.employerMatch,
+      iraContribution: inputs.iraContribution,
       megaBackdoor: results.mega,
       hsaContribution: inputs.hsaContribution,
+      matchRate: inputs.matchRate,
+      contributionDestinations: {
+        retirementBucketId: state.retirementBucketId,
+        iraBucketId: state.iraBucketId,
+        megaBucketId: state.megaBucketId,
+        hsaBucketId: state.hsaBucketId,
+      },
+      salaryItems: inputs.salaryItems,
+      rsuItems: inputs.rsuItems,
+      rsuGrossNextYear: results.rsuGrossNextYear,
+      rsuNetNextYear: results.rsuNetNextYear,
     });
-  }, [inputs, results]);
+  }, [
+    inputs,
+    results,
+    state.retirementBucketId,
+    state.iraBucketId,
+    state.megaBucketId,
+    state.hsaBucketId,
+  ]);
 
   function updateField(field, value) {
     setState((current) => ({ ...current, [field]: value }));
   }
 
+  function updateIncomeItem(itemId, patch) {
+    setState((current) => ({
+      ...current,
+      incomeItems: current.incomeItems.map((item) =>
+        item.id === itemId ? { ...item, ...patch } : item,
+      ),
+    }));
+  }
+
+  function removeIncomeItem(itemId) {
+    setState((current) => ({
+      ...current,
+      incomeItems: current.incomeItems.filter((item) => item.id !== itemId),
+    }));
+  }
+
+  function addSalaryItem() {
+    setState((current) => ({
+      ...current,
+      incomeItems: [...current.incomeItems, createSalaryItem({ amount: "" })],
+    }));
+  }
+
+  function addRsuItem() {
+    setState((current) => ({
+      ...current,
+      incomeItems: [...current.incomeItems, createRsuItem()],
+    }));
+  }
+
   function reset() {
-    setState({ ...DEFAULTS });
+    setState({
+      ...DEFAULTS,
+      incomeItems: [createSalaryItem()],
+    });
   }
 
   const contributionRows = [
     ["Employee 401(k)", inputs.employee401k],
     ["Employer match", results.employerMatch],
+    ["IRA", inputs.iraContribution],
     ["Mega backdoor after-tax", results.mega],
     ["HSA", inputs.hsaContribution],
   ];
@@ -223,109 +339,372 @@ export function IncomePage() {
   ];
 
   return (
-    <PageShell
-      actions={
-        <ActionButton onClick={reset}>
-          Reset
-        </ActionButton>
-      }
-    >
+    <PageShell actions={<ActionButton onClick={reset}>Reset</ActionButton>}>
       <main className={surfaceClass}>
-        <section className={pageSectionClass}>
-          <Section title="Income">
-            <div className="grid gap-4">
-              <NumberField
-                label="Gross salary"
-                htmlFor="grossSalary"
-                prefix="$"
-                min="0"
-                step="1000"
-                value={state.grossSalary}
-                onChange={(event) =>
-                  updateField("grossSalary", event.target.value)
-                }
+        <WorkspaceLayout
+          summary={
+            <>
+              <SummaryStrip
+                kicker="Estimated Annual Take-Home"
+                value={usd(results.annualTakeHome, 2)}
               />
+
+              <div className="mt-6">
+                <MetricGrid
+                  items={[
+                    {
+                      label: "Annual salary",
+                      value: usd(results.grossSalary, 2),
+                    },
+                    {
+                      label: "Monthly take-home",
+                      value: usd(results.monthlyTakeHome, 2),
+                    },
+                    {
+                      label: "Next 12m RSU gross",
+                      value: usd(results.rsuGrossNextYear, 2),
+                    },
+                    {
+                      label: "Next 12m RSU net",
+                      value: usd(results.rsuNetNextYear, 2),
+                    },
+                    {
+                      label: "Retirement saving",
+                      value: usd(
+                        inputs.employee401k +
+                          results.employerMatch +
+                          inputs.iraContribution +
+                          results.mega,
+                        2,
+                      ),
+                    },
+                    {
+                      label: "Total taxes",
+                      value: usd(results.totalTaxes, 2),
+                    },
+                  ]}
+                />
+              </div>
+
+              <AdvancedPanel
+                id="incomeParameters"
+                title="Income parameters"
+                open={state.incomeParametersOpen}
+                onToggle={(open) =>
+                  updateField("incomeParametersOpen", open)
+                }
+              >
+                <div className="grid gap-4">
+                  <NumberField
+                    label="Employer match rate"
+                    htmlFor="matchRate"
+                    suffix="%"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={state.matchRate}
+                    onChange={(event) =>
+                      updateField("matchRate", event.target.value)
+                    }
+                  />
+                </div>
+              </AdvancedPanel>
+            </>
+          }
+        >
+          <Section
+            title="Income"
+            actions={
+              <div className="flex flex-wrap gap-3">
+                <ActionButton onClick={addSalaryItem}>Add salary</ActionButton>
+                <ActionButton onClick={addRsuItem}>Add RSU</ActionButton>
+              </div>
+            }
+          >
+            <div className="grid gap-3">
+              {state.incomeItems.map((item) => {
+                if (item.type === "salary") {
+                  const annualizedSalary = getAnnualSalaryTotal([
+                    {
+                      amount: readNumber(item.amount, 0),
+                      frequency: item.frequency,
+                    },
+                  ]);
+
+                  return (
+                    <RowItem
+                      key={item.id}
+                      headerClassName="grid gap-3 md:grid-cols-2"
+                      removeLabel={`Remove ${item.name || "salary"}`}
+                      onRemove={(event) => {
+                        event.stopPropagation();
+                        removeIncomeItem(item.id);
+                      }}
+                      detailsTitle="Salary details"
+                      detailsSummary={renderIncomeSummary(
+                        item,
+                        annualizedSalary,
+                      )}
+                      detailsOpen={Boolean(item.detailsOpen)}
+                      onToggleDetails={(open) =>
+                        updateIncomeItem(item.id, { detailsOpen: open })
+                      }
+                      header={
+                        <>
+                          <TextField
+                            label="Income name"
+                            htmlFor={`incomeName-${item.id}`}
+                            value={item.name}
+                            onChange={(event) =>
+                              updateIncomeItem(item.id, {
+                                name: event.target.value,
+                              })
+                            }
+                          />
+                          <NumberField
+                            label="Amount"
+                            htmlFor={`incomeAmount-${item.id}`}
+                            prefix="$"
+                            min="0"
+                            step="1000"
+                            value={item.amount}
+                            onChange={(event) =>
+                              updateIncomeItem(item.id, {
+                                amount: event.target.value,
+                              })
+                            }
+                          />
+                        </>
+                      }
+                    >
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="grid gap-1">
+                          <span className={fieldLabelClass}>Frequency</span>
+                          <SegmentedToggle
+                            ariaLabel={`${item.name || "Salary"} frequency`}
+                            value={item.frequency}
+                            onChange={(frequency) =>
+                              updateIncomeItem(item.id, { frequency })
+                            }
+                            options={[
+                              { value: "annual", label: "Annual" },
+                              { value: "monthly", label: "Monthly" },
+                            ]}
+                          />
+                        </div>
+                      </div>
+                    </RowItem>
+                  );
+                }
+
+                return (
+                  <RowItem
+                    key={item.id}
+                    headerClassName="grid gap-3 md:grid-cols-2"
+                    removeLabel={`Remove ${item.name || "RSU grant"}`}
+                    onRemove={(event) => {
+                      event.stopPropagation();
+                      removeIncomeItem(item.id);
+                    }}
+                    detailsTitle="RSU details"
+                    detailsOpen={Boolean(item.detailsOpen)}
+                    onToggleDetails={(open) =>
+                      updateIncomeItem(item.id, { detailsOpen: open })
+                    }
+                    header={
+                      <>
+                        <TextField
+                          label="Income name"
+                          htmlFor={`incomeName-${item.id}`}
+                          value={item.name}
+                          onChange={(event) =>
+                            updateIncomeItem(item.id, {
+                              name: event.target.value,
+                            })
+                          }
+                        />
+                        <NumberField
+                          label="Unvested remaining"
+                          htmlFor={`grantAmount-${item.id}`}
+                          prefix="$"
+                          min="0"
+                          step="1000"
+                          value={item.grantAmount}
+                          onChange={(event) =>
+                            updateIncomeItem(item.id, {
+                              grantAmount: event.target.value,
+                            })
+                          }
+                        />
+                      </>
+                    }
+                  >
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <NumberField
+                        label="Annual refresher"
+                        htmlFor={`refresherAmount-${item.id}`}
+                        prefix="$"
+                        min="0"
+                        step="1000"
+                        value={item.refresherAmount}
+                        onChange={(event) =>
+                          updateIncomeItem(item.id, {
+                            refresherAmount: event.target.value,
+                          })
+                        }
+                      />
+                      <NumberField
+                        label="Years left to vest"
+                        htmlFor={`vestingYears-${item.id}`}
+                        suffix="years"
+                        min="1"
+                        step="1"
+                        value={item.vestingYears}
+                        onChange={(event) =>
+                          updateIncomeItem(item.id, {
+                            vestingYears: event.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </RowItem>
+                );
+              })}
             </div>
           </Section>
 
           <Section title="Retirement Savings" divider>
-            <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
-              <SliderField
-                id="employee401k"
-                label="Employee 401(k)"
-                valueLabel={usd(inputs.employee401k)}
-                min="0"
-                max="24500"
-                step="100"
-                value={state.employee401k}
-                onChange={(event) =>
-                  updateField("employee401k", event.target.value)
-                }
-              />
-              <SliderField
-                id="matchRate"
-                label="Employer match rate"
-                valueLabel={`${Math.round(inputs.matchRate)}%`}
-                min="0"
-                max="100"
-                step="1"
-                value={state.matchRate}
-                onChange={(event) =>
-                  updateField("matchRate", event.target.value)
-                }
-              />
-              <SliderField
-                id="megaBackdoorInput"
-                label="Mega backdoor amount"
-                valueLabel={usd(results.mega)}
-                min="0"
-                max={Math.max(0, Math.round(results.availableMegaRoom))}
-                step="100"
-                value={Math.min(
-                  readNumber(state.megaBackdoorInput, 0),
-                  Math.max(0, Math.round(results.availableMegaRoom)),
-                )}
-                onChange={(event) =>
-                  updateField("megaBackdoorInput", event.target.value)
-                }
-              />
-              <SliderField
-                id="hsaContribution"
-                label="HSA contribution"
-                valueLabel={usd(inputs.hsaContribution)}
-                min="0"
-                max="4400"
-                step="50"
-                value={state.hsaContribution}
-                onChange={(event) =>
-                  updateField("hsaContribution", event.target.value)
-                }
-              />
+            <div className="grid gap-4">
+              <div className="grid gap-3 border-b border-(--line-soft) pb-4 md:grid-cols-[140px_minmax(0,1fr)_220px] md:items-start">
+                <div className="pt-1 text-sm text-(--ink-soft)">
+                  Traditional 401(k)
+                </div>
+                <SliderField
+                  id="employee401k"
+                  label="Employee contribution"
+                  valueLabel={usd(inputs.employee401k)}
+                  min="0"
+                  max="24500"
+                  step="100"
+                  value={state.employee401k}
+                  onChange={(event) =>
+                    updateField("employee401k", event.target.value)
+                  }
+                />
+                <SelectField
+                  label="Destination"
+                  htmlFor="retirementBucketId"
+                  value={state.retirementBucketId}
+                  onChange={(event) =>
+                    updateField("retirementBucketId", event.target.value)
+                  }
+                >
+                  <option value="">None</option>
+                  {assetOptions.map((bucket) => (
+                    <option key={bucket.id} value={bucket.id}>
+                      {bucket.label}
+                    </option>
+                  ))}
+                </SelectField>
+              </div>
+
+              <div className="grid gap-3 border-b border-(--line-soft) pb-4 md:grid-cols-[140px_minmax(0,1fr)_220px] md:items-start">
+                <div className="pt-1 text-sm text-(--ink-soft)">Roth 401(k)</div>
+                <SliderField
+                  id="megaBackdoorInput"
+                  label="Mega backdoor"
+                  valueLabel={usd(results.mega)}
+                  min="0"
+                  max={Math.max(0, Math.round(results.availableMegaRoom))}
+                  step="100"
+                  value={Math.min(
+                    readNumber(state.megaBackdoorInput, 0),
+                    Math.max(0, Math.round(results.availableMegaRoom)),
+                  )}
+                  onChange={(event) =>
+                    updateField("megaBackdoorInput", event.target.value)
+                  }
+                />
+                <SelectField
+                  label="Destination"
+                  htmlFor="megaBucketId"
+                  value={state.megaBucketId}
+                  onChange={(event) =>
+                    updateField("megaBucketId", event.target.value)
+                  }
+                >
+                  <option value="">None</option>
+                  {assetOptions.map((bucket) => (
+                    <option key={bucket.id} value={bucket.id}>
+                      {bucket.label}
+                    </option>
+                  ))}
+                </SelectField>
+              </div>
+
+              <div className="grid gap-3 border-b border-(--line-soft) pb-4 md:grid-cols-[140px_minmax(0,1fr)_220px] md:items-start">
+                <div className="pt-1 text-sm text-(--ink-soft)">IRA</div>
+                <SliderField
+                  id="iraContribution"
+                  label="Annual contribution"
+                  valueLabel={usd(inputs.iraContribution)}
+                  min="0"
+                  max="7000"
+                  step="100"
+                  value={state.iraContribution}
+                  onChange={(event) =>
+                    updateField("iraContribution", event.target.value)
+                  }
+                />
+                <SelectField
+                  label="Destination"
+                  htmlFor="iraBucketId"
+                  value={state.iraBucketId}
+                  onChange={(event) =>
+                    updateField("iraBucketId", event.target.value)
+                  }
+                >
+                  <option value="">None</option>
+                  {assetOptions.map((bucket) => (
+                    <option key={bucket.id} value={bucket.id}>
+                      {bucket.label}
+                    </option>
+                  ))}
+                </SelectField>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-[140px_minmax(0,1fr)_220px] md:items-start">
+                <div className="pt-1 text-sm text-(--ink-soft)">HSA</div>
+                <SliderField
+                  id="hsaContribution"
+                  label="Annual contribution"
+                  valueLabel={usd(inputs.hsaContribution)}
+                  min="0"
+                  max="4400"
+                  step="50"
+                  value={state.hsaContribution}
+                  onChange={(event) =>
+                    updateField("hsaContribution", event.target.value)
+                  }
+                />
+                <SelectField
+                  label="Destination"
+                  htmlFor="hsaBucketId"
+                  value={state.hsaBucketId}
+                  onChange={(event) =>
+                    updateField("hsaBucketId", event.target.value)
+                  }
+                >
+                  <option value="">None</option>
+                  {assetOptions.map((bucket) => (
+                    <option key={bucket.id} value={bucket.id}>
+                      {bucket.label}
+                    </option>
+                  ))}
+                </SelectField>
+              </div>
             </div>
           </Section>
-
-          <div className="mt-3">
-            <div className="grid gap-1 pb-4">
-              <span className="text-sm uppercase tracking-wide text-(--ink-soft)">
-                Estimated Annual Take-Home
-              </span>
-              <strong className="text-4xl leading-none tracking-tight md:text-5xl">
-                {usd(results.annualTakeHome, 2)}
-              </strong>
-            </div>
-
-            <MetricGrid
-              items={[
-                {
-                  label: "Monthly take-home",
-                  value: usd(results.monthlyTakeHome, 2),
-                },
-                { label: "Mega backdoor amount", value: usd(results.mega) },
-                { label: "Employer match", value: usd(results.employerMatch) },
-                { label: "Total taxes", value: usd(results.totalTaxes) },
-              ]}
-            />
-          </div>
 
           <Section title="Contribution Breakdown" divider>
             <table>
@@ -352,73 +731,7 @@ export function IncomePage() {
               </tbody>
             </table>
           </Section>
-
-          <AdvancedPanel
-            id="taxAssumptions"
-            title="Tax Assumptions"
-            open={state.taxAssumptionsOpen}
-            onToggle={(open) => updateField("taxAssumptionsOpen", open)}
-          >
-            <div className="grid">
-              <NumberField
-                label="401(k) annual additions limit"
-                htmlFor="annualAdditions"
-                prefix="$"
-                min="0"
-                step="100"
-                value={state.annualAdditions}
-                onChange={(event) =>
-                  updateField("annualAdditions", event.target.value)
-                }
-              />
-              <NumberField
-                label="Federal standard deduction"
-                htmlFor="federalStandardDeduction"
-                prefix="$"
-                min="0"
-                step="50"
-                value={state.federalStandardDeduction}
-                onChange={(event) =>
-                  updateField("federalStandardDeduction", event.target.value)
-                }
-              />
-              <NumberField
-                label="California standard deduction"
-                htmlFor="caStandardDeduction"
-                prefix="$"
-                min="0"
-                step="50"
-                value={state.caStandardDeduction}
-                onChange={(event) =>
-                  updateField("caStandardDeduction", event.target.value)
-                }
-              />
-              <NumberField
-                label="CA SDI rate"
-                htmlFor="caSdiRate"
-                suffix="%"
-                min="0"
-                max="10"
-                step="0.1"
-                value={state.caSdiRate}
-                onChange={(event) =>
-                  updateField("caSdiRate", event.target.value)
-                }
-              />
-              <SelectField
-                label="CA SDI"
-                htmlFor="includeCaSdi"
-                value={state.includeCaSdi}
-                onChange={(event) =>
-                  updateField("includeCaSdi", event.target.value)
-                }
-              >
-                <option value="yes">Include</option>
-                <option value="no">Ignore</option>
-              </SelectField>
-            </div>
-          </AdvancedPanel>
-        </section>
+        </WorkspaceLayout>
       </main>
     </PageShell>
   );
