@@ -34,24 +34,10 @@ export function normalizeExpense(rawExpense) {
   };
 }
 
-function getLegacyExpenses(parsed) {
-  const legacyDefs = [
-    ["Essentials", parsed?.essentialsMonthly],
-    ["Lifestyle", parsed?.lifestyleMonthly],
-    ["Irregular / Travel", parsed?.irregularMonthly],
-    ["Other", parsed?.otherMonthly],
-  ];
-
-  return legacyDefs.map(([name, monthly]) =>
-    normalizeExpense({ name, monthly }),
-  );
-}
-
 export function normalizeExpensesState(parsed, fallback) {
-  const expenses =
-    Array.isArray(parsed?.expenses) && parsed.expenses.length
-      ? parsed.expenses.map((expense) => normalizeExpense(expense))
-      : getLegacyExpenses(parsed);
+  const expenses = Array.isArray(parsed?.expenses)
+    ? parsed.expenses.map((expense) => normalizeExpense(expense))
+    : fallback.expenses;
 
   return {
     expenses,

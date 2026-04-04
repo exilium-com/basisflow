@@ -2,11 +2,7 @@ import React, { useEffect, useMemo } from "react";
 import { ActionButton } from "../components/ActionButton";
 import { AdvancedPanel } from "../components/AdvancedPanel";
 import { MetricGrid } from "../components/MetricGrid";
-import {
-  NumberField,
-  TextField,
-  fieldLabelClass,
-} from "../components/Field";
+import { NumberField, TextField, fieldLabelClass } from "../components/Field";
 import { PageShell } from "../components/PageShell";
 import { RowItem } from "../components/RowItem";
 import { Section } from "../components/Section";
@@ -57,11 +53,11 @@ function createRsuItem(overrides = {}) {
 
 const DEFAULTS = {
   incomeItems: [createSalaryItem()],
-  employee401k: "24500",
-  matchRate: "50",
-  iraContribution: "7000",
-  megaBackdoorInput: "35250",
-  hsaContribution: "4400",
+  employee401k: "0",
+  matchRate: "0",
+  iraContribution: "0",
+  megaBackdoorInput: "0",
+  hsaContribution: "0",
   incomeParametersOpen: false,
 };
 
@@ -90,44 +86,11 @@ function normalizeIncomeItem(item) {
 }
 
 function normalizeState(parsed, fallback) {
-  const hasDynamicItems =
-    Array.isArray(parsed?.incomeItems) && parsed.incomeItems.length > 0;
-  const migratedItems = hasDynamicItems
-    ? parsed.incomeItems.map((item) => normalizeIncomeItem(item))
-    : [
-        createSalaryItem({
-          amount:
-            typeof parsed?.grossSalary === "string"
-              ? parsed.grossSalary
-              : fallback.incomeItems[0].amount,
-        }),
-      ];
-
-  const legacyRsuGrantAmount =
-    typeof parsed?.rsuGrantAmount === "string" ? parsed.rsuGrantAmount : "0";
-  const legacyRsuRefresherAmount =
-    typeof parsed?.rsuRefresherAmount === "string"
-      ? parsed.rsuRefresherAmount
-      : "0";
-  const shouldMigrateLegacyRsu =
-    !hasDynamicItems &&
-    (readNumber(legacyRsuGrantAmount, 0) > 0 ||
-      readNumber(legacyRsuRefresherAmount, 0) > 0);
-
   return {
-    incomeItems: shouldMigrateLegacyRsu
-      ? [
-          ...migratedItems,
-          createRsuItem({
-            grantAmount: legacyRsuGrantAmount,
-            refresherAmount: legacyRsuRefresherAmount,
-            vestingYears:
-              typeof parsed?.rsuVestingYears === "string"
-                ? parsed.rsuVestingYears
-                : "4",
-          }),
-        ]
-      : migratedItems,
+    incomeItems:
+      Array.isArray(parsed?.incomeItems) && parsed.incomeItems.length > 0
+        ? parsed.incomeItems.map((item) => normalizeIncomeItem(item))
+        : fallback.incomeItems.map((item) => normalizeIncomeItem(item)),
     employee401k:
       typeof parsed?.employee401k === "string"
         ? parsed.employee401k
@@ -286,6 +249,59 @@ export function IncomePage() {
     ["Mega backdoor after-tax", results.mega],
     ["HSA", inputs.hsaContribution],
   ];
+  const hasRsuItems = rsuItems.length > 0;
+  const summaryItems = [
+    {
+      label: "Annual salary",
+      value: usd(results.grossSalary, 2),
+    },
+    {
+      label: "Monthly take-home",
+      value: usd(results.monthlyTakeHome, 2),
+    },
+    ...(hasRsuItems
+      ? [
+          {
+            label: "Next 12m RSU gross",
+            value: usd(results.rsuGrossNextYear, 2),
+          },
+          {
+            label: "Next 12m RSU net",
+            value: usd(results.rsuNetNextYear, 2),
+          },
+        ]
+      : []),
+    {
+      label: "Retirement saving",
+      value: usd(
+        inputs.employee401k +
+          results.employerMatch +
+          inputs.iraContribution +
+          results.mega,
+        2,
+      ),
+    },
+    {
+      label: "Total taxes",
+      value: usd(results.totalTaxes, 2),
+    },
+    {
+      label: "Federal tax",
+      value: usd(results.federalTax, 2),
+    },
+    {
+      label: "California tax",
+      value: usd(results.californiaTax, 2),
+    },
+    {
+      label: "FICA",
+      value: usd(results.fica.total, 2),
+    },
+    {
+      label: "CA SDI",
+      value: usd(results.caSdi, 2),
+    },
+  ];
 
   const taxRows = [
     ["Federal income tax", results.federalTax],
@@ -308,65 +324,14 @@ export function IncomePage() {
               />
 
               <div className="mt-6">
-                <MetricGrid
-                  items={[
-                    {
-                      label: "Annual salary",
-                      value: usd(results.grossSalary, 2),
-                    },
-                    {
-                      label: "Monthly take-home",
-                      value: usd(results.monthlyTakeHome, 2),
-                    },
-                    {
-                      label: "Next 12m RSU gross",
-                      value: usd(results.rsuGrossNextYear, 2),
-                    },
-                    {
-                      label: "Next 12m RSU net",
-                      value: usd(results.rsuNetNextYear, 2),
-                    },
-                    {
-                      label: "Retirement saving",
-                      value: usd(
-                        inputs.employee401k +
-                          results.employerMatch +
-                          inputs.iraContribution +
-                          results.mega,
-                        2,
-                      ),
-                    },
-                    {
-                      label: "Total taxes",
-                      value: usd(results.totalTaxes, 2),
-                    },
-                    {
-                      label: "Federal tax",
-                      value: usd(results.federalTax, 2),
-                    },
-                    {
-                      label: "California tax",
-                      value: usd(results.californiaTax, 2),
-                    },
-                    {
-                      label: "FICA",
-                      value: usd(results.fica.total, 2),
-                    },
-                    {
-                      label: "CA SDI",
-                      value: usd(results.caSdi, 2),
-                    },
-                  ]}
-                />
+                <MetricGrid items={summaryItems} />
               </div>
 
               <AdvancedPanel
                 id="incomeParameters"
                 title="Income parameters"
                 open={state.incomeParametersOpen}
-                onToggle={(open) =>
-                  updateField("incomeParametersOpen", open)
-                }
+                onToggle={(open) => updateField("incomeParametersOpen", open)}
               >
                 <div className="grid gap-4">
                   <NumberField
@@ -541,11 +506,14 @@ export function IncomePage() {
           </Section>
 
           <Section title="Retirement Savings" divider>
-              <div className="grid gap-4">
-                <div className="grid gap-3 border-b border-(--line-soft) pb-4 md:grid-cols-[140px_minmax(0,1fr)] md:items-start">
-                  <div className="pt-1 text-sm text-(--ink-soft)">
-                    Traditional 401(k)
-                  </div>
+            <div className="grid gap-4">
+              <div
+                className="grid gap-3 border-b border-(--line-soft) pb-4
+                  md:grid-cols-[140px_minmax(0,1fr)] md:items-start"
+              >
+                <div className="pt-1 text-sm text-(--ink-soft)">
+                  Traditional 401(k)
+                </div>
                 <SliderField
                   id="employee401k"
                   label="Employee contribution"
@@ -560,8 +528,13 @@ export function IncomePage() {
                 />
               </div>
 
-              <div className="grid gap-3 border-b border-(--line-soft) pb-4 md:grid-cols-[140px_minmax(0,1fr)] md:items-start">
-                <div className="pt-1 text-sm text-(--ink-soft)">Roth 401(k)</div>
+              <div
+                className="grid gap-3 border-b border-(--line-soft) pb-4
+                  md:grid-cols-[140px_minmax(0,1fr)] md:items-start"
+              >
+                <div className="pt-1 text-sm text-(--ink-soft)">
+                  Roth 401(k)
+                </div>
                 <SliderField
                   id="megaBackdoorInput"
                   label="Mega backdoor"
@@ -579,7 +552,10 @@ export function IncomePage() {
                 />
               </div>
 
-              <div className="grid gap-3 border-b border-(--line-soft) pb-4 md:grid-cols-[140px_minmax(0,1fr)] md:items-start">
+              <div
+                className="grid gap-3 border-b border-(--line-soft) pb-4
+                  md:grid-cols-[140px_minmax(0,1fr)] md:items-start"
+              >
                 <div className="pt-1 text-sm text-(--ink-soft)">IRA</div>
                 <SliderField
                   id="iraContribution"
@@ -595,7 +571,10 @@ export function IncomePage() {
                 />
               </div>
 
-              <div className="grid gap-3 md:grid-cols-[140px_minmax(0,1fr)] md:items-start">
+              <div
+                className="grid gap-3 md:grid-cols-[140px_minmax(0,1fr)]
+                  md:items-start"
+              >
                 <div className="pt-1 text-sm text-(--ink-soft)">HSA</div>
                 <SliderField
                   id="hsaContribution"

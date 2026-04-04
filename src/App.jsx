@@ -8,16 +8,6 @@ import { ExpensesPage } from "./pages/ExpensesPage";
 import { ProjectionPage } from "./pages/ProjectionPage";
 import { TaxConfigPage } from "./pages/TaxConfigPage";
 
-const LEGACY_ROUTES = [
-  ["/index.html", "/"],
-  ["/income.html", "/income"],
-  ["/mortgage.html", "/mortgage"],
-  ["/savings.html", "/assets"],
-  ["/expenses.html", "/expenses"],
-  ["/projection.html", "/projection"],
-  ["/tax-config.html", "/taxes"],
-];
-
 export function App() {
   return (
     <Routes>
@@ -28,9 +18,6 @@ export function App() {
       <Route path="/expenses" element={<ExpensesPage />} />
       <Route path="/projection" element={<ProjectionPage />} />
       <Route path="/taxes" element={<TaxConfigPage />} />
-      {LEGACY_ROUTES.map(([from, to]) => (
-        <Route key={from} path={from} element={<Navigate to={to} replace />} />
-      ))}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -204,7 +204,6 @@ export function AssetsPage() {
       label: "Tax-deferred assets",
       value: usd(totals.taxDeferredCurrentTotal),
     },
-    { label: "Bucket count", value: String(inputs.buckets.length) },
   ];
 
   return (
@@ -250,7 +249,7 @@ export function AssetsPage() {
                         ? undefined
                         : () => removeBucket(bucket.id)
                     }
-                    detailsTitle="Bucket details"
+                    detailsTitle="Asset details"
                     detailsOpen={bucket.detailsOpen}
                     onToggleDetails={(open) =>
                       updateBucket(bucket.id, { detailsOpen: open })
@@ -326,24 +325,6 @@ export function AssetsPage() {
             </div>
           </Section>
 
-          <Section title="Current Bucket Snapshot" divider>
-            <table>
-              <thead>
-                <tr>
-                  <th>Bucket</th>
-                  <th>Current value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {inputs.buckets.map((bucket) => (
-                  <tr key={bucket.id}>
-                    <td>{bucket.label}</td>
-                    <td>{usd(bucket.current)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Section>
         </WorkspaceLayout>
       </main>
     </PageShell>

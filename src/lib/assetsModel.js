@@ -47,12 +47,6 @@ function normalizeTaxTreatment(rawBucket) {
   if (rawBucket?.taxTreatment === "taxDeferred") {
     return "taxDeferred";
   }
-  if (typeof rawBucket?.taxFree === "boolean") {
-    return rawBucket.taxFree ? "taxDeferred" : "none";
-  }
-  if (rawBucket?.type === "tax_free") {
-    return "taxDeferred";
-  }
   return "none";
 }
 
@@ -128,34 +122,11 @@ export function normalizeBucket(rawBucket) {
   };
 }
 
-function isLegacySeedBucket(bucket, taxTreatment) {
-  return (
-    bucket.taxTreatment === taxTreatment &&
-    bucket.name === "" &&
-    bucket.current === "" &&
-    bucket.contribution === "" &&
-    bucket.growth === "" &&
-    bucket.basis === ""
-  );
-}
-
 export function normalizeAssetsState(parsed, fallback) {
-  const rawBuckets =
-    Array.isArray(parsed?.buckets) && parsed.buckets.length
-      ? parsed.buckets.map((bucket) => normalizeBucket(bucket))
-      : fallback.buckets;
-  const buckets =
-    rawBuckets.length === 2 &&
-    isLegacySeedBucket(rawBuckets[0], "none") &&
-    isLegacySeedBucket(rawBuckets[1], "taxDeferred")
-      ? [
-          createSeedBucket("none", rawBuckets[0].detailsOpen),
-          createSeedBucket("taxDeferred", rawBuckets[1].detailsOpen),
-        ]
-      : rawBuckets;
-
   return {
-    buckets,
+    buckets: Array.isArray(parsed?.buckets)
+      ? parsed.buckets.map((bucket) => normalizeBucket(bucket))
+      : fallback.buckets,
   };
 }
 
@@ -244,7 +215,8 @@ export function ensurePinnedRetirementBuckets(state, visibleBucketIds = null) {
 }
 
 export function defaultLabelForBucket(bucket) {
-  return bucket.name.trim() || TYPE_DEFAULTS[bucket.taxTreatment].name;
+  const typeDefaults = TYPE_DEFAULTS[bucket.taxTreatment] ?? TYPE_DEFAULTS.none;
+  return bucket.name.trim() || typeDefaults.name;
 }
 
 export function normalizeAssetInputs(

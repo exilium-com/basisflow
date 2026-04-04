@@ -1,91 +1,125 @@
 import React from "react";
 import { ActionButton } from "../components/ActionButton";
 import { PageShell } from "../components/PageShell";
-import { NAV_ITEMS } from "../lib/nav";
 import { pageSectionClass, surfaceClass } from "../lib/ui";
 
-const TOOL_ROWS = [
+const TOOL_AREAS = [
   {
-    key: "income",
-    title: "Income Calculator",
-    description:
-      "Annual take-home estimate with California single-filer assumptions, 401(k), employer match, mega backdoor, and HSA inputs.",
+    title: "Income",
+    description: "Salary, RSUs, taxes, and take-home pay in one place.",
+    accent: "var(--teal)",
+    border: "rgba(13,106,115,0.18)",
   },
   {
-    key: "assets",
-    title: "Assets Calculator",
-    description:
-      "Bucket editor for current balances, tax-free vs taxable treatment, and taxable basis.",
+    title: "Assets",
+    description: "Balances, basis, and tax treatment without spreadsheet sprawl.",
+    accent: "var(--clay)",
+    border: "rgba(197,107,61,0.22)",
   },
   {
-    key: "mortgage",
-    title: "Mortgage Calculator",
-    description:
-      "Loan comparison workspace for fixed and ARM options, with monthly payment summary and side-by-side comparison.",
+    title: "Housing",
+    description: "Mortgage cost, down payment, and home equity impact.",
+    accent: "var(--teal)",
+    border: "rgba(13,106,115,0.18)",
   },
   {
-    key: "expenses",
-    title: "Expenses Calculator",
-    description:
-      "Dynamic non-housing expense lines with monthly or annual cadence.",
-  },
-  {
-    key: "projection",
     title: "Projection",
-    description:
-      "Combined long-run annual view for income, assets, mortgage, and expenses, including free-cash allocation into asset buckets.",
-  },
-  {
-    key: "taxes",
-    title: "Tax Config",
-    description:
-      "Shared 2026 federal, state, and capital-gains bracket settings reused by the other tools.",
+    description: "A long-run view of how cash flow compounds into net worth.",
+    accent: "var(--clay)",
+    border: "rgba(197,107,61,0.22)",
   },
 ];
+
+const mutedText = { color: "var(--ink-soft)" };
+const sectionBorder = { borderColor: "var(--line-soft)" };
 
 export function HomePage() {
   return (
     <PageShell>
-      <main className={surfaceClass}>
-        <section className={pageSectionClass}>
-          <div className="border-b border-(--line-soft) pb-4">
-            <p
-              className="text-xs font-extrabold uppercase tracking-wide
-                text-(--ink-soft)"
-            >
-              Basisflow
-            </p>
-            <p className="mt-2 max-w-prose leading-relaxed text-(--ink-soft)">
-              Basisflow is a local planning workspace for income, assets,
-              mortgage, expenses, projection, and shared tax assumptions. Set
-              up the inputs first, then move to Projection for the long-run
-              model.
-            </p>
+      <main className={`${surfaceClass} flex-1 overflow-hidden`}>
+        <section className="relative isolate flex flex-1 overflow-hidden">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-90"
+            aria-hidden="true"
+          >
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(circle at 14% 20%, rgba(13,106,115,0.18), transparent 34%), radial-gradient(circle at 86% 24%, rgba(197,107,61,0.16), transparent 24%), linear-gradient(180deg, rgba(255,253,249,0.98), rgba(239,230,216,0.68))",
+              }}
+            />
+            <div
+              className="absolute h-72 w-72 rounded-full"
+              style={{
+                right: "-8%",
+                bottom: "-18%",
+                background: "rgba(13,106,115,0.08)",
+              }}
+            />
           </div>
 
-          <div className="mt-4 grid gap-0">
-            {TOOL_ROWS.map((row) => {
-              const nav = NAV_ITEMS.find((item) => item.key === row.key);
-              return (
-                <article key={row.key} className="flex flex-col gap-3 border-t border-(--line-soft) py-4 first:border-t-0 md:flex-row md:items-center">
-                  <div className="w-20 text-xs font-extrabold uppercase tracking-wide text-(--ink-soft)">
-                    {nav.index}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-xl font-bold">{row.title}</h2>
-                    <p className="mt-1.5 leading-relaxed text-(--ink-soft)">
-                      {row.description}
-                    </p>
-                  </div>
+          <div className={`${pageSectionClass} relative flex flex-1`}>
+            <div className="home-reveal mx-auto grid flex-1 max-w-5xl content-center gap-8 py-6 md:py-8">
+              <div className="grid gap-4">
+                <p
+                  className="text-xs font-extrabold uppercase"
+                  style={{ ...mutedText, letterSpacing: "0.22em" }}
+                >
+                  Basisflow
+                </p>
+                <h1
+                  className="max-w-4xl leading-none"
+                  style={{ fontSize: "clamp(3rem, 8vw, 6rem)" }}
+                >
+                  See how income turns to net worth.
+                </h1>
+                <p
+                  className="home-reveal home-delay-1 max-w-2xl text-base leading-7 md:text-lg"
+                  style={mutedText}
+                >
+                  Basisflow combines income, assets, mortgage, expenses, and
+                  projection into one working model so you can understand how
+                  today&apos;s cash flow compounds into long-run outcomes.
+                </p>
+                <div className="home-reveal home-delay-2 pt-2">
                   <ActionButton
-                    className="justify-self-start whitespace-nowrap"
-                    to={nav.to}
+                    to="/income"
+                    className="h-14 px-6 text-base font-extrabold uppercase"
+                    style={{
+                      backgroundColor: "var(--teal)",
+                      borderColor: "var(--teal)",
+                      color: "var(--white)",
+                      letterSpacing: "0.08em",
+                    }}
                   >
-                    Open
+                    Get started
                   </ActionButton>
-                </article>
-              );
-            })}
+                </div>
+              </div>
+
+              <div className="grid gap-2 border-t pt-5" style={sectionBorder}>
+                {TOOL_AREAS.map((item) => (
+                  <article
+                    key={item.title}
+                    className="home-reveal home-delay-2 border-b py-3 transition duration-200 hover:translate-x-1"
+                    style={sectionBorder}
+                  >
+                    <div className="grid gap-1 border-l pl-4" style={{ borderColor: item.border }}>
+                      <h2
+                        className="leading-none"
+                        style={{ fontSize: "clamp(1.5rem, 2.4vw, 2.4rem)" }}
+                      >
+                        {item.title}
+                      </h2>
+                      <p className="max-w-xl leading-6" style={mutedText}>
+                        {item.description}
+                      </p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
       </main>

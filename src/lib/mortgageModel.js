@@ -267,16 +267,13 @@ export function normalizeMortgageState(parsed, fallback) {
       Object.fromEntries(
         option.fields.map((field) => {
           const nestedValue = parsed?.loanOptions?.[option.type]?.[field.field];
-          const legacyValue = parsed?.[field.htmlFor];
           const fallbackValue = defaults.loanOptions[option.type][field.field];
 
           return [
             field.field,
             typeof nestedValue === "string"
               ? nestedValue
-              : typeof legacyValue === "string"
-                ? legacyValue
-                : fallbackValue,
+              : fallbackValue,
           ];
         }),
       ),

@@ -403,9 +403,7 @@ export function calculateProjection({
       : 0,
     rsuItems: Array.isArray(incomeSummary?.rsuItems)
       ? incomeSummary.rsuItems
-      : incomeSummary?.rsus
-        ? [incomeSummary.rsus]
-        : [],
+      : [],
   };
   const annualExpenseTotal = expenseInputs.expenses.reduce(
     (sum, expense) => sum + expense.annualBase,
