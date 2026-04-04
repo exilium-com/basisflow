@@ -31,16 +31,17 @@ import {
   sanitizeMortgageValue,
 } from "../lib/mortgageModel";
 import { saveJson } from "../lib/storage";
+import {
+  MORTGAGE_STATE_KEY,
+  MORTGAGE_SUMMARY_KEY,
+} from "../lib/storageKeys";
 import { useStoredState } from "../hooks/useStoredState";
 import { surfaceClass } from "../lib/ui";
-
-const COOKIE_NAME = "finance_tools_mortgage_v1";
-const SUMMARY_COOKIE_NAME = "finance_tools_mortgage_summary_v1";
 
 export function MortgagePage() {
   const [expandedLoanType, setExpandedLoanType] = useState(null);
   const [state, setState] = useStoredState(
-    COOKIE_NAME,
+    MORTGAGE_STATE_KEY,
     createDefaultMortgageState,
     {
       normalize: normalizeMortgageState,
@@ -80,7 +81,7 @@ export function MortgagePage() {
       };
     });
 
-    saveJson(SUMMARY_COOKIE_NAME, {
+    saveJson(MORTGAGE_SUMMARY_KEY, {
       type: scenario.type,
       typeLabel: scenario.typeLabel,
       isArm: scenario.isArm,

@@ -1,6 +1,7 @@
 import { roundTo } from "./format";
+import { loadStoredJson, saveJson } from "./storage";
 
-export const STORAGE_KEY = "finance_tools_tax_config_v1";
+export const STORAGE_KEY = "basisflow_tax_config";
 
 export const DEFAULT_CONFIG = {
   annualAdditionsLimit: 72000,
@@ -108,27 +109,18 @@ export function normalizeConfig(rawConfig) {
 }
 
 export function loadTaxConfig() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return cloneDefaultConfig();
-    }
-
-    return normalizeConfig(JSON.parse(raw));
-  } catch {
-    return cloneDefaultConfig();
-  }
+  return normalizeConfig(loadStoredJson(STORAGE_KEY));
 }
 
 export function saveTaxConfig(config) {
   const normalized = normalizeConfig(config);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+  saveJson(STORAGE_KEY, normalized);
   return normalized;
 }
 
 export function resetTaxConfig() {
   const defaults = cloneDefaultConfig();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
+  saveJson(STORAGE_KEY, defaults);
   return defaults;
 }
 
