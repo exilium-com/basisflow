@@ -49,10 +49,17 @@ export function HomePage() {
       <main className={surfaceClass}>
         <section className={pageSectionClass}>
           <div className="border-b border-(--line-soft) pb-4">
+            <p
+              className="text-xs font-extrabold uppercase tracking-wide
+                text-(--ink-soft)"
+            >
+              Basisflow
+            </p>
             <p className="mt-2 max-w-prose leading-relaxed text-(--ink-soft)">
-              Local calculators for income, assets, mortgage, expenses,
-              projection, and shared tax assumptions. Use the first four pages
-              to define inputs, then move to Projection for the long-run model.
+              Basisflow is a local planning workspace for income, assets,
+              mortgage, expenses, projection, and shared tax assumptions. Set
+              up the inputs first, then move to Projection for the long-run
+              model.
             </p>
           </div>
 
