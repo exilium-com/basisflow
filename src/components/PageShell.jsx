@@ -1,12 +1,27 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { NavLink } from "react-router-dom";
 import { NAV_ITEMS } from "../lib/nav";
+import { clearAppState, deleteProfile, hasSavedProfile, listProfiles, loadProfile, saveProfile } from "../lib/storage";
 import { ActionButton } from "./ActionButton";
 import { ProfileLoadDialog } from "./ProfileLoadDialog";
 import { ProfileSaveDialog } from "./ProfileSaveDialog";
 import { ToastMessage } from "./ToastMessage";
-import { useProfileActions } from "../hooks/useProfileActions";
+
+const PROFILE_NAME_OPTIONS = [
+  "Golden Path",
+  "Weekend Numbers",
+  "Quiet Rich",
+  "Coastline Plan",
+  "Future Me",
+  "Rainy Day Map",
+  "Soft Landing",
+  "Long View",
+  "Compound Mode",
+  "Sunday Spreadsheet",
+];
+
+const PENDING_TOAST_KEY = "basisflow_pending_toast";
 
 function ToolNavLinks() {
   return NAV_ITEMS.map((item) => (
@@ -52,24 +67,114 @@ function ShellActions({ actions, onOpenSaveDialog, onOpenLoadDialog, onResetAll,
 }
 
 export function PageShell({ actions = null, children }) {
-  const {
-    closeLoadDialog,
-    closeSaveDialog,
-    handleDeleteProfile,
-    handleLoadProfile,
-    handleResetAll,
-    handleSaveProfile,
-    loadDialogOpen,
-    openLoadDialog,
-    openSaveDialog,
-    profileAvailable,
-    profileName,
-    profileNamePlaceholder,
-    saveDialogOpen,
-    savedProfiles,
-    setProfileName,
-    statusMessage,
-  } = useProfileActions();
+  const [statusMessage, setStatusMessage] = useState("");
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [loadDialogOpen, setLoadDialogOpen] = useState(false);
+  const [profileName, setProfileName] = useState("");
+  const [profileNamePlaceholder, setProfileNamePlaceholder] = useState("");
+  const savedProfiles = useMemo(() => listProfiles(), [statusMessage, saveDialogOpen, loadDialogOpen]);
+  const profileAvailable = hasSavedProfile();
+
+  useEffect(() => {
+    try {
+      const pendingToast = sessionStorage.getItem(PENDING_TOAST_KEY);
+      if (pendingToast) {
+        setStatusMessage(pendingToast);
+        sessionStorage.removeItem(PENDING_TOAST_KEY);
+      }
+    } catch {
+      // Best effort.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!statusMessage) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setStatusMessage("");
+    }, 4000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [statusMessage]);
+
+  function closeSaveDialog() {
+    setSaveDialogOpen(false);
+    setProfileName("");
+    setProfileNamePlaceholder("");
+  }
+
+  function openSaveDialog() {
+    setProfileName("");
+    setProfileNamePlaceholder(PROFILE_NAME_OPTIONS[Math.floor(Math.random() * PROFILE_NAME_OPTIONS.length)]);
+    setSaveDialogOpen(true);
+  }
+
+  function openLoadDialog() {
+    setLoadDialogOpen(true);
+  }
+
+  function closeLoadDialog() {
+    setLoadDialogOpen(false);
+  }
+
+  function handleSaveProfile() {
+    const resolvedProfileName = profileName.trim() || profileNamePlaceholder;
+    if (!saveProfile(resolvedProfileName)) {
+      setStatusMessage("Enter a profile name");
+      return;
+    }
+
+    setStatusMessage(`Saved ${resolvedProfileName}`);
+    closeSaveDialog();
+  }
+
+  function handleLoadProfile(name) {
+    if (!loadProfile(name)) {
+      setStatusMessage("Profile not found");
+      return;
+    }
+
+    try {
+      sessionStorage.setItem(PENDING_TOAST_KEY, `Loaded ${name}`);
+    } catch {
+      // Best effort.
+    }
+
+    closeLoadDialog();
+    window.location.reload();
+  }
+
+  function handleDeleteProfile(name) {
+    if (!deleteProfile(name)) {
+      setStatusMessage("Could not delete profile");
+      return;
+    }
+
+    setStatusMessage(`Deleted ${name}`);
+  }
+
+  function handleResetAll() {
+    if (
+      !window.confirm("Reset all app data to defaults? This clears the current working state but keeps saved profiles.")
+    ) {
+      return;
+    }
+
+    if (!clearAppState()) {
+      setStatusMessage("Could not reset app state");
+      return;
+    }
+
+    try {
+      sessionStorage.setItem(PENDING_TOAST_KEY, "Reset all");
+    } catch {
+      // Best effort.
+    }
+
+    window.location.reload();
+  }
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-screen-2xl flex-col px-3 sm:px-4">
