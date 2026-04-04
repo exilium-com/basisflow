@@ -324,18 +324,14 @@ function advanceProjectedBucketWithNetContribution(bucketState, annualContributi
     2,
   );
 
-  let nextBasisValue = bucketState.basisValue;
-  if (bucketState.taxTreatment === "none" || bucketState.taxTreatment === "taxDeferred") {
-    if (annualContribution >= 0) {
-      nextBasisValue = roundTo(bucketState.basisValue + annualContribution, 2);
-    } else if (bucketState.balance > 0) {
-      nextBasisValue = roundTo(bucketState.basisValue * (Math.max(0, nextBalance) / bucketState.balance), 2);
-    } else {
-      nextBasisValue = 0;
-    }
-  } else {
-    nextBasisValue = 0;
-  }
+  const nextBasisValue =
+    bucketState.taxTreatment === "none" || bucketState.taxTreatment === "taxDeferred"
+      ? annualContribution >= 0
+        ? roundTo(bucketState.basisValue + annualContribution, 2)
+        : bucketState.balance > 0
+          ? roundTo(bucketState.basisValue * (Math.max(0, nextBalance) / bucketState.balance), 2)
+          : 0
+      : 0;
 
   return {
     ...bucketState,
