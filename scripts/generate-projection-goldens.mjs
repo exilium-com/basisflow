@@ -22,10 +22,7 @@ function projectStockBalance(annualContribution, growthRate, years) {
   let balance = 0;
 
   for (let year = 1; year <= years; year += 1) {
-    balance = roundToCents(
-      balance * (1 + growthRate) +
-        annualContribution * (1 + growthRate / 2),
-    );
+    balance = roundToCents(balance * (1 + growthRate) + annualContribution * (1 + growthRate / 2));
   }
 
   return balance;
@@ -50,12 +47,7 @@ function toProjectionGolden(incomeGolden) {
       (incomeExpected.fica?.total ?? 0) +
       (incomeExpected.caSdi ?? 0);
   const annualTakeHome = roundToCents(
-    salary -
-      employee401k -
-      hsaContribution -
-      iraContribution -
-      megaBackdoorInput -
-      totalTaxes,
+    salary - employee401k - hsaContribution - iraContribution - megaBackdoorInput - totalTaxes,
   );
   const mortgage = MORTGAGE.annualMortgage;
 
@@ -88,11 +80,7 @@ function toProjectionGolden(incomeGolden) {
 
   const yearlyExpected = Object.fromEntries(
     [1, 5].map((year) => {
-      const stockBalance = projectStockBalance(
-        annualTakeHome - mortgage,
-        Number(STOCK_BUCKET.growth) / 100,
-        year,
-      );
+      const stockBalance = projectStockBalance(annualTakeHome - mortgage, Number(STOCK_BUCKET.growth) / 100, year);
       return [
         year,
         {
@@ -115,13 +103,6 @@ function toProjectionGolden(incomeGolden) {
 
 const projectionGoldens = incomeGoldens.map(toProjectionGolden);
 
-const output = `export const projectionGoldens = ${JSON.stringify(
-  projectionGoldens,
-  null,
-  2,
-)};\n`;
+const output = `export const projectionGoldens = ${JSON.stringify(projectionGoldens, null, 2)};\n`;
 
-writeFileSync(
-  new URL("../src/lib/__tests__/goldens/projection.js", import.meta.url),
-  output,
-);
+writeFileSync(new URL("../src/lib/__tests__/goldens/projection.js", import.meta.url), output);

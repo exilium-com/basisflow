@@ -1,5 +1,5 @@
 import React from "react";
-import { cx } from "../lib/cx";
+import clsx from "clsx";
 
 export function RowItem({
   header,
@@ -22,7 +22,7 @@ export function RowItem({
 
   return (
     <article
-      className={cx(
+      className={clsx(
         "relative border border-(--line) bg-(--white-soft)",
         pinned && "!border-(--teal-soft) !bg-(--teal-tint)",
         selected && "border-(--teal) bg-(--white)",
@@ -32,9 +32,8 @@ export function RowItem({
     >
       {onRemove ? (
         <button
-          className="absolute top-2 right-3 z-10 border-0 bg-transparent p-0
-            text-xs leading-none font-extrabold text-(--ink-soft) transition
-            hover:text-(--ink) focus-visible:outline-none"
+          className="absolute top-2 right-3 z-10 border-0 bg-transparent p-0 text-xs leading-none font-extrabold
+            text-(--ink-soft) transition hover:text-(--ink) focus-visible:outline-none"
           type="button"
           aria-label={removeLabel}
           onClick={onRemove}
@@ -45,12 +44,11 @@ export function RowItem({
 
       <div className={headerPadding}>
         <div className="flex items-start justify-between gap-3">
-          <div className={cx("min-w-0 flex-1", headerClassName)}>
+          <div className={clsx("min-w-0 flex-1", headerClassName)}>
             {header}
             {detailsTitle ? (
               <button
-                className="inline-flex items-center gap-2 text-xs text-(--ink)
-                  focus-visible:outline-none"
+                className="inline-flex items-center gap-2 text-xs text-(--ink) focus-visible:outline-none"
                 type="button"
                 aria-controls={detailsId}
                 aria-expanded={detailsOpen}
@@ -63,17 +61,12 @@ export function RowItem({
                   {detailsOpen ? "−" : "+"}
                 </span>
                 <span>{detailsTitle}</span>
-                {detailsSummary ? (
-                  <span className="text-(--ink-soft)">{detailsSummary}</span>
-                ) : null}
+                {detailsSummary ? <span className="text-(--ink-soft)">{detailsSummary}</span> : null}
               </button>
             ) : null}
           </div>
           {action ? (
-            <div
-              className="flex-none"
-              onClick={(event) => event.stopPropagation()}
-            >
+            <div className="flex-none" onClick={(event) => event.stopPropagation()}>
               {action}
             </div>
           ) : null}
@@ -82,13 +75,8 @@ export function RowItem({
 
       {detailsTitle && detailsOpen ? (
         <div id={detailsId}>
-          <div
-            aria-hidden="true"
-            className="mx-6 border-t border-(--line-soft)"
-          />
-          <div className={cx("px-4 pt-2 pb-4", detailsContentClassName)}>
-            {children}
-          </div>
+          <div aria-hidden="true" className="mx-6 border-t border-(--line-soft)" />
+          <div className={clsx("px-4 pt-2 pb-4", detailsContentClassName)}>{children}</div>
         </div>
       ) : null}
     </article>

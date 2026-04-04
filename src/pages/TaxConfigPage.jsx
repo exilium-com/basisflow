@@ -8,22 +8,14 @@ import { surfaceClass } from "../lib/ui";
 
 export function TaxConfigPage() {
   const initialConfig = useMemo(() => loadTaxConfig(), []);
-  const [federalBrackets, setFederalBrackets] = useState(
-    JSON.stringify(initialConfig.federalBrackets, null, 2),
-  );
-  const [annualAdditionsLimit, setAnnualAdditionsLimit] = useState(
-    String(initialConfig.annualAdditionsLimit),
-  );
+  const [federalBrackets, setFederalBrackets] = useState(JSON.stringify(initialConfig.federalBrackets, null, 2));
+  const [annualAdditionsLimit, setAnnualAdditionsLimit] = useState(String(initialConfig.annualAdditionsLimit));
   const [federalStandardDeduction, setFederalStandardDeduction] = useState(
     String(initialConfig.federalStandardDeduction),
   );
-  const [stateStandardDeduction, setStateStandardDeduction] = useState(
-    String(initialConfig.stateStandardDeduction),
-  );
+  const [stateStandardDeduction, setStateStandardDeduction] = useState(String(initialConfig.stateStandardDeduction));
   const [caSdiRate, setCaSdiRate] = useState(String(initialConfig.caSdiRate));
-  const [stateBrackets, setStateBrackets] = useState(
-    JSON.stringify(initialConfig.stateBrackets, null, 2),
-  );
+  const [stateBrackets, setStateBrackets] = useState(JSON.stringify(initialConfig.stateBrackets, null, 2));
   const [longTermCapitalGains, setLongTermCapitalGains] = useState(
     JSON.stringify(initialConfig.longTermCapitalGains, null, 2),
   );
@@ -36,9 +28,7 @@ export function TaxConfigPage() {
     setCaSdiRate(String(config.caSdiRate));
     setFederalBrackets(JSON.stringify(config.federalBrackets, null, 2));
     setStateBrackets(JSON.stringify(config.stateBrackets, null, 2));
-    setLongTermCapitalGains(
-      JSON.stringify(config.longTermCapitalGains, null, 2),
-    );
+    setLongTermCapitalGains(JSON.stringify(config.longTermCapitalGains, null, 2));
   }
 
   function handleApply() {
@@ -65,9 +55,8 @@ export function TaxConfigPage() {
         <section className="p-6 max-sm:p-4">
           <Section title="Tax Config">
             <p className="leading-relaxed text-(--ink-soft)">
-              Each array is saved to local storage and reused across the suite,
-              including income, assets, and projection. Use <code>null</code> for
-              the top bracket.
+              Each array is saved to local storage and reused across the suite, including income, assets, and
+              projection. Use <code>null</code> for the top bracket.
             </p>
             <div className="mt-4 grid grid-cols-2 gap-4 max-md:grid-cols-1">
               <NumberField
@@ -76,9 +65,7 @@ export function TaxConfigPage() {
                 min="0"
                 step="100"
                 value={annualAdditionsLimit}
-                onChange={(event) =>
-                  setAnnualAdditionsLimit(event.target.value)
-                }
+                onChange={(event) => setAnnualAdditionsLimit(event.target.value)}
               />
               <NumberField
                 label="Federal standard deduction"
@@ -86,9 +73,7 @@ export function TaxConfigPage() {
                 min="0"
                 step="50"
                 value={federalStandardDeduction}
-                onChange={(event) =>
-                  setFederalStandardDeduction(event.target.value)
-                }
+                onChange={(event) => setFederalStandardDeduction(event.target.value)}
               />
               <NumberField
                 label="California standard deduction"
@@ -96,9 +81,7 @@ export function TaxConfigPage() {
                 min="0"
                 step="50"
                 value={stateStandardDeduction}
-                onChange={(event) =>
-                  setStateStandardDeduction(event.target.value)
-                }
+                onChange={(event) => setStateStandardDeduction(event.target.value)}
               />
               <NumberField
                 label="CA SDI rate"
@@ -121,20 +104,13 @@ export function TaxConfigPage() {
               <TextAreaField
                 label="Long-term capital gains"
                 value={longTermCapitalGains}
-                onChange={(event) =>
-                  setLongTermCapitalGains(event.target.value)
-                }
+                onChange={(event) => setLongTermCapitalGains(event.target.value)}
               />
             </div>
             <div className="mt-4 flex gap-2.5">
-              <ActionButton onClick={handleApply}>
-                Apply config
-              </ActionButton>
+              <ActionButton onClick={handleApply}>Apply config</ActionButton>
             </div>
-            <div
-              className="mt-4 min-h-6 leading-relaxed text-(--ink-soft)"
-              aria-live="polite"
-            >
+            <div className="mt-4 min-h-6 leading-relaxed text-(--ink-soft)" aria-live="polite">
               {status}
             </div>
           </Section>

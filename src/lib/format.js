@@ -36,9 +36,7 @@ export function numberToEditableString(value, decimals = 0) {
     return "";
   }
 
-  return decimals === 0
-    ? String(Math.round(value))
-    : String(roundTo(value, decimals));
+  return decimals === 0 ? String(Math.round(value)) : String(roundTo(value, decimals));
 }
 
 export function formatInputDisplay(value, config) {
@@ -70,12 +68,7 @@ export function stripToNumber(rawValue) {
   }
 
   const normalized = rawValue.replace(/[^0-9.-]/g, "");
-  if (
-    !normalized ||
-    normalized === "-" ||
-    normalized === "." ||
-    normalized === "-."
-  ) {
+  if (!normalized || normalized === "-" || normalized === "." || normalized === "-.") {
     return NaN;
   }
 

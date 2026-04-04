@@ -1,20 +1,12 @@
-import {
-  createDefaultAssetsState,
-  normalizeAssetInputs,
-  normalizeAssetsState,
-} from "../../assetsModel";
-import {
-  createDefaultExpenseState,
-  normalizeExpenseInputs,
-  normalizeExpensesState,
-} from "../../expensesModel";
+import { createDefaultAssetsState, normalizeAssetInputs, normalizeAssetsState } from "../../assetsModel";
+import { createDefaultExpenseState, normalizeExpenseInputs, normalizeExpensesState } from "../../expensesModel";
 import {
   buildIncomeDirectedContributions,
-  calculateProjection,
   createDefaultProjectionState,
   normalizeProjectionInputs,
   normalizeProjectionState,
-} from "../../projectionModel";
+} from "../../projectionState";
+import { calculateProjection } from "../../projectionCalculation";
 import { roundTo } from "../../format";
 import { DEFAULT_CONFIG, normalizeConfig } from "../../taxConfig";
 
@@ -82,18 +74,9 @@ function createProjectionRsuItems(rsuValue) {
   ];
 }
 
-function createAccount({
-  id,
-  name,
-  taxTreatment = "none",
-  balance = 0,
-  annualContribution = 0,
-  growth = 0,
-  basis,
-}) {
+function createAccount({ id, name, taxTreatment = "none", balance = 0, annualContribution = 0, growth = 0, basis }) {
   const startingBalance = roundTo(balance, 2);
-  const effectiveBasis =
-    basis ?? (taxTreatment === "none" ? startingBalance : 0);
+  const effectiveBasis = basis ?? (taxTreatment === "none" ? startingBalance : 0);
 
   return {
     id,
@@ -139,12 +122,7 @@ function ensureRetirementAccounts(accounts, retirement) {
   return nextAccounts;
 }
 
-function createIncomeSummary({
-  salary = 150000,
-  annualTakeHome = 100000,
-  retirement = {},
-  rsuValue = 0,
-}) {
+function createIncomeSummary({ salary = 150000, annualTakeHome = 100000, retirement = {}, rsuValue = 0 }) {
   const {
     employee401k = 0,
     employerMatch = 0,
@@ -170,11 +148,7 @@ function createIncomeSummary({
   };
 }
 
-function createMortgageSummary({
-  annualMortgage = 0,
-  homePrice = 0,
-  currentEquity = 0,
-}) {
+function createMortgageSummary({ annualMortgage = 0, homePrice = 0, currentEquity = 0 }) {
   return {
     totalMonthlyPayment: roundTo(annualMortgage / 12, 2),
     currentEquity: roundTo(currentEquity, 2),
@@ -329,11 +303,7 @@ export function runProjectionScenario({
       homePrice,
       currentEquity,
     }),
-    assetsState: createAssetsState(
-      accounts,
-      normalizedRetirement,
-      allocations,
-    ),
+    assetsState: createAssetsState(accounts, normalizedRetirement, allocations),
     expensesState: createExpensesState(annualExpenses),
     projectionState: createProjectionState({
       horizonYears,
@@ -354,35 +324,14 @@ export function runProjectionScenario({
   const fallbackExpensesState = createDefaultExpenseState();
   const fallbackProjectionState = createDefaultProjectionState();
 
-  const assetsState = normalizeAssetsState(
-    clone(scenario.assetsState),
-    fallbackAssetsState,
-  );
-  const expensesState = normalizeExpensesState(
-    clone(scenario.expensesState),
-    fallbackExpensesState,
-  );
-  const projectionState = normalizeProjectionState(
-    clone(scenario.projectionState),
-    fallbackProjectionState,
-  );
+  const assetsState = normalizeAssetsState(clone(scenario.assetsState), fallbackAssetsState);
+  const expensesState = normalizeExpensesState(clone(scenario.expensesState), fallbackExpensesState);
+  const projectionState = normalizeProjectionState(clone(scenario.projectionState), fallbackProjectionState);
 
-  const assetInputs = normalizeAssetInputs(
-    assetsState,
-    projectionState.assetGrowthRate,
-  );
-  const expenseInputs = normalizeExpenseInputs(
-    expensesState,
-    projectionState.expenseGrowthRate,
-  );
-  const incomeDirectedContributions = buildIncomeDirectedContributions(
-    scenario.incomeSummary,
-  );
-  const projectionInputs = normalizeProjectionInputs(
-    projectionState,
-    assetInputs,
-    incomeDirectedContributions,
-  );
+  const assetInputs = normalizeAssetInputs(assetsState, projectionState.assetGrowthRate);
+  const expenseInputs = normalizeExpenseInputs(expensesState, projectionState.expenseGrowthRate);
+  const incomeDirectedContributions = buildIncomeDirectedContributions(scenario.incomeSummary);
+  const projectionInputs = normalizeProjectionInputs(projectionState, assetInputs, incomeDirectedContributions);
   const results = calculateProjection({
     incomeSummary: scenario.incomeSummary,
     mortgageSummary: scenario.mortgageSummary,

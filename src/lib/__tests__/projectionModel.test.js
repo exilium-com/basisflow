@@ -25,16 +25,8 @@ const realisticIncome = runIncomeScenario({
 }).income;
 
 const deductibleTaxSavings =
-  computeAdditionalTax(
-    170000,
-    10000,
-    normalizeConfig(DEFAULT_CONFIG).federalBrackets,
-  ) +
-  computeAdditionalTax(
-    170000,
-    10000,
-    normalizeConfig(DEFAULT_CONFIG).stateBrackets,
-  );
+  computeAdditionalTax(170000, 10000, normalizeConfig(DEFAULT_CONFIG).federalBrackets) +
+  computeAdditionalTax(170000, 10000, normalizeConfig(DEFAULT_CONFIG).stateBrackets);
 
 const projectionCases = [
   {

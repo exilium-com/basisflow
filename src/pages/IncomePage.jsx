@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from "react";
 import { AdvancedPanel } from "../components/AdvancedPanel";
+import { ActionButton } from "../components/ActionButton";
 import { MetricGrid } from "../components/MetricGrid";
 import { NumberField, TextField, fieldLabelClass } from "../components/Field";
 import { PageShell } from "../components/PageShell";
@@ -11,17 +12,9 @@ import { SummaryStrip } from "../components/SummaryStrip";
 import { WorkspaceLayout } from "../components/WorkspaceLayout";
 import { useStoredState } from "../hooks/useStoredState";
 import { readNumber, usd } from "../lib/format";
-import {
-  calculateIncome,
-  computeRsuGrossForItems,
-  getAnnualSalaryTotal,
-} from "../lib/incomeModel";
-import { loadStoredJson, saveJson } from "../lib/storage";
+import { calculateIncome, computeRsuGrossForItems, getAnnualSalaryTotal } from "../lib/incomeModel";
+import { saveJson } from "../lib/storage";
 import { loadTaxConfig } from "../lib/taxConfig";
-import {
-  normalizeAssetsState,
-  PINNED_RETIREMENT_BUCKETS,
-} from "../lib/assetsModel";
 import { INCOME_STATE_KEY, INCOME_SUMMARY_KEY } from "../lib/storageKeys";
 import { surfaceClass } from "../lib/ui";
 
@@ -65,12 +58,9 @@ function normalizeIncomeItem(item) {
     return createRsuItem({
       id: typeof item?.id === "string" ? item.id : crypto.randomUUID(),
       name: typeof item?.name === "string" ? item.name : "RSU grant",
-      grantAmount:
-        typeof item?.grantAmount === "string" ? item.grantAmount : "0",
-      refresherAmount:
-        typeof item?.refresherAmount === "string" ? item.refresherAmount : "0",
-      vestingYears:
-        typeof item?.vestingYears === "string" ? item.vestingYears : "4",
+      grantAmount: typeof item?.grantAmount === "string" ? item.grantAmount : "0",
+      refresherAmount: typeof item?.refresherAmount === "string" ? item.refresherAmount : "0",
+      vestingYears: typeof item?.vestingYears === "string" ? item.vestingYears : "4",
       detailsOpen: Boolean(item?.detailsOpen),
     });
   }
@@ -90,35 +80,19 @@ function normalizeState(parsed, fallback) {
       Array.isArray(parsed?.incomeItems) && parsed.incomeItems.length > 0
         ? parsed.incomeItems.map((item) => normalizeIncomeItem(item))
         : fallback.incomeItems.map((item) => normalizeIncomeItem(item)),
-    employee401k:
-      typeof parsed?.employee401k === "string"
-        ? parsed.employee401k
-        : fallback.employee401k,
-    matchRate:
-      typeof parsed?.matchRate === "string"
-        ? parsed.matchRate
-        : fallback.matchRate,
-    iraContribution:
-      typeof parsed?.iraContribution === "string"
-        ? parsed.iraContribution
-        : fallback.iraContribution,
+    employee401k: typeof parsed?.employee401k === "string" ? parsed.employee401k : fallback.employee401k,
+    matchRate: typeof parsed?.matchRate === "string" ? parsed.matchRate : fallback.matchRate,
+    iraContribution: typeof parsed?.iraContribution === "string" ? parsed.iraContribution : fallback.iraContribution,
     megaBackdoorInput:
-      typeof parsed?.megaBackdoorInput === "string"
-        ? parsed.megaBackdoorInput
-        : fallback.megaBackdoorInput,
-    hsaContribution:
-      typeof parsed?.hsaContribution === "string"
-        ? parsed.hsaContribution
-        : fallback.hsaContribution,
+      typeof parsed?.megaBackdoorInput === "string" ? parsed.megaBackdoorInput : fallback.megaBackdoorInput,
+    hsaContribution: typeof parsed?.hsaContribution === "string" ? parsed.hsaContribution : fallback.hsaContribution,
     incomeParametersOpen: Boolean(parsed?.incomeParametersOpen),
   };
 }
 
 function renderIncomeSummary(item, annualizedSalary) {
   if (item.type === "salary") {
-    return item.frequency === "monthly"
-      ? `${usd(annualizedSalary)} / year`
-      : "Annual";
+    return item.frequency === "monthly" ? `${usd(annualizedSalary)} / year` : "Annual";
   }
 
   const vestYears = Math.max(1, Math.round(readNumber(item.vestingYears, 4)));
@@ -128,8 +102,6 @@ function renderIncomeSummary(item, annualizedSalary) {
 export function IncomePage() {
   const [state, setState] = useStoredState(INCOME_STATE_KEY, DEFAULTS, {
     normalize: normalizeState,
-    localStorage: true,
-    preferLocalStorage: true,
   });
 
   const salaryItems = useMemo(
@@ -171,10 +143,7 @@ export function IncomePage() {
     [salaryItems, rsuItems, state],
   );
   const taxConfig = useMemo(() => loadTaxConfig(), []);
-  const results = useMemo(
-    () => calculateIncome(inputs, taxConfig),
-    [inputs, taxConfig],
-  );
+  const results = useMemo(() => calculateIncome(inputs, taxConfig), [inputs, taxConfig]);
 
   useEffect(() => {
     saveJson(INCOME_SUMMARY_KEY, {
@@ -207,9 +176,7 @@ export function IncomePage() {
   function updateIncomeItem(itemId, patch) {
     setState((current) => ({
       ...current,
-      incomeItems: current.incomeItems.map((item) =>
-        item.id === itemId ? { ...item, ...patch } : item,
-      ),
+      incomeItems: current.incomeItems.map((item) => (item.id === itemId ? { ...item, ...patch } : item)),
     }));
   }
 
@@ -265,13 +232,7 @@ export function IncomePage() {
       : []),
     {
       label: "Retirement saving",
-      value: usd(
-        inputs.employee401k +
-          results.employerMatch +
-          inputs.iraContribution +
-          results.mega,
-        2,
-      ),
+      value: usd(inputs.employee401k + results.employerMatch + inputs.iraContribution + results.mega, 2),
     },
     {
       label: "Total taxes",
@@ -310,10 +271,7 @@ export function IncomePage() {
         <WorkspaceLayout
           summary={
             <>
-              <SummaryStrip
-                kicker="Estimated Annual Take-Home"
-                value={usd(results.annualTakeHome, 2)}
-              />
+              <SummaryStrip kicker="Estimated Annual Take-Home" value={usd(results.annualTakeHome, 2)} />
 
               <div className="mt-6">
                 <MetricGrid items={summaryItems} />
@@ -333,9 +291,7 @@ export function IncomePage() {
                     max="100"
                     step="1"
                     value={state.matchRate}
-                    onChange={(event) =>
-                      updateField("matchRate", event.target.value)
-                    }
+                    onChange={(event) => updateField("matchRate", event.target.value)}
                   />
                 </div>
               </AdvancedPanel>
@@ -371,14 +327,9 @@ export function IncomePage() {
                         removeIncomeItem(item.id);
                       }}
                       detailsTitle="Salary details"
-                      detailsSummary={renderIncomeSummary(
-                        item,
-                        annualizedSalary,
-                      )}
+                      detailsSummary={renderIncomeSummary(item, annualizedSalary)}
                       detailsOpen={Boolean(item.detailsOpen)}
-                      onToggleDetails={(open) =>
-                        updateIncomeItem(item.id, { detailsOpen: open })
-                      }
+                      onToggleDetails={(open) => updateIncomeItem(item.id, { detailsOpen: open })}
                       header={
                         <>
                           <TextField
@@ -411,9 +362,7 @@ export function IncomePage() {
                           <SegmentedToggle
                             ariaLabel={`${item.name || "Salary"} frequency`}
                             value={item.frequency}
-                            onChange={(frequency) =>
-                              updateIncomeItem(item.id, { frequency })
-                            }
+                            onChange={(frequency) => updateIncomeItem(item.id, { frequency })}
                             options={[
                               { value: "annual", label: "Annual" },
                               { value: "monthly", label: "Monthly" },
@@ -436,9 +385,7 @@ export function IncomePage() {
                     }}
                     detailsTitle="RSU details"
                     detailsOpen={Boolean(item.detailsOpen)}
-                    onToggleDetails={(open) =>
-                      updateIncomeItem(item.id, { detailsOpen: open })
-                    }
+                    onToggleDetails={(open) => updateIncomeItem(item.id, { detailsOpen: open })}
                     header={
                       <>
                         <TextField
@@ -500,12 +447,10 @@ export function IncomePage() {
           <Section title="Retirement Savings" divider>
             <div className="grid gap-4">
               <div
-                className="grid gap-3 border-b border-(--line-soft) pb-4
-                  md:grid-cols-[140px_minmax(0,1fr)] md:items-start"
+                className="grid gap-3 border-b border-(--line-soft) pb-4 md:grid-cols-[140px_minmax(0,1fr)]
+                  md:items-start"
               >
-                <div className="pt-1 text-sm text-(--ink-soft)">
-                  Traditional 401(k)
-                </div>
+                <div className="pt-1 text-sm text-(--ink-soft)">Traditional 401(k)</div>
                 <SliderField
                   id="employee401k"
                   label="Employee contribution"
@@ -514,19 +459,15 @@ export function IncomePage() {
                   max="24500"
                   step="50"
                   value={state.employee401k}
-                  onChange={(event) =>
-                    updateField("employee401k", event.target.value)
-                  }
+                  onChange={(event) => updateField("employee401k", event.target.value)}
                 />
               </div>
 
               <div
-                className="grid gap-3 border-b border-(--line-soft) pb-4
-                  md:grid-cols-[140px_minmax(0,1fr)] md:items-start"
+                className="grid gap-3 border-b border-(--line-soft) pb-4 md:grid-cols-[140px_minmax(0,1fr)]
+                  md:items-start"
               >
-                <div className="pt-1 text-sm text-(--ink-soft)">
-                  Roth 401(k)
-                </div>
+                <div className="pt-1 text-sm text-(--ink-soft)">Roth 401(k)</div>
                 <SliderField
                   id="megaBackdoorInput"
                   label="Mega backdoor"
@@ -538,15 +479,13 @@ export function IncomePage() {
                     readNumber(state.megaBackdoorInput, 0),
                     Math.max(0, Math.round(results.availableMegaRoom)),
                   )}
-                  onChange={(event) =>
-                    updateField("megaBackdoorInput", event.target.value)
-                  }
+                  onChange={(event) => updateField("megaBackdoorInput", event.target.value)}
                 />
               </div>
 
               <div
-                className="grid gap-3 border-b border-(--line-soft) pb-4
-                  md:grid-cols-[140px_minmax(0,1fr)] md:items-start"
+                className="grid gap-3 border-b border-(--line-soft) pb-4 md:grid-cols-[140px_minmax(0,1fr)]
+                  md:items-start"
               >
                 <div className="pt-1 text-sm text-(--ink-soft)">IRA</div>
                 <SliderField
@@ -557,16 +496,11 @@ export function IncomePage() {
                   max="7000"
                   step="50"
                   value={state.iraContribution}
-                  onChange={(event) =>
-                    updateField("iraContribution", event.target.value)
-                  }
+                  onChange={(event) => updateField("iraContribution", event.target.value)}
                 />
               </div>
 
-              <div
-                className="grid gap-3 md:grid-cols-[140px_minmax(0,1fr)]
-                  md:items-start"
-              >
+              <div className="grid gap-3 md:grid-cols-[140px_minmax(0,1fr)] md:items-start">
                 <div className="pt-1 text-sm text-(--ink-soft)">HSA</div>
                 <SliderField
                   id="hsaContribution"
@@ -576,9 +510,7 @@ export function IncomePage() {
                   max="4400"
                   step="50"
                   value={state.hsaContribution}
-                  onChange={(event) =>
-                    updateField("hsaContribution", event.target.value)
-                  }
+                  onChange={(event) => updateField("hsaContribution", event.target.value)}
                 />
               </div>
             </div>
