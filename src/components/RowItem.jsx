@@ -18,7 +18,7 @@ export function RowItem({
   children,
 }) {
   const detailsId = React.useId();
-  const headerPadding = onRemove ? "px-4 pt-3 pb-3 pr-12" : "px-4 pt-3 pb-3";
+  const headerPadding = "px-4 pt-3 pb-3 pr-12";
 
   return (
     <article

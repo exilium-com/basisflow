@@ -5,6 +5,7 @@ import { cx } from "../lib/cx";
 export function ActionButton({
   to,
   className = "",
+  style,
   type = "button",
   children,
   ...props
@@ -16,14 +17,14 @@ export function ActionButton({
 
   if (to) {
     return (
-      <Link className={buttonClassName} to={to} {...props}>
+      <Link className={buttonClassName} style={style} to={to} {...props}>
         {children}
       </Link>
     );
   }
 
   return (
-    <button className={buttonClassName} type={type} {...props}>
+    <button className={buttonClassName} style={style} type={type} {...props}>
       {children}
     </button>
   );

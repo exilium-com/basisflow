@@ -3,7 +3,7 @@ import { ActionButton } from "../components/ActionButton";
 import { NumberField, TextAreaField } from "../components/Field";
 import { PageShell } from "../components/PageShell";
 import { Section } from "../components/Section";
-import { loadTaxConfig, resetTaxConfig, saveTaxConfig } from "../lib/taxConfig";
+import { loadTaxConfig, saveTaxConfig } from "../lib/taxConfig";
 import { surfaceClass } from "../lib/ui";
 
 export function TaxConfigPage() {
@@ -59,20 +59,8 @@ export function TaxConfigPage() {
     }
   }
 
-  function handleReset() {
-    const config = resetTaxConfig();
-    applyConfig(config);
-    setStatus("Reset to 2026 defaults.");
-  }
-
   return (
-    <PageShell
-      actions={
-        <ActionButton onClick={handleReset}>
-          Reset
-        </ActionButton>
-      }
-    >
+    <PageShell>
       <main className={surfaceClass}>
         <section className="p-6 max-sm:p-4">
           <Section title="Tax Config">

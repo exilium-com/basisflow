@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AdvancedPanel } from "../components/AdvancedPanel";
-import { ActionButton } from "../components/ActionButton";
 import { ChartPanel } from "../components/ChartPanel";
 import { DisplayToggle } from "../components/DisplayToggle";
 import {
@@ -802,10 +801,6 @@ export function ProjectionPage() {
     updateExpenseOverride(expenseId, { detailsOpen: open });
   }
 
-  function reset() {
-    setState(createDefaultProjectionState());
-  }
-
   function updateAssetOverride(bucketId, patch) {
     setState((current) => ({
       ...current,
@@ -1047,7 +1042,7 @@ export function ProjectionPage() {
   const snapshotLabelClass = "font-bold text-(--ink)";
   const snapshotValueClass = "mt-1 font-bold text-(--ink)";
   return (
-    <PageShell actions={<ActionButton onClick={reset}>Reset</ActionButton>}>
+    <PageShell>
       <main className={surfaceClass}>
         <WorkspaceLayout
           summary={

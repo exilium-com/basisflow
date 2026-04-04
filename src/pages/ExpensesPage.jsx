@@ -1,5 +1,4 @@
 import React, { useMemo } from "react";
-import { ActionButton } from "../components/ActionButton";
 import { Field, NumberField, TextField } from "../components/Field";
 import { PageShell } from "../components/PageShell";
 import { ResultList } from "../components/ResultList";
@@ -84,10 +83,6 @@ export function ExpensesPage() {
     }));
   }
 
-  function reset() {
-    setState(createDefaultExpenseState());
-  }
-
   const summaryItems = [
     {
       label: "Monthly run-rate spend",
@@ -96,13 +91,7 @@ export function ExpensesPage() {
   ];
 
   return (
-    <PageShell
-      actions={
-        <ActionButton onClick={reset}>
-          Reset
-        </ActionButton>
-      }
-    >
+    <PageShell>
       <main className={surfaceClass}>
         <WorkspaceLayout
           summary={

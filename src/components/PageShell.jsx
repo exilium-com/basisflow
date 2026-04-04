@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { NAV_ITEMS } from "../lib/nav";
+import { ActionButton } from "./ActionButton";
 import { cx } from "../lib/cx";
 import { TextField } from "./Field";
 import { ProfileDialog } from "./ProfileDialog";
 import { ToastMessage } from "./ToastMessage";
 import {
+  clearAppState,
   deleteProfile,
   hasSavedProfile,
   listProfiles,
@@ -129,68 +131,126 @@ export function PageShell({ actions = null, children }) {
     }
   }
 
+  function handleResetAll() {
+    const confirmed = window.confirm(
+      "Reset all app data to defaults? This clears the current working state but keeps saved profiles.",
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    const cleared = clearAppState();
+    if (!cleared) {
+      setStatusMessage("Could not reset app state");
+      return;
+    }
+
+    try {
+      sessionStorage.setItem(PENDING_TOAST_KEY, "Reset all");
+    } catch {
+      // Best effort.
+    }
+
+    window.location.reload();
+  }
+
   return (
     <div
       className="mx-auto flex min-h-screen w-full max-w-screen-2xl flex-col px-3
         sm:px-4"
     >
       <nav
-        className="mt-3 mb-3 flex flex-wrap gap-2 border-b border-(--line) pb-3"
+        className="mt-3 mb-3 border-b border-(--line) pb-3"
         aria-label="Tools"
       >
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.key}
-            className={({ isActive }) =>
-              cx(
-                `inline-flex h-10 items-center gap-2 border border-(--line)
-                bg-(--white-soft) px-3 text-xs font-extrabold tracking-wide
-                text-(--ink) uppercase no-underline transition duration-150
-                hover:-translate-y-px hover:bg-(--white)
-                focus-visible:-translate-y-px focus-visible:bg-(--white)
-                focus-visible:outline-none`,
-                isActive &&
-                  "!border-(--teal) !bg-(--teal-tint) !text-(--teal)",
-              )
-            }
-            to={item.to}
-            end={item.to === "/"}
-          >
-            <span className="text-xs opacity-70">{item.index}</span>
-            <span>{item.label}</span>
-          </NavLink>
-        ))}
-        <div className="ml-auto flex flex-wrap items-center gap-1.5">
-          {statusMessage ? (
-            <ToastMessage message={statusMessage} />
-          ) : null}
-          <button
-            className="inline-flex h-10 items-center border border-(--line)
-              bg-(--white-soft) px-3 text-xs font-extrabold tracking-wide
-              text-(--ink) uppercase transition duration-150
-              hover:-translate-y-px hover:bg-(--white)
-              focus-visible:-translate-y-px focus-visible:bg-(--white)
-              focus-visible:outline-none"
-            type="button"
-            onClick={openSaveDialog}
-          >
-            Save Profile
-          </button>
-          <button
-            className="inline-flex h-10 items-center border border-(--line)
-              bg-(--white-soft) px-3 text-xs font-extrabold tracking-wide
-              text-(--ink) uppercase transition duration-150
-              hover:-translate-y-px hover:bg-(--white)
-              focus-visible:-translate-y-px focus-visible:bg-(--white)
-              focus-visible:outline-none disabled:cursor-not-allowed
-              disabled:opacity-50"
-            type="button"
-            onClick={() => setLoadDialogOpen(true)}
-            disabled={!profileAvailable}
-          >
-            Load Profile
-          </button>
-          {actions}
+        <div className="hidden sm:flex sm:flex-wrap sm:items-center sm:gap-2">
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.key}
+              className={({ isActive }) =>
+                cx(
+                  `inline-flex h-10 items-center gap-2 border border-(--line)
+                  bg-(--white-soft) px-3 text-xs font-extrabold tracking-wide
+                  text-(--ink) uppercase no-underline transition duration-150
+                  hover:-translate-y-px hover:bg-(--white)
+                  focus-visible:-translate-y-px focus-visible:bg-(--white)
+                  focus-visible:outline-none`,
+                  isActive &&
+                    "!border-(--teal) !bg-(--teal-tint) !text-(--teal)",
+                )
+              }
+              to={item.to}
+              end={item.to === "/"}
+            >
+              <span className="text-xs opacity-70">{item.index}</span>
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+          <div className="ml-auto flex flex-wrap items-center gap-1.5">
+            {statusMessage ? (
+              <ToastMessage message={statusMessage} />
+            ) : null}
+            <ActionButton className="px-3 text-xs uppercase tracking-wide" onClick={openSaveDialog}>
+              Save Profile
+            </ActionButton>
+            <ActionButton
+              className="px-3 text-xs uppercase tracking-wide disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => setLoadDialogOpen(true)}
+              disabled={!profileAvailable}
+            >
+              Load Profile
+            </ActionButton>
+            <ActionButton className="px-3 text-xs uppercase tracking-wide" onClick={handleResetAll}>
+              Reset
+            </ActionButton>
+            {actions}
+          </div>
+        </div>
+
+        <div className="sm:hidden">
+          <div className="flex gap-2 overflow-x-auto pb-2 whitespace-nowrap">
+            {NAV_ITEMS.map((item) => (
+              <NavLink
+                key={item.key}
+                className={({ isActive }) =>
+                  cx(
+                    `inline-flex h-10 shrink-0 items-center gap-2 border
+                    border-(--line) bg-(--white-soft) px-3 text-xs
+                    font-extrabold tracking-wide text-(--ink) uppercase
+                    no-underline transition duration-150 hover:-translate-y-px
+                    hover:bg-(--white) focus-visible:-translate-y-px
+                    focus-visible:bg-(--white) focus-visible:outline-none`,
+                    isActive &&
+                      "!border-(--teal) !bg-(--teal-tint) !text-(--teal)",
+                  )
+                }
+                to={item.to}
+                end={item.to === "/"}
+              >
+                <span className="text-xs opacity-70">{item.index}</span>
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center justify-end gap-1.5">
+            {statusMessage ? (
+              <ToastMessage message={statusMessage} />
+            ) : null}
+            <ActionButton className="px-3 text-xs uppercase tracking-wide" onClick={openSaveDialog}>
+              Save Profile
+            </ActionButton>
+            <ActionButton
+              className="px-3 text-xs uppercase tracking-wide disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => setLoadDialogOpen(true)}
+              disabled={!profileAvailable}
+            >
+              Load Profile
+            </ActionButton>
+            <ActionButton className="px-3 text-xs uppercase tracking-wide" onClick={handleResetAll}>
+              Reset
+            </ActionButton>
+            {actions}
+          </div>
         </div>
       </nav>
 
@@ -205,28 +265,20 @@ export function PageShell({ actions = null, children }) {
             onChange={(event) => setProfileName(event.target.value)}
           />
           <div className="flex justify-end gap-2">
-            <button
-              className="inline-flex h-10 items-center border border-(--line)
-                bg-(--white-soft) px-4 text-xs font-extrabold tracking-wide
-                text-(--ink) uppercase transition duration-150 hover:bg-(--white)"
-              onClick={closeSaveDialog}
-              type="button"
-            >
+            <ActionButton className="px-4 text-xs uppercase tracking-wide" onClick={closeSaveDialog}>
               Cancel
-            </button>
-            <button
-              className="inline-flex h-10 items-center border px-4 text-xs
-                font-extrabold tracking-wide uppercase transition duration-150"
+            </ActionButton>
+            <ActionButton
+              className="px-4 text-xs uppercase tracking-wide"
               onClick={handleSaveProfile}
               style={{
                 backgroundColor: "var(--teal)",
                 borderColor: "var(--teal)",
                 color: "var(--white)",
               }}
-              type="button"
             >
               Save
-            </button>
+            </ActionButton>
           </div>
         </ProfileDialog>
       ) : null}

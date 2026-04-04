@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo } from "react";
-import { ActionButton } from "../components/ActionButton";
 import { AdvancedPanel } from "../components/AdvancedPanel";
 import { MetricGrid } from "../components/MetricGrid";
 import { NumberField, TextField, fieldLabelClass } from "../components/Field";
@@ -235,13 +234,6 @@ export function IncomePage() {
     }));
   }
 
-  function reset() {
-    setState({
-      ...DEFAULTS,
-      incomeItems: [createSalaryItem()],
-    });
-  }
-
   const contributionRows = [
     ["Employee 401(k)", inputs.employee401k],
     ["Employer match", results.employerMatch],
@@ -313,7 +305,7 @@ export function IncomePage() {
   ];
 
   return (
-    <PageShell actions={<ActionButton onClick={reset}>Reset</ActionButton>}>
+    <PageShell>
       <main className={surfaceClass}>
         <WorkspaceLayout
           summary={

@@ -193,6 +193,15 @@ export function saveStateObject(name, value) {
   saveJson(name, value);
 }
 
+export function clearAppState() {
+  try {
+    localStorage.removeItem(APP_STORAGE_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function listProfiles() {
   try {
     return Object.keys(localStorage)

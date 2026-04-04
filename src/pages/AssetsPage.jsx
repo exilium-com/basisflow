@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo } from "react";
-import { ActionButton } from "../components/ActionButton";
 import { NumberField, SelectField, TextField } from "../components/Field";
 import { PageShell } from "../components/PageShell";
 import { ResultList } from "../components/ResultList";
@@ -173,10 +172,6 @@ export function AssetsPage() {
     }));
   }
 
-  function reset() {
-    setState(createDefaultAssetsState());
-  }
-
   function addBucket() {
     setState((current) => ({
       ...current,
@@ -204,16 +199,17 @@ export function AssetsPage() {
       label: "Tax-deferred assets",
       value: usd(totals.taxDeferredCurrentTotal),
     },
-  ];
+  ].filter((item, index) => {
+    const totalsByIndex = [
+      totals.taxableCurrentTotal,
+      totals.taxDeductibleCurrentTotal,
+      totals.taxDeferredCurrentTotal,
+    ];
+    return totalsByIndex[index] > 0;
+  });
 
   return (
-    <PageShell
-      actions={
-        <ActionButton onClick={reset}>
-          Reset
-        </ActionButton>
-      }
-    >
+    <PageShell>
       <main className={surfaceClass}>
         <WorkspaceLayout
           summary={

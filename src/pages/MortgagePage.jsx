@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AdvancedPanel } from "../components/AdvancedPanel";
-import { ActionButton } from "../components/ActionButton";
 import { ChartPanel } from "../components/ChartPanel";
 import { MortgageBalanceChart, MortgageCompositionChart } from "../components/MortgageCharts";
 import { NumberField, fieldLabelClass } from "../components/Field";
@@ -241,10 +240,6 @@ export function MortgagePage() {
     });
   }
 
-  function reset() {
-    setState(createDefaultMortgageState());
-  }
-
   function selectLoan(loanType) {
     if (
       state.activeLoanType !== loanType &&
@@ -345,7 +340,7 @@ export function MortgagePage() {
   }
 
   return (
-    <PageShell actions={<ActionButton onClick={reset}>Reset</ActionButton>}>
+    <PageShell>
       <main className={surfaceClass}>
         <WorkspaceLayout
           summary={
