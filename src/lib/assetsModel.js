@@ -107,15 +107,11 @@ function hasMeaningfulBucketValues(bucket) {
 
 export function normalizeBucket(rawBucket) {
   return {
-    id:
-      typeof rawBucket?.id === "string" && rawBucket.id
-        ? rawBucket.id
-        : crypto.randomUUID(),
+    id: typeof rawBucket?.id === "string" && rawBucket.id ? rawBucket.id : crypto.randomUUID(),
     taxTreatment: normalizeTaxTreatment(rawBucket),
     name: typeof rawBucket?.name === "string" ? rawBucket.name : "",
     current: typeof rawBucket?.current === "string" ? rawBucket.current : "",
-    contribution:
-      typeof rawBucket?.contribution === "string" ? rawBucket.contribution : "",
+    contribution: typeof rawBucket?.contribution === "string" ? rawBucket.contribution : "",
     growth: typeof rawBucket?.growth === "string" ? rawBucket.growth : "",
     basis: typeof rawBucket?.basis === "string" ? rawBucket.basis : "",
     detailsOpen: Boolean(rawBucket?.detailsOpen),
@@ -131,24 +127,14 @@ export function normalizeAssetsState(parsed, fallback) {
 }
 
 export function getPinnedRetirementTargets() {
-  return Object.fromEntries(
-    Object.entries(PINNED_RETIREMENT_BUCKETS).map(([key, config]) => [
-      key,
-      config.id,
-    ]),
-  );
+  return Object.fromEntries(Object.entries(PINNED_RETIREMENT_BUCKETS).map(([key, config]) => [key, config.id]));
 }
 
-export function getVisiblePinnedRetirementBucketIds(
-  state,
-  incomeDirectedContributions = {},
-) {
+export function getVisiblePinnedRetirementBucketIds(state, incomeDirectedContributions = {}) {
   const visibleIds = new Set();
 
   state.buckets.forEach((bucket) => {
-    const isPinnedRetirementBucket = Object.values(PINNED_RETIREMENT_BUCKETS).some(
-      (config) => config.id === bucket.id,
-    );
+    const isPinnedRetirementBucket = Object.values(PINNED_RETIREMENT_BUCKETS).some((config) => config.id === bucket.id);
 
     if (isPinnedRetirementBucket && hasMeaningfulBucketValues(bucket)) {
       visibleIds.add(bucket.id);
@@ -166,12 +152,9 @@ export function getVisiblePinnedRetirementBucketIds(
 
 export function ensurePinnedRetirementBuckets(state, visibleBucketIds = null) {
   const targets = getPinnedRetirementTargets();
-  const visibleIds =
-    visibleBucketIds instanceof Set ? visibleBucketIds : null;
+  const visibleIds = visibleBucketIds instanceof Set ? visibleBucketIds : null;
   const buckets = [...state.buckets].filter((bucket) => {
-    const isPinnedRetirementBucket = Object.values(PINNED_RETIREMENT_BUCKETS).some(
-      (config) => config.id === bucket.id,
-    );
+    const isPinnedRetirementBucket = Object.values(PINNED_RETIREMENT_BUCKETS).some((config) => config.id === bucket.id);
 
     if (!isPinnedRetirementBucket || !visibleIds) {
       return true;
@@ -219,25 +202,14 @@ export function defaultLabelForBucket(bucket) {
   return bucket.name.trim() || typeDefaults.name;
 }
 
-export function normalizeAssetInputs(
-  state,
-  baselineGrowthRate = TYPE_DEFAULTS.none.growth,
-) {
+export function normalizeAssetInputs(state, baselineGrowthRate = TYPE_DEFAULTS.none.growth) {
   return {
-    baselineGrowthRate:
-      readNumber(baselineGrowthRate, TYPE_DEFAULTS.none.growth) / 100,
+    baselineGrowthRate: readNumber(baselineGrowthRate, TYPE_DEFAULTS.none.growth) / 100,
     buckets: state.buckets.map((bucket) => {
       const current = Math.max(0, readNumber(bucket.current, 0));
       const contribution = Math.max(0, readNumber(bucket.contribution, 0));
-      const growth =
-        readNumber(
-          bucket.growth,
-          readNumber(baselineGrowthRate, TYPE_DEFAULTS.none.growth),
-        ) / 100;
-      const basis =
-        bucket.taxTreatment === "none"
-          ? clamp(readNumber(bucket.basis, current), 0, current)
-          : 0;
+      const growth = readNumber(bucket.growth, readNumber(baselineGrowthRate, TYPE_DEFAULTS.none.growth)) / 100;
+      const basis = bucket.taxTreatment === "none" ? clamp(readNumber(bucket.basis, current), 0, current) : 0;
 
       return {
         ...bucket,
@@ -251,32 +223,9 @@ export function normalizeAssetInputs(
   };
 }
 
-function computeCapitalGainsRate(amount, brackets) {
-  const safeAmount = Math.max(0, amount);
-
-  for (const bracket of brackets) {
-    if (bracket.top === null || safeAmount <= bracket.top) {
-      return bracket.rate / 100;
-    }
-  }
-
-  return 0;
-}
-
-function computeCapitalGainsTax(
-  amount,
-  taxConfig,
-  { federalTaxableIncome = 0 } = {},
-) {
+function computeCapitalGainsTax(amount, taxConfig, { federalTaxableIncome = 0 } = {}) {
   const gain = Math.max(0, amount);
-  return roundTo(
-    computeAdditionalTax(
-      federalTaxableIncome,
-      gain,
-      taxConfig.longTermCapitalGains,
-    ),
-    2,
-  );
+  return roundTo(computeAdditionalTax(federalTaxableIncome, gain, taxConfig.longTermCapitalGains), 2);
 }
 
 function computeOrdinaryWithdrawalTax(amount, taxConfig) {
@@ -289,21 +238,18 @@ export function createProjectedBucketState(bucket) {
   return {
     ...bucket,
     balance: bucket.current,
-    basisValue:
-      bucket.taxTreatment === "none" ? bucket.basis : bucket.current,
+    basisValue: bucket.taxTreatment === "none" ? bucket.basis : bucket.current,
   };
 }
 
 export function advanceProjectedBucket(bucketState, annualContribution = 0) {
   const contribution = Math.max(0, annualContribution);
   const balance = roundTo(
-    bucketState.balance * (1 + bucketState.growth) +
-      contribution * (1 + bucketState.growth / 2),
+    bucketState.balance * (1 + bucketState.growth) + contribution * (1 + bucketState.growth / 2),
     2,
   );
   const basisValue = roundTo(
-    bucketState.taxTreatment === "none" ||
-    bucketState.taxTreatment === "taxDeferred"
+    bucketState.taxTreatment === "none" || bucketState.taxTreatment === "taxDeferred"
       ? bucketState.basisValue + contribution
       : bucketState.basisValue,
     2,
@@ -319,17 +265,10 @@ export function advanceProjectedBucket(bucketState, annualContribution = 0) {
 export function snapshotProjectedBucket(bucketState, taxConfig, taxBases) {
   const taxDue = roundTo(
     bucketState.taxTreatment === "none"
-      ? computeCapitalGainsTax(
-          Math.max(0, bucketState.balance - bucketState.basisValue),
-          taxConfig,
-          taxBases,
-        )
+      ? computeCapitalGainsTax(Math.max(0, bucketState.balance - bucketState.basisValue), taxConfig, taxBases)
       : bucketState.taxTreatment === "taxDeductible"
         ? computeOrdinaryWithdrawalTax(bucketState.balance, taxConfig)
-        : computeOrdinaryWithdrawalTax(
-            Math.max(0, bucketState.balance - bucketState.basisValue),
-            taxConfig,
-          ),
+        : computeOrdinaryWithdrawalTax(Math.max(0, bucketState.balance - bucketState.basisValue), taxConfig),
     2,
   );
 
@@ -352,41 +291,28 @@ export function snapshotProjectedBucket(bucketState, taxConfig, taxBases) {
 }
 
 export function calculateAssetSnapshot(inputs, taxConfig) {
-  const bucketStates = inputs.buckets.map((bucket) =>
-    createProjectedBucketState(bucket),
-  );
-  const buckets = bucketStates.map((bucketState) =>
-    snapshotProjectedBucket(bucketState, taxConfig),
-  );
+  const bucketStates = inputs.buckets.map((bucket) => createProjectedBucketState(bucket));
+  const buckets = bucketStates.map((bucketState) => snapshotProjectedBucket(bucketState, taxConfig));
 
   const totals = {
     currentTotal: inputs.buckets.reduce((sum, bucket) => sum + bucket.current, 0),
-    annualContributionTotal: inputs.buckets.reduce(
-      (sum, bucket) => sum + bucket.contribution,
-      0,
-    ),
+    annualContributionTotal: inputs.buckets.reduce((sum, bucket) => sum + bucket.contribution, 0),
     taxableCurrentTotal: inputs.buckets.reduce(
       (sum, bucket) => sum + (bucket.taxTreatment === "none" ? bucket.current : 0),
       0,
     ),
     taxDeductibleCurrentTotal: inputs.buckets.reduce(
-      (sum, bucket) =>
-        sum + (bucket.taxTreatment === "taxDeductible" ? bucket.current : 0),
+      (sum, bucket) => sum + (bucket.taxTreatment === "taxDeductible" ? bucket.current : 0),
       0,
     ),
     taxDeferredCurrentTotal: inputs.buckets.reduce(
-      (sum, bucket) =>
-        sum + (bucket.taxTreatment === "taxDeferred" ? bucket.current : 0),
+      (sum, bucket) => sum + (bucket.taxTreatment === "taxDeferred" ? bucket.current : 0),
       0,
     ),
     currentEmbeddedTax: buckets.reduce((sum, bucket) => sum + bucket.taxDue, 0),
-    afterTaxCurrentTotal: buckets.reduce(
-      (sum, bucket) => sum + bucket.afterTax,
-      0,
-    ),
+    afterTaxCurrentTotal: buckets.reduce((sum, bucket) => sum + bucket.afterTax, 0),
     basisProtected: buckets.reduce(
-      (sum, bucket) =>
-        bucket.type === "none" ? sum + bucket.basis : sum + bucket.balance,
+      (sum, bucket) => (bucket.type === "none" ? sum + bucket.basis : sum + bucket.balance),
       0,
     ),
   };
@@ -394,29 +320,19 @@ export function calculateAssetSnapshot(inputs, taxConfig) {
   return { totals, buckets };
 }
 
-export function projectAssetBuckets(
-  inputs,
-  horizonYears,
-  taxConfig,
-  extraContributionByBucketId = {},
-) {
-  let bucketStates = inputs.buckets.map((bucket) =>
-    createProjectedBucketState(bucket),
-  );
+export function projectAssetBuckets(inputs, horizonYears, taxConfig, extraContributionByBucketId = {}) {
+  let bucketStates = inputs.buckets.map((bucket) => createProjectedBucketState(bucket));
   const projection = [];
 
   for (let year = 1; year <= horizonYears; year += 1) {
     bucketStates = bucketStates.map((bucketState) =>
       advanceProjectedBucket(
         bucketState,
-        bucketState.contribution +
-          Math.max(0, extraContributionByBucketId[bucketState.id]?.[year] ?? 0),
+        bucketState.contribution + Math.max(0, extraContributionByBucketId[bucketState.id]?.[year] ?? 0),
       ),
     );
 
-    const snapshots = bucketStates.map((bucketState) =>
-      snapshotProjectedBucket(bucketState, taxConfig),
-    );
+    const snapshots = bucketStates.map((bucketState) => snapshotProjectedBucket(bucketState, taxConfig));
     projection.push({
       year,
       grossValue: snapshots.reduce((sum, item) => sum + item.balance, 0),
@@ -426,9 +342,7 @@ export function projectAssetBuckets(
   }
 
   return {
-    buckets: bucketStates.map((bucketState) =>
-      snapshotProjectedBucket(bucketState, taxConfig),
-    ),
+    buckets: bucketStates.map((bucketState) => snapshotProjectedBucket(bucketState, taxConfig)),
     projection,
   };
 }

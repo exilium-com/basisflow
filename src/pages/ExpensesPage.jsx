@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { ActionButton } from "../components/ActionButton";
 import { Field, NumberField, TextField } from "../components/Field";
 import { PageShell } from "../components/PageShell";
 import { ResultList } from "../components/ResultList";
@@ -15,30 +16,20 @@ import {
   normalizeExpenseInputs,
   normalizeExpensesState,
 } from "../lib/expensesModel";
-import {
-  createDefaultProjectionState,
-  normalizeProjectionState,
-} from "../lib/projectionModel";
+import { createDefaultProjectionState, normalizeProjectionState } from "../lib/projectionState";
 import { useStoredState } from "../hooks/useStoredState";
 import { surfaceClass } from "../lib/ui";
 import { EXPENSES_STATE_KEY, PROJECTION_STATE_KEY } from "../lib/storageKeys";
 
 export function ExpensesPage() {
-  const [state, setState] = useStoredState(
-    EXPENSES_STATE_KEY,
-    createDefaultExpenseState,
-    {
-      normalize: normalizeExpensesState,
-      localStorage: true,
-      preferLocalStorage: true,
-    },
-  );
+  const [state, setState] = useStoredState(EXPENSES_STATE_KEY, createDefaultExpenseState, {
+    normalize: normalizeExpensesState,
+  });
 
   const projectionState = useMemo(
     () =>
       normalizeProjectionState(
-        loadStoredJson(PROJECTION_STATE_KEY, true) ??
-          createDefaultProjectionState(),
+        loadStoredJson(PROJECTION_STATE_KEY, true) ?? createDefaultProjectionState(),
         createDefaultProjectionState(),
       ),
     [state],
@@ -52,9 +43,7 @@ export function ExpensesPage() {
   function updateExpense(expenseId, patch) {
     setState((current) => ({
       ...current,
-      expenses: current.expenses.map((expense) =>
-        expense.id === expenseId ? { ...expense, ...patch } : expense,
-      ),
+      expenses: current.expenses.map((expense) => (expense.id === expenseId ? { ...expense, ...patch } : expense)),
     }));
   }
 
@@ -96,22 +85,12 @@ export function ExpensesPage() {
         <WorkspaceLayout
           summary={
             <>
-              <SummaryStrip
-                kicker="Annual Non-Housing Spend"
-                value={usd(results.annualExpenseTotal)}
-              />
+              <SummaryStrip kicker="Annual Non-Housing Spend" value={usd(results.annualExpenseTotal)} />
               <ResultList items={summaryItems} />
             </>
           }
         >
-          <Section
-            title="Expenses"
-            actions={
-              <ActionButton onClick={addExpense}>
-                Add expense
-              </ActionButton>
-            }
-          >
+          <Section title="Expenses" actions={<ActionButton onClick={addExpense}>Add expense</ActionButton>}>
             <div className="grid gap-2.5">
               {state.expenses.map((expense) => {
                 return (
@@ -121,9 +100,7 @@ export function ExpensesPage() {
                     onRemove={() => removeExpense(expense.id)}
                     detailsTitle="Expense details"
                     detailsOpen={expense.detailsOpen}
-                    onToggleDetails={(open) =>
-                      updateExpense(expense.id, { detailsOpen: open })
-                    }
+                    onToggleDetails={(open) => updateExpense(expense.id, { detailsOpen: open })}
                     headerClassName="grid items-center gap-3 lg:grid-cols-2"
                     detailsContentClassName="grid gap-3"
                     header={
@@ -142,11 +119,7 @@ export function ExpensesPage() {
                           label="Amount"
                           prefix="$"
                           suffix={
-                            expense.frequency === "annual"
-                              ? "/year"
-                              : expense.frequency === "one_off"
-                                ? ""
-                                : "/month"
+                            expense.frequency === "annual" ? "/year" : expense.frequency === "one_off" ? "" : "/month"
                           }
                           min="0"
                           step="50"
@@ -161,16 +134,11 @@ export function ExpensesPage() {
                       </>
                     }
                   >
-                    <Field
-                      label="Cadence"
-                      className="inline-grid self-start justify-self-start"
-                    >
+                    <Field label="Cadence" className="inline-grid self-start justify-self-start">
                       <SegmentedToggle
                         ariaLabel={`Cadence for ${expense.name || "expense"}`}
                         value={expense.frequency}
-                        onChange={(nextValue) =>
-                          updateExpense(expense.id, { frequency: nextValue })
-                        }
+                        onChange={(nextValue) => updateExpense(expense.id, { frequency: nextValue })}
                         options={[
                           { value: "monthly", label: "Monthly" },
                           { value: "annual", label: "Annual" },

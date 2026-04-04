@@ -20,9 +20,6 @@ export function getChartFrame() {
 
 export function buildLinePath(points) {
   return points
-    .map(
-      (point, index) =>
-        `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
-    )
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
     .join(" ");
 }

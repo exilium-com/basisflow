@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from "react";
+import { ActionButton } from "../components/ActionButton";
 import { NumberField, SelectField, TextField } from "../components/Field";
 import { PageShell } from "../components/PageShell";
 import { ResultList } from "../components/ResultList";
@@ -20,88 +21,61 @@ import {
   CASH_BUCKET_ID,
   createDefaultProjectionState,
   normalizeProjectionState,
-} from "../lib/projectionModel";
+} from "../lib/projectionState";
 import { loadStoredJson } from "../lib/storage";
 import { useStoredState } from "../hooks/useStoredState";
 import { surfaceClass } from "../lib/ui";
-import {
-  ASSETS_STATE_KEY,
-  INCOME_SUMMARY_KEY,
-  PROJECTION_STATE_KEY,
-} from "../lib/storageKeys";
+import { ASSETS_STATE_KEY, INCOME_SUMMARY_KEY, PROJECTION_STATE_KEY } from "../lib/storageKeys";
 
 export function AssetsPage() {
-  const [state, setState] = useStoredState(
-    ASSETS_STATE_KEY,
-    createDefaultAssetsState,
-    {
-      normalize: normalizeAssetsState,
-      localStorage: true,
-      preferLocalStorage: true,
-    },
-  );
+  const [state, setState] = useStoredState(ASSETS_STATE_KEY, createDefaultAssetsState, {
+    normalize: normalizeAssetsState,
+  });
 
   const projectionState = useMemo(
     () =>
       normalizeProjectionState(
-        loadStoredJson(PROJECTION_STATE_KEY, true) ??
-          createDefaultProjectionState(),
+        loadStoredJson(PROJECTION_STATE_KEY, true) ?? createDefaultProjectionState(),
         createDefaultProjectionState(),
       ),
     [state],
   );
-  const incomeSummary = useMemo(
-    () => loadStoredJson(INCOME_SUMMARY_KEY) ?? {},
-    [state],
-  );
-  const incomeDirectedContributions = useMemo(
-    () => buildIncomeDirectedContributions(incomeSummary),
-    [incomeSummary],
-  );
+  const incomeSummary = useMemo(() => loadStoredJson(INCOME_SUMMARY_KEY) ?? {}, [state]);
+  const incomeDirectedContributions = useMemo(() => buildIncomeDirectedContributions(incomeSummary), [incomeSummary]);
   const visiblePinnedRetirementBucketIds = useMemo(
-    () =>
-      getVisiblePinnedRetirementBucketIds(state, incomeDirectedContributions),
+    () => getVisiblePinnedRetirementBucketIds(state, incomeDirectedContributions),
     [state, incomeDirectedContributions],
   );
-  const syncedState = useMemo(
-    () => {
-      const nextState = ensurePinnedRetirementBuckets(
-        state,
-        visiblePinnedRetirementBucketIds,
-      );
+  const syncedState = useMemo(() => {
+    const nextState = ensurePinnedRetirementBuckets(state, visiblePinnedRetirementBucketIds);
 
-      if (nextState.buckets.some((bucket) => bucket.id === CASH_BUCKET_ID)) {
-        return nextState;
-      }
+    if (nextState.buckets.some((bucket) => bucket.id === CASH_BUCKET_ID)) {
+      return nextState;
+    }
 
-      return {
-        ...nextState,
-        buckets: [
-          {
-            id: CASH_BUCKET_ID,
-            taxTreatment: "none",
-            name: "Cash",
-            current: "",
-            contribution: "",
-            growth: "0",
-            basis: "",
-            detailsOpen: false,
-          },
-          ...nextState.buckets,
-        ],
-      };
-    },
-    [state, visiblePinnedRetirementBucketIds],
-  );
+    return {
+      ...nextState,
+      buckets: [
+        {
+          id: CASH_BUCKET_ID,
+          taxTreatment: "none",
+          name: "Cash",
+          current: "",
+          contribution: "",
+          growth: "0",
+          basis: "",
+          detailsOpen: false,
+        },
+        ...nextState.buckets,
+      ],
+    };
+  }, [state, visiblePinnedRetirementBucketIds]);
   const pinnedBucketIds = useMemo(
-    () =>
-      new Set([CASH_BUCKET_ID, ...visiblePinnedRetirementBucketIds]),
+    () => new Set([CASH_BUCKET_ID, ...visiblePinnedRetirementBucketIds]),
     [visiblePinnedRetirementBucketIds],
   );
   const bucketIdSignature = state.buckets.map((bucket) => bucket.id).join("|");
-  const syncedBucketIdSignature = syncedState.buckets
-    .map((bucket) => bucket.id)
-    .join("|");
+  const syncedBucketIdSignature = syncedState.buckets.map((bucket) => bucket.id).join("|");
 
   useEffect(() => {
     if (bucketIdSignature !== syncedBucketIdSignature) {
@@ -131,18 +105,15 @@ export function AssetsPage() {
     () => ({
       currentTotal: inputs.buckets.reduce((sum, bucket) => sum + bucket.current, 0),
       taxableCurrentTotal: inputs.buckets.reduce(
-        (sum, bucket) =>
-          sum + (bucket.taxTreatment === "none" ? bucket.current : 0),
+        (sum, bucket) => sum + (bucket.taxTreatment === "none" ? bucket.current : 0),
         0,
       ),
       taxDeductibleCurrentTotal: inputs.buckets.reduce(
-        (sum, bucket) =>
-          sum + (bucket.taxTreatment === "taxDeductible" ? bucket.current : 0),
+        (sum, bucket) => sum + (bucket.taxTreatment === "taxDeductible" ? bucket.current : 0),
         0,
       ),
       taxDeferredCurrentTotal: inputs.buckets.reduce(
-        (sum, bucket) =>
-          sum + (bucket.taxTreatment === "taxDeferred" ? bucket.current : 0),
+        (sum, bucket) => sum + (bucket.taxTreatment === "taxDeferred" ? bucket.current : 0),
         0,
       ),
     }),
@@ -158,10 +129,7 @@ export function AssetsPage() {
         }
 
         const nextBucket = { ...bucket, ...patch };
-        if (
-          typeof patch.taxTreatment === "string" &&
-          patch.taxTreatment !== bucket.taxTreatment
-        ) {
+        if (typeof patch.taxTreatment === "string" && patch.taxTreatment !== bucket.taxTreatment) {
           return {
             ...nextBucket,
             basis: patch.taxTreatment === "none" ? nextBucket.basis : "",
@@ -214,22 +182,12 @@ export function AssetsPage() {
         <WorkspaceLayout
           summary={
             <>
-              <SummaryStrip
-                kicker="Current Asset Total"
-                value={usd(totals.currentTotal)}
-              />
+              <SummaryStrip kicker="Current Asset Total" value={usd(totals.currentTotal)} />
               <ResultList items={summaryItems} />
             </>
           }
         >
-          <Section
-            title="Assets"
-            actions={
-              <ActionButton onClick={addBucket}>
-                Add asset
-              </ActionButton>
-            }
-          >
+          <Section title="Assets" actions={<ActionButton onClick={addBucket}>Add asset</ActionButton>}>
             <div className="grid gap-2.5">
               {orderedBuckets.map((bucket) => {
                 const isPinnedRetirementBucket = pinnedBucketIds.has(bucket.id);
@@ -237,19 +195,11 @@ export function AssetsPage() {
                   <RowItem
                     key={bucket.id}
                     pinned={isPinnedRetirementBucket}
-                    removeLabel={
-                      isPinnedRetirementBucket ? undefined : "Remove asset"
-                    }
-                    onRemove={
-                      isPinnedRetirementBucket
-                        ? undefined
-                        : () => removeBucket(bucket.id)
-                    }
+                    removeLabel={isPinnedRetirementBucket ? undefined : "Remove asset"}
+                    onRemove={isPinnedRetirementBucket ? undefined : () => removeBucket(bucket.id)}
                     detailsTitle="Asset details"
                     detailsOpen={bucket.detailsOpen}
-                    onToggleDetails={(open) =>
-                      updateBucket(bucket.id, { detailsOpen: open })
-                    }
+                    onToggleDetails={(open) => updateBucket(bucket.id, { detailsOpen: open })}
                     headerClassName="grid items-center gap-3 lg:grid-cols-2"
                     detailsContentClassName="grid gap-3 sm:grid-cols-2"
                     header={
@@ -259,12 +209,8 @@ export function AssetsPage() {
                           value={bucket.name}
                           placeholder="Asset name"
                           disabled={isPinnedRetirementBucket}
-                          inputClassName={
-                            isPinnedRetirementBucket ? "text-(--ink-soft)" : ""
-                          }
-                          onChange={(event) =>
-                            updateBucket(bucket.id, { name: event.target.value })
-                          }
+                          inputClassName={isPinnedRetirementBucket ? "text-(--ink-soft)" : ""}
+                          onChange={(event) => updateBucket(bucket.id, { name: event.target.value })}
                         />
                         <NumberField
                           label="Current value"
@@ -273,9 +219,7 @@ export function AssetsPage() {
                           step="1000"
                           value={bucket.current}
                           placeholder="0"
-                          inputClassName={
-                            isPinnedRetirementBucket ? "text-(--ink-soft)" : ""
-                          }
+                          inputClassName={isPinnedRetirementBucket ? "text-(--ink-soft)" : ""}
                           onChange={(event) =>
                             updateBucket(bucket.id, {
                               current: event.target.value,
@@ -307,12 +251,8 @@ export function AssetsPage() {
                         step="1000"
                         value={bucket.basis}
                         placeholder="0"
-                        inputClassName={
-                          isPinnedRetirementBucket ? "text-(--ink-soft)" : ""
-                        }
-                        onChange={(event) =>
-                          updateBucket(bucket.id, { basis: event.target.value })
-                        }
+                        inputClassName={isPinnedRetirementBucket ? "text-(--ink-soft)" : ""}
+                        onChange={(event) => updateBucket(bucket.id, { basis: event.target.value })}
                       />
                     ) : null}
                   </RowItem>
@@ -320,7 +260,6 @@ export function AssetsPage() {
               })}
             </div>
           </Section>
-
         </WorkspaceLayout>
       </main>
     </PageShell>

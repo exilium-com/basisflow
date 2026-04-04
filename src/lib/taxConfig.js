@@ -80,31 +80,18 @@ export function normalizeConfig(rawConfig) {
     annualAdditionsLimit: Number.isFinite(Number(rawConfig?.annualAdditionsLimit))
       ? Math.max(0, Number(rawConfig.annualAdditionsLimit))
       : fallback.annualAdditionsLimit,
-    federalStandardDeduction: Number.isFinite(
-      Number(rawConfig?.federalStandardDeduction),
-    )
+    federalStandardDeduction: Number.isFinite(Number(rawConfig?.federalStandardDeduction))
       ? Math.max(0, Number(rawConfig.federalStandardDeduction))
       : fallback.federalStandardDeduction,
-    stateStandardDeduction: Number.isFinite(
-      Number(rawConfig?.stateStandardDeduction),
-    )
+    stateStandardDeduction: Number.isFinite(Number(rawConfig?.stateStandardDeduction))
       ? Math.max(0, Number(rawConfig.stateStandardDeduction))
       : fallback.stateStandardDeduction,
     caSdiRate: Number.isFinite(Number(rawConfig?.caSdiRate))
       ? Math.max(0, Number(rawConfig.caSdiRate))
       : fallback.caSdiRate,
-    federalBrackets: normalizeBracketList(
-      rawConfig?.federalBrackets,
-      fallback.federalBrackets,
-    ),
-    stateBrackets: normalizeBracketList(
-      rawConfig?.stateBrackets,
-      fallback.stateBrackets,
-    ),
-    longTermCapitalGains: normalizeBracketList(
-      rawConfig?.longTermCapitalGains,
-      fallback.longTermCapitalGains,
-    ),
+    federalBrackets: normalizeBracketList(rawConfig?.federalBrackets, fallback.federalBrackets),
+    stateBrackets: normalizeBracketList(rawConfig?.stateBrackets, fallback.stateBrackets),
+    longTermCapitalGains: normalizeBracketList(rawConfig?.longTermCapitalGains, fallback.longTermCapitalGains),
   };
 }
 
@@ -150,8 +137,5 @@ export function computeProgressiveTax(income, brackets) {
 export function computeAdditionalTax(baseIncome, addedIncome, brackets) {
   const safeBase = Math.max(0, baseIncome);
   const safeAdded = Math.max(0, addedIncome);
-  return (
-    computeProgressiveTax(safeBase + safeAdded, brackets) -
-    computeProgressiveTax(safeBase, brackets)
-  );
+  return computeProgressiveTax(safeBase + safeAdded, brackets) - computeProgressiveTax(safeBase, brackets);
 }

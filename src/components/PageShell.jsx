@@ -1,255 +1,106 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React from "react";
+import clsx from "clsx";
 import { NavLink } from "react-router-dom";
 import { NAV_ITEMS } from "../lib/nav";
 import { ActionButton } from "./ActionButton";
-import { cx } from "../lib/cx";
-import { TextField } from "./Field";
-import { ProfileDialog } from "./ProfileDialog";
+import { ProfileLoadDialog } from "./ProfileLoadDialog";
+import { ProfileSaveDialog } from "./ProfileSaveDialog";
 import { ToastMessage } from "./ToastMessage";
-import {
-  clearAppState,
-  deleteProfile,
-  hasSavedProfile,
-  listProfiles,
-  loadProfile,
-  saveProfile,
-} from "../lib/storage";
+import { useProfileActions } from "../hooks/useProfileActions";
 
-const PROFILE_NAME_OPTIONS = [
-  "Golden Path",
-  "Weekend Numbers",
-  "Quiet Rich",
-  "Coastline Plan",
-  "Future Me",
-  "Rainy Day Map",
-  "Soft Landing",
-  "Long View",
-  "Compound Mode",
-  "Sunday Spreadsheet",
-];
+function ToolNavLinks() {
+  return NAV_ITEMS.map((item) => (
+    <NavLink
+      key={item.key}
+      className={({ isActive }) =>
+        clsx(
+          `inline-flex h-10 items-center gap-2 border border-(--line) bg-(--white-soft) px-3 text-xs font-extrabold
+          tracking-wide text-(--ink) uppercase no-underline transition duration-150 hover:-translate-y-px
+          hover:bg-(--white) focus-visible:-translate-y-px focus-visible:bg-(--white) focus-visible:outline-none`,
+          isActive && "!border-(--teal) !bg-(--teal-tint) !text-(--teal)",
+        )
+      }
+      to={item.to}
+      end={item.to === "/"}
+    >
+      <span className="text-xs opacity-70">{item.index}</span>
+      <span>{item.label}</span>
+    </NavLink>
+  ));
+}
 
-const PENDING_TOAST_KEY = "basisflow_pending_toast";
-
-function pickRandomProfileName() {
-  return PROFILE_NAME_OPTIONS[
-    Math.floor(Math.random() * PROFILE_NAME_OPTIONS.length)
-  ];
+function ShellActions({ actions, onOpenSaveDialog, onOpenLoadDialog, onResetAll, profileAvailable, statusMessage }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {statusMessage ? <ToastMessage message={statusMessage} /> : null}
+      <ActionButton className="px-3 text-xs tracking-wide uppercase" onClick={onOpenSaveDialog}>
+        Save Profile
+      </ActionButton>
+      <ActionButton
+        className="px-3 text-xs tracking-wide uppercase disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={onOpenLoadDialog}
+        disabled={!profileAvailable}
+      >
+        Load Profile
+      </ActionButton>
+      <ActionButton className="px-3 text-xs tracking-wide uppercase" onClick={onResetAll}>
+        Reset
+      </ActionButton>
+      {actions}
+    </div>
+  );
 }
 
 export function PageShell({ actions = null, children }) {
-  const [statusMessage, setStatusMessage] = useState("");
-  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [loadDialogOpen, setLoadDialogOpen] = useState(false);
-  const [profileName, setProfileName] = useState("");
-  const [profileNamePlaceholder, setProfileNamePlaceholder] = useState("");
-  const savedProfiles = useMemo(
-    () => listProfiles(),
-    [statusMessage, saveDialogOpen, loadDialogOpen],
-  );
-  const profileAvailable = hasSavedProfile();
-
-  useEffect(() => {
-    try {
-      const pendingToast = sessionStorage.getItem(PENDING_TOAST_KEY);
-      if (pendingToast) {
-        setStatusMessage(pendingToast);
-        sessionStorage.removeItem(PENDING_TOAST_KEY);
-      }
-    } catch {
-      // Best effort.
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!statusMessage) {
-      return undefined;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setStatusMessage("");
-    }, 4000);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [statusMessage]);
-
-  function closeSaveDialog() {
-    setSaveDialogOpen(false);
-    setProfileName("");
-    setProfileNamePlaceholder("");
-  }
-
-  function openSaveDialog() {
-    setProfileName("");
-    setProfileNamePlaceholder(pickRandomProfileName());
-    setSaveDialogOpen(true);
-  }
-
-  function handleSaveProfile() {
-    const resolvedProfileName = profileName.trim() || profileNamePlaceholder;
-    const saved = saveProfile(resolvedProfileName);
-    if (!saved) {
-      setStatusMessage("Enter a profile name");
-      return;
-    }
-
-    setStatusMessage(`Saved ${resolvedProfileName}`);
-    closeSaveDialog();
-  }
-
-  function handleLoadProfile(name) {
-    const loaded = loadProfile(name);
-    if (!loaded) {
-      setStatusMessage("Profile not found");
-      return;
-    }
-
-    try {
-      sessionStorage.setItem(PENDING_TOAST_KEY, `Loaded ${name}`);
-    } catch {
-      // Best effort.
-    }
-
-    setLoadDialogOpen(false);
-    window.location.reload();
-  }
-
-  function handleDeleteProfile(name) {
-    const deleted = deleteProfile(name);
-    if (!deleted) {
-      setStatusMessage("Could not delete profile");
-      return;
-    }
-
-    setStatusMessage(`Deleted ${name}`);
-  }
-
-  function handleDeleteHover(event, active) {
-    if (active) {
-      event.currentTarget.style.backgroundColor = "var(--destructive-soft)";
-    } else {
-      event.currentTarget.style.backgroundColor = "var(--white)";
-    }
-  }
-
-  function handleResetAll() {
-    const confirmed = window.confirm(
-      "Reset all app data to defaults? This clears the current working state but keeps saved profiles.",
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    const cleared = clearAppState();
-    if (!cleared) {
-      setStatusMessage("Could not reset app state");
-      return;
-    }
-
-    try {
-      sessionStorage.setItem(PENDING_TOAST_KEY, "Reset all");
-    } catch {
-      // Best effort.
-    }
-
-    window.location.reload();
-  }
+  const {
+    closeLoadDialog,
+    closeSaveDialog,
+    handleDeleteProfile,
+    handleLoadProfile,
+    handleResetAll,
+    handleSaveProfile,
+    loadDialogOpen,
+    openLoadDialog,
+    openSaveDialog,
+    profileAvailable,
+    profileName,
+    profileNamePlaceholder,
+    saveDialogOpen,
+    savedProfiles,
+    setProfileName,
+    statusMessage,
+  } = useProfileActions();
 
   return (
-    <div
-      className="mx-auto flex min-h-screen w-full max-w-screen-2xl flex-col px-3
-        sm:px-4"
-    >
-      <nav
-        className="mt-3 mb-3 border-b border-(--line) pb-3"
-        aria-label="Tools"
-      >
+    <div className="mx-auto flex min-h-screen w-full max-w-screen-2xl flex-col px-3 sm:px-4">
+      <nav className="mt-3 mb-3 border-b border-(--line) pb-3" aria-label="Tools">
         <div className="hidden sm:flex sm:flex-wrap sm:items-center sm:gap-2">
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.key}
-              className={({ isActive }) =>
-                cx(
-                  `inline-flex h-10 items-center gap-2 border border-(--line)
-                  bg-(--white-soft) px-3 text-xs font-extrabold tracking-wide
-                  text-(--ink) uppercase no-underline transition duration-150
-                  hover:-translate-y-px hover:bg-(--white)
-                  focus-visible:-translate-y-px focus-visible:bg-(--white)
-                  focus-visible:outline-none`,
-                  isActive &&
-                    "!border-(--teal) !bg-(--teal-tint) !text-(--teal)",
-                )
-              }
-              to={item.to}
-              end={item.to === "/"}
-            >
-              <span className="text-xs opacity-70">{item.index}</span>
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
-          <div className="ml-auto flex flex-wrap items-center gap-1.5">
-            {statusMessage ? (
-              <ToastMessage message={statusMessage} />
-            ) : null}
-            <ActionButton className="px-3 text-xs uppercase tracking-wide" onClick={openSaveDialog}>
-              Save Profile
-            </ActionButton>
-            <ActionButton
-              className="px-3 text-xs uppercase tracking-wide disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={() => setLoadDialogOpen(true)}
-              disabled={!profileAvailable}
-            >
-              Load Profile
-            </ActionButton>
-            <ActionButton className="px-3 text-xs uppercase tracking-wide" onClick={handleResetAll}>
-              Reset
-            </ActionButton>
-            {actions}
+          <ToolNavLinks />
+          <div className="ml-auto">
+            <ShellActions
+              actions={actions}
+              onOpenSaveDialog={openSaveDialog}
+              onOpenLoadDialog={openLoadDialog}
+              onResetAll={handleResetAll}
+              profileAvailable={profileAvailable}
+              statusMessage={statusMessage}
+            />
           </div>
         </div>
 
         <div className="sm:hidden">
           <div className="flex gap-2 overflow-x-auto pb-2 whitespace-nowrap">
-            {NAV_ITEMS.map((item) => (
-              <NavLink
-                key={item.key}
-                className={({ isActive }) =>
-                  cx(
-                    `inline-flex h-10 shrink-0 items-center gap-2 border
-                    border-(--line) bg-(--white-soft) px-3 text-xs
-                    font-extrabold tracking-wide text-(--ink) uppercase
-                    no-underline transition duration-150 hover:-translate-y-px
-                    hover:bg-(--white) focus-visible:-translate-y-px
-                    focus-visible:bg-(--white) focus-visible:outline-none`,
-                    isActive &&
-                      "!border-(--teal) !bg-(--teal-tint) !text-(--teal)",
-                  )
-                }
-                to={item.to}
-                end={item.to === "/"}
-              >
-                <span className="text-xs opacity-70">{item.index}</span>
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
+            <ToolNavLinks />
           </div>
-          <div className="mt-2 flex flex-wrap items-center justify-end gap-1.5">
-            {statusMessage ? (
-              <ToastMessage message={statusMessage} />
-            ) : null}
-            <ActionButton className="px-3 text-xs uppercase tracking-wide" onClick={openSaveDialog}>
-              Save Profile
-            </ActionButton>
-            <ActionButton
-              className="px-3 text-xs uppercase tracking-wide disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={() => setLoadDialogOpen(true)}
-              disabled={!profileAvailable}
-            >
-              Load Profile
-            </ActionButton>
-            <ActionButton className="px-3 text-xs uppercase tracking-wide" onClick={handleResetAll}>
-              Reset
-            </ActionButton>
-            {actions}
+          <div className="mt-2 flex justify-end">
+            <ShellActions
+              actions={actions}
+              onOpenSaveDialog={openSaveDialog}
+              onOpenLoadDialog={openLoadDialog}
+              onResetAll={handleResetAll}
+              profileAvailable={profileAvailable}
+              statusMessage={statusMessage}
+            />
           </div>
         </div>
       </nav>
@@ -257,77 +108,22 @@ export function PageShell({ actions = null, children }) {
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
 
       {saveDialogOpen ? (
-        <ProfileDialog title="Save Profile" onClose={closeSaveDialog}>
-          <TextField
-            label="Profile name"
-            placeholder={profileNamePlaceholder}
-            value={profileName}
-            onChange={(event) => setProfileName(event.target.value)}
-          />
-          <div className="flex justify-end gap-2">
-            <ActionButton className="px-4 text-xs uppercase tracking-wide" onClick={closeSaveDialog}>
-              Cancel
-            </ActionButton>
-            <ActionButton
-              className="px-4 text-xs uppercase tracking-wide"
-              onClick={handleSaveProfile}
-              style={{
-                backgroundColor: "var(--teal)",
-                borderColor: "var(--teal)",
-                color: "var(--white)",
-              }}
-            >
-              Save
-            </ActionButton>
-          </div>
-        </ProfileDialog>
+        <ProfileSaveDialog
+          onClose={closeSaveDialog}
+          onProfileNameChange={setProfileName}
+          onSave={handleSaveProfile}
+          placeholder={profileNamePlaceholder}
+          value={profileName}
+        />
       ) : null}
 
       {loadDialogOpen ? (
-        <ProfileDialog
-          title="Load Profile"
-          onClose={() => setLoadDialogOpen(false)}
-        >
-          {savedProfiles.length ? (
-            <div className="grid gap-2">
-              {savedProfiles.map((name) => (
-                <button
-                  key={name}
-                  className="flex items-center justify-between gap-3 border border-(--line)
-                    bg-(--white-soft) px-4 py-3 text-left transition duration-150
-                    hover:-translate-y-px hover:bg-(--white)"
-                  onClick={() => handleLoadProfile(name)}
-                  type="button"
-                >
-                  <span className="font-semibold text-(--ink)">{name}</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      aria-label={`Delete ${name}`}
-                      className="inline-flex h-9 w-9 items-center justify-center border
-                        bg-(--white) text-sm font-extrabold transition duration-150
-                        hover:-translate-y-px"
-                      style={{
-                        borderColor: "var(--destructive-soft)",
-                        color: "var(--destructive)",
-                      }}
-                      onMouseEnter={(event) => handleDeleteHover(event, true)}
-                      onMouseLeave={(event) => handleDeleteHover(event, false)}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleDeleteProfile(name);
-                      }}
-                      type="button"
-                    >
-                      X
-                    </button>
-                  </div>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-(--ink-soft)">No saved profiles.</p>
-          )}
-        </ProfileDialog>
+        <ProfileLoadDialog
+          names={savedProfiles}
+          onClose={closeLoadDialog}
+          onDelete={handleDeleteProfile}
+          onLoad={handleLoadProfile}
+        />
       ) : null}
     </div>
   );

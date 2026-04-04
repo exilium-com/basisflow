@@ -5,11 +5,7 @@ export function money(value) {
   return Math.round(value * 100) / 100;
 }
 
-export function createIncomeInputs({
-  salary = 0,
-  rsuValue = 0,
-  ...overrides
-} = {}) {
+export function createIncomeInputs({ salary = 0, rsuValue = 0, ...overrides } = {}) {
   return {
     grossSalary: salary,
     rsuGrossNextYear: rsuValue,
@@ -48,11 +44,7 @@ export function runIncomeScenario({
     taxConfig: resolvedTaxConfig,
     grossSalary: resolvedInputs.grossSalary,
     savings: computeSavings(resolvedInputs, resolvedTaxConfig),
-    taxes: computeAnnualTaxes(
-      resolvedInputs,
-      resolvedTaxConfig,
-      extraOrdinaryIncome,
-    ),
+    taxes: computeAnnualTaxes(resolvedInputs, resolvedTaxConfig, extraOrdinaryIncome),
     income: calculateIncome(resolvedInputs, resolvedTaxConfig),
   };
 }

@@ -1,6 +1,5 @@
 import React from "react";
-const rowClassName =
-  "flex justify-between gap-4 border-b border-(--line) py-3 max-md:flex-col max-md:items-start";
+const rowClassName = "flex justify-between gap-4 border-b border-(--line) py-3 max-md:flex-col max-md:items-start";
 
 export function ResultList({ items, live = false }) {
   return (

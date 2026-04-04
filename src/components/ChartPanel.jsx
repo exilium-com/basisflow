@@ -11,10 +11,7 @@ export function ChartPanel({ title, legend = [], children }) {
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-3 px-4 pb-4 text-sm text-(--ink-soft)">
           {legend.map((item) => (
             <span key={item.label} className="inline-flex items-center gap-2">
-              <i
-                className="inline-block h-3 w-3"
-                style={{ background: item.color }}
-              ></i>
+              <i className="inline-block h-3 w-3" style={{ background: item.color }}></i>
               {item.label}
             </span>
           ))}

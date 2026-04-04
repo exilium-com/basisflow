@@ -1,8 +1,7 @@
 import React from "react";
-import { cx } from "../lib/cx";
+import clsx from "clsx";
 
-export const fieldLabelClass =
-  "text-sm text-(--ink-soft)";
+export const fieldLabelClass = "text-sm text-(--ink-soft)";
 
 const inputBaseClassName =
   "w-full min-w-0 border-0 bg-transparent p-0 text-base font-semibold text-(--ink) outline-none";
@@ -17,23 +16,13 @@ const inputFrameClassName =
   "relative flex min-h-10 items-center border border-(--line) border-l-4 border-l-(--teal-soft) bg-(--white) px-3 transition-colors focus-within:border-(--teal) focus-within:border-l-(--teal)";
 const invalidInputFrameClassName = "border-(--danger) border-l-(--danger)";
 const affixClassName = "flex-none text-sm font-extrabold text-(--ink-soft)";
-const checkboxLabelClassName =
-  "flex min-h-8 w-full min-w-0 items-center gap-2 text-base font-semibold text-(--ink)";
+const checkboxLabelClassName = "flex min-h-8 w-full min-w-0 items-center gap-2 text-base font-semibold text-(--ink)";
 
-export function Field({
-  label,
-  htmlFor,
-  className = "",
-  labelClassName = "",
-  children,
-}) {
+export function Field({ label, htmlFor, className = "", labelClassName = "", children }) {
   return (
-    <div className={cx("grid min-w-0 gap-1", className)}>
+    <div className={clsx("grid min-w-0 gap-1", className)}>
       {label ? (
-        <label
-          className={cx(fieldLabelClass, labelClassName)}
-          htmlFor={htmlFor}
-        >
+        <label className={clsx(fieldLabelClass, labelClassName)} htmlFor={htmlFor}>
           {label}
         </label>
       ) : null}
@@ -42,28 +31,12 @@ export function Field({
   );
 }
 
-export function InputFrame({
-  prefix = null,
-  suffix = null,
-  invalid = false,
-  className = "",
-  children,
-}) {
+export function InputFrame({ prefix = null, suffix = null, invalid = false, className = "", children }) {
   return (
-    <div
-      className={cx(
-        inputFrameClassName,
-        invalid && invalidInputFrameClassName,
-        className,
-      )}
-    >
-      {prefix ? (
-        <span className={cx(affixClassName, "mr-1.5 ml-0.5")}>{prefix}</span>
-      ) : null}
+    <div className={clsx(inputFrameClassName, invalid && invalidInputFrameClassName, className)}>
+      {prefix ? <span className={clsx(affixClassName, "mr-1.5 ml-0.5")}>{prefix}</span> : null}
       {children}
-      {suffix ? (
-        <span className={cx(affixClassName, "ml-1.5")}>{suffix}</span>
-      ) : null}
+      {suffix ? <span className={clsx(affixClassName, "ml-1.5")}>{suffix}</span> : null}
     </div>
   );
 }
@@ -85,24 +58,9 @@ export function TextField({
   const inputId = htmlFor ?? resolvedId;
 
   return (
-    <Field
-      label={label}
-      htmlFor={inputId}
-      className={className}
-      labelClassName={labelClassName}
-    >
-      <InputFrame
-        prefix={prefix}
-        suffix={suffix}
-        invalid={invalid}
-        className={frameClassName}
-      >
-        <input
-          id={inputId}
-          type={type}
-          className={cx(inputBaseClassName, inputClassName)}
-          {...inputProps}
-        />
+    <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
+      <InputFrame prefix={prefix} suffix={suffix} invalid={invalid} className={frameClassName}>
+        <input id={inputId} type={type} className={clsx(inputBaseClassName, inputClassName)} {...inputProps} />
       </InputFrame>
     </Field>
   );
@@ -125,22 +83,17 @@ export function NumberField({
   const inputId = htmlFor ?? resolvedId;
 
   return (
-    <Field
-      label={label}
-      htmlFor={inputId}
-      className={className}
-      labelClassName={labelClassName}
-    >
+    <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
       <InputFrame
         prefix={prefix}
         suffix={suffix}
         invalid={invalid}
-        className={cx(compact && "min-h-9 px-2", frameClassName)}
+        className={clsx(compact && "min-h-9 px-2", frameClassName)}
       >
         <input
           id={inputId}
           type="number"
-          className={cx(inputBaseClassName, compact && "text-sm", inputClassName)}
+          className={clsx(inputBaseClassName, compact && "text-sm", inputClassName)}
           {...inputProps}
         />
       </InputFrame>
@@ -162,20 +115,12 @@ export function SelectField({
   const inputId = htmlFor ?? resolvedId;
 
   return (
-    <Field
-      label={label}
-      htmlFor={inputId}
-      className={className}
-      labelClassName={labelClassName}
-    >
+    <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
       <InputFrame invalid={invalid} className={frameClassName}>
         <select id={inputId} className={selectClassName} {...inputProps}>
           {children}
         </select>
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute right-3 text-sm font-bold text-(--ink-soft)"
-        >
+        <span aria-hidden="true" className="pointer-events-none absolute right-3 text-sm font-bold text-(--ink-soft)">
           ▾
         </span>
       </InputFrame>
@@ -197,25 +142,16 @@ export function CheckboxField({
   const inputId = htmlFor ?? resolvedId;
 
   return (
-    <div className={cx("grid min-w-0 gap-1", className)}>
-      <div
-        aria-hidden="true"
-        className={cx(fieldLabelClass, "invisible select-none", labelClassName)}
-      >
+    <div className={clsx("grid min-w-0 gap-1", className)}>
+      <div aria-hidden="true" className={clsx(fieldLabelClass, "invisible select-none", labelClassName)}>
         {label || "."}
       </div>
-      <InputFrame
-        invalid={invalid}
-        className={cx("min-h-9 justify-start px-2", frameClassName)}
-      >
-        <label
-          className={cx(checkboxLabelClassName, labelClassName)}
-          htmlFor={inputId}
-        >
+      <InputFrame invalid={invalid} className={clsx("min-h-9 justify-start px-2", frameClassName)}>
+        <label className={clsx(checkboxLabelClassName, labelClassName)} htmlFor={inputId}>
           <input
             id={inputId}
             type="checkbox"
-            className={cx("h-4 w-4 shrink-0 accent-(--teal)", inputClassName)}
+            className={clsx("h-4 w-4 shrink-0 accent-(--teal)", inputClassName)}
             {...inputProps}
           />
           <span>{label}</span>
@@ -225,23 +161,12 @@ export function CheckboxField({
   );
 }
 
-export function TextAreaField({
-  label,
-  htmlFor,
-  className = "",
-  labelClassName = "",
-  ...props
-}) {
+export function TextAreaField({ label, htmlFor, className = "", labelClassName = "", ...props }) {
   const resolvedId = React.useId();
   const inputId = htmlFor ?? resolvedId;
 
   return (
-    <Field
-      label={label}
-      htmlFor={inputId}
-      className={className}
-      labelClassName={labelClassName}
-    >
+    <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
       <textarea id={inputId} className={textAreaClassName} {...props} />
     </Field>
   );
