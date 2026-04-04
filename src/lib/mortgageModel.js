@@ -87,7 +87,7 @@ export const FIELD_CONFIGS = {
 };
 
 export const NUMERIC_DEFAULTS = {
-  homePrice: 1250000,
+  homePrice: 800000,
   downPaymentPercent: 20,
   propertyTaxRate: 1.18,
   insurancePerYear: 1800,

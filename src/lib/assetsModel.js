@@ -98,8 +98,17 @@ export function createPinnedBucket({ id, name, taxTreatment }) {
 
 export function createDefaultAssetsState() {
   return {
-    buckets: [createSeedBucket("none"), createSeedBucket("taxDeferred")],
+    buckets: [],
   };
+}
+
+function hasMeaningfulBucketValues(bucket) {
+  return (
+    Math.max(0, readNumber(bucket?.current, 0)) > 0 ||
+    Math.max(0, readNumber(bucket?.contribution, 0)) > 0 ||
+    Math.max(0, readNumber(bucket?.basis, 0)) > 0 ||
+    String(bucket?.growth ?? "").trim() !== ""
+  );
 }
 
 export function normalizeBucket(rawBucket) {
@@ -159,11 +168,52 @@ export function getPinnedRetirementTargets() {
   );
 }
 
-export function ensurePinnedRetirementBuckets(state) {
+export function getVisiblePinnedRetirementBucketIds(
+  state,
+  incomeDirectedContributions = {},
+) {
+  const visibleIds = new Set();
+
+  state.buckets.forEach((bucket) => {
+    const isPinnedRetirementBucket = Object.values(PINNED_RETIREMENT_BUCKETS).some(
+      (config) => config.id === bucket.id,
+    );
+
+    if (isPinnedRetirementBucket && hasMeaningfulBucketValues(bucket)) {
+      visibleIds.add(bucket.id);
+    }
+  });
+
+  Object.values(PINNED_RETIREMENT_BUCKETS).forEach((config) => {
+    if ((incomeDirectedContributions[config.id] ?? 0) > 0) {
+      visibleIds.add(config.id);
+    }
+  });
+
+  return visibleIds;
+}
+
+export function ensurePinnedRetirementBuckets(state, visibleBucketIds = null) {
   const targets = getPinnedRetirementTargets();
-  const buckets = [...state.buckets];
+  const visibleIds =
+    visibleBucketIds instanceof Set ? visibleBucketIds : null;
+  const buckets = [...state.buckets].filter((bucket) => {
+    const isPinnedRetirementBucket = Object.values(PINNED_RETIREMENT_BUCKETS).some(
+      (config) => config.id === bucket.id,
+    );
+
+    if (!isPinnedRetirementBucket || !visibleIds) {
+      return true;
+    }
+
+    return visibleIds.has(bucket.id) || hasMeaningfulBucketValues(bucket);
+  });
 
   Object.entries(PINNED_RETIREMENT_BUCKETS).forEach(([key, config]) => {
+    if (visibleIds && !visibleIds.has(config.id)) {
+      return;
+    }
+
     const targetId = targets[key];
     const existingIndex = buckets.findIndex((bucket) => bucket.id === targetId);
 

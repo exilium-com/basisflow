@@ -2,44 +2,7 @@ import { readNumber } from "./format";
 
 export function createDefaultExpenseState() {
   return {
-    expenses: [
-      {
-        id: crypto.randomUUID(),
-        name: "Essentials",
-        amount: "0",
-        frequency: "monthly",
-        oneOffYear: "",
-        growthRate: "",
-        detailsOpen: false,
-      },
-      {
-        id: crypto.randomUUID(),
-        name: "Lifestyle",
-        amount: "0",
-        frequency: "monthly",
-        oneOffYear: "",
-        growthRate: "",
-        detailsOpen: false,
-      },
-      {
-        id: crypto.randomUUID(),
-        name: "Irregular / Travel",
-        amount: "0",
-        frequency: "monthly",
-        oneOffYear: "",
-        growthRate: "",
-        detailsOpen: false,
-      },
-      {
-        id: crypto.randomUUID(),
-        name: "Other",
-        amount: "0",
-        frequency: "monthly",
-        oneOffYear: "",
-        growthRate: "",
-        detailsOpen: false,
-      },
-    ],
+    expenses: [],
     advancedOpen: false,
   };
 }

@@ -21,7 +21,7 @@ import {
   calculateAssetSnapshot,
   createDefaultAssetsState,
   ensurePinnedRetirementBuckets,
-  getPinnedRetirementTargets,
+  getVisiblePinnedRetirementBucketIds,
   normalizeAssetInputs,
   normalizeAssetsState,
 } from "../lib/assetsModel";
@@ -560,8 +560,15 @@ function MonthlyCashFlowPanel({ items, total, netFlow }) {
   );
 }
 
-function createDerivedProjectionBuckets(assetState) {
-  const pinnedState = ensurePinnedRetirementBuckets(assetState);
+function createDerivedProjectionBuckets(assetState, incomeDirectedContributions) {
+  const visiblePinnedRetirementBucketIds = getVisiblePinnedRetirementBucketIds(
+    assetState,
+    incomeDirectedContributions,
+  );
+  const pinnedState = ensurePinnedRetirementBuckets(
+    assetState,
+    visiblePinnedRetirementBucketIds,
+  );
   const buckets = [...pinnedState.buckets];
 
   if (!buckets.some((bucket) => bucket.id === CASH_BUCKET_ID)) {
@@ -577,7 +584,7 @@ function createDerivedProjectionBuckets(assetState) {
     });
   }
 
-  const pinnedRetirementTargets = Object.values(getPinnedRetirementTargets());
+  const pinnedRetirementTargets = [...visiblePinnedRetirementBucketIds];
   const pinnedIds = [CASH_BUCKET_ID, ...pinnedRetirementTargets];
 
   return {
@@ -671,8 +678,15 @@ export function ProjectionPage() {
     () => normalizeExpensesState(rawExpensesState, createDefaultExpenseState()),
     [rawExpensesState],
   );
+  const incomeDirectedContributions = useMemo(
+    () => buildIncomeDirectedContributions(incomeSummary),
+    [incomeSummary],
+  );
   const projectionAssetState = useMemo(() => {
-    const derivedState = createDerivedProjectionBuckets(assetState);
+    const derivedState = createDerivedProjectionBuckets(
+      assetState,
+      incomeDirectedContributions,
+    );
 
     return {
       ...derivedState,
@@ -690,7 +704,7 @@ export function ProjectionPage() {
         };
       }),
     };
-  }, [assetState, state.assetOverrides]);
+  }, [assetState, incomeDirectedContributions, state.assetOverrides]);
   const projectionExpenseState = useMemo(
     () => ({
       ...expenseState,
@@ -713,10 +727,6 @@ export function ProjectionPage() {
     () =>
       normalizeExpenseInputs(projectionExpenseState, state.expenseGrowthRate),
     [projectionExpenseState, state.expenseGrowthRate],
-  );
-  const incomeDirectedContributions = useMemo(
-    () => buildIncomeDirectedContributions(incomeSummary),
-    [incomeSummary],
   );
   const projectionInputs = useMemo(
     () =>
@@ -1014,7 +1024,10 @@ export function ProjectionPage() {
   }, [incomeSummary, projectionInputs, selectedRow]);
   const pinnedProjectionBucketIds = new Set([
     CASH_BUCKET_ID,
-    ...Object.values(getPinnedRetirementTargets()),
+    ...getVisiblePinnedRetirementBucketIds(
+      assetState,
+      incomeDirectedContributions,
+    ),
   ]);
 
   function getAssetOverrideSummary(bucket) {

@@ -12,11 +12,12 @@ import {
   createBlankBucket,
   createDefaultAssetsState,
   ensurePinnedRetirementBuckets,
-  getPinnedRetirementTargets,
+  getVisiblePinnedRetirementBucketIds,
   normalizeAssetInputs,
   normalizeAssetsState,
 } from "../lib/assetsModel";
 import {
+  buildIncomeDirectedContributions,
   CASH_BUCKET_ID,
   createDefaultProjectionState,
   normalizeProjectionState,
@@ -24,7 +25,11 @@ import {
 import { loadStoredJson } from "../lib/storage";
 import { useStoredState } from "../hooks/useStoredState";
 import { surfaceClass } from "../lib/ui";
-import { ASSETS_STATE_KEY, PROJECTION_STATE_KEY } from "../lib/storageKeys";
+import {
+  ASSETS_STATE_KEY,
+  INCOME_SUMMARY_KEY,
+  PROJECTION_STATE_KEY,
+} from "../lib/storageKeys";
 
 export function AssetsPage() {
   const [state, setState] = useStoredState(
@@ -46,9 +51,25 @@ export function AssetsPage() {
       ),
     [state],
   );
+  const incomeSummary = useMemo(
+    () => loadStoredJson(INCOME_SUMMARY_KEY) ?? {},
+    [state],
+  );
+  const incomeDirectedContributions = useMemo(
+    () => buildIncomeDirectedContributions(incomeSummary),
+    [incomeSummary],
+  );
+  const visiblePinnedRetirementBucketIds = useMemo(
+    () =>
+      getVisiblePinnedRetirementBucketIds(state, incomeDirectedContributions),
+    [state, incomeDirectedContributions],
+  );
   const syncedState = useMemo(
     () => {
-      const nextState = ensurePinnedRetirementBuckets(state);
+      const nextState = ensurePinnedRetirementBuckets(
+        state,
+        visiblePinnedRetirementBucketIds,
+      );
 
       if (nextState.buckets.some((bucket) => bucket.id === CASH_BUCKET_ID)) {
         return nextState;
@@ -71,17 +92,12 @@ export function AssetsPage() {
         ],
       };
     },
-    [state],
+    [state, visiblePinnedRetirementBucketIds],
   );
   const pinnedBucketIds = useMemo(
     () =>
-      new Set(
-        [
-          CASH_BUCKET_ID,
-          ...Object.values(getPinnedRetirementTargets()),
-        ],
-      ),
-    [],
+      new Set([CASH_BUCKET_ID, ...visiblePinnedRetirementBucketIds]),
+    [visiblePinnedRetirementBucketIds],
   );
   const bucketIdSignature = state.buckets.map((bucket) => bucket.id).join("|");
   const syncedBucketIdSignature = syncedState.buckets

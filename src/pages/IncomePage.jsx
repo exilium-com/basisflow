@@ -35,7 +35,7 @@ function createSalaryItem(overrides = {}) {
     id: crypto.randomUUID(),
     type: "salary",
     name: "Salary",
-    amount: "255000",
+    amount: "150000",
     frequency: "annual",
     detailsOpen: false,
     ...overrides,
