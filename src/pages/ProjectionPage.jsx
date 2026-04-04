@@ -3,7 +3,12 @@ import { AdvancedPanel } from "../components/AdvancedPanel";
 import { ActionButton } from "../components/ActionButton";
 import { ChartPanel } from "../components/ChartPanel";
 import { DisplayToggle } from "../components/DisplayToggle";
-import { NumberField, SelectField, fieldLabelClass } from "../components/Field";
+import {
+  CheckboxField,
+  NumberField,
+  SelectField,
+  fieldLabelClass,
+} from "../components/Field";
 import { PageShell } from "../components/PageShell";
 import { ResultList } from "../components/ResultList";
 import { RowItem } from "../components/RowItem";
@@ -15,6 +20,8 @@ import { buildLinePath, getChartFrame } from "../lib/chart";
 import {
   calculateAssetSnapshot,
   createDefaultAssetsState,
+  ensurePinnedRetirementBuckets,
+  getPinnedRetirementTargets,
   normalizeAssetInputs,
   normalizeAssetsState,
 } from "../lib/assetsModel";
@@ -28,6 +35,7 @@ import { loadStoredJson } from "../lib/storage";
 import {
   buildIncomeDirectedContributions,
   calculateProjection,
+  CASH_BUCKET_ID,
   createDefaultProjectionState,
   normalizeProjectionInputs,
   normalizeProjectionState,
@@ -299,13 +307,13 @@ function AssetTaxChart({ inputs, results, currentYear }) {
   const displayProjection = results.projection.map((row) => ({
     year: row.year,
     assetsGross: toDisplayValue(row.assetsGross, row.year, inputs),
-    assetEmbeddedTax: toDisplayValue(row.assetEmbeddedTax, row.year, inputs),
+    capitalGainsTax: toDisplayValue(row.capitalGainsTax, row.year, inputs),
   }));
   const totalYears = displayProjection.length;
   const maxValue = Math.max(
     ...displayProjection.flatMap((row) => [
       row.assetsGross,
-      row.assetEmbeddedTax,
+      row.capitalGainsTax,
     ]),
     1,
   );
@@ -321,7 +329,7 @@ function AssetTaxChart({ inputs, results, currentYear }) {
     pointFor(row.assetsGross, index),
   );
   const taxPoints = displayProjection.map((row, index) =>
-    pointFor(row.assetEmbeddedTax, index),
+    pointFor(row.capitalGainsTax, index),
   );
   const markerX =
     plotLeft + (currentYear / Math.max(inputs.horizonYears, 1)) * innerWidth;
@@ -330,7 +338,7 @@ function AssetTaxChart({ inputs, results, currentYear }) {
     <svg
       viewBox="0 0 720 320"
       role="img"
-      aria-label="Projected asset gross value and embedded tax chart"
+      aria-label="Projected asset gross value and capital gains tax chart"
     >
       <rect
         x={plotLeft}
@@ -443,6 +451,166 @@ function AssetTaxChart({ inputs, results, currentYear }) {
   );
 }
 
+function polarPoint(cx, cy, radius, angle) {
+  return {
+    x: cx + radius * Math.cos(angle),
+    y: cy + radius * Math.sin(angle),
+  };
+}
+
+function describeDonutSlice(cx, cy, outerRadius, innerRadius, startAngle, endAngle) {
+  const startOuter = polarPoint(cx, cy, outerRadius, startAngle);
+  const endOuter = polarPoint(cx, cy, outerRadius, endAngle);
+  const startInner = polarPoint(cx, cy, innerRadius, startAngle);
+  const endInner = polarPoint(cx, cy, innerRadius, endAngle);
+  const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
+
+  return [
+    `M ${startOuter.x} ${startOuter.y}`,
+    `A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${endOuter.x} ${endOuter.y}`,
+    `L ${endInner.x} ${endInner.y}`,
+    `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${startInner.x} ${startInner.y}`,
+    "Z",
+  ].join(" ");
+}
+
+function MonthlyCashFlowPanel({ items, total, netFlow }) {
+  const cx = 112;
+  const cy = 112;
+  const outerRadius = 82;
+  const innerRadius = 50;
+  let currentAngle = -Math.PI / 2;
+
+  return (
+    <div className="grid gap-6 px-4 pb-4 pt-2 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-center">
+      <div className="flex justify-center">
+        <svg viewBox="0 0 224 224" role="img" aria-label="Monthly cash flow breakdown">
+          <circle
+            cx={cx}
+            cy={cy}
+            r={outerRadius}
+            fill="var(--white)"
+            stroke="var(--line-soft)"
+          />
+          {total > 0
+            ? items.map((item) => {
+                const sliceAngle = (item.value / total) * Math.PI * 2;
+                const startAngle = currentAngle;
+                const endAngle = currentAngle + sliceAngle;
+                currentAngle = endAngle;
+
+                return (
+                  <path
+                    key={item.label}
+                    d={describeDonutSlice(
+                      cx,
+                      cy,
+                      outerRadius,
+                      innerRadius,
+                      startAngle,
+                      endAngle,
+                    )}
+                    fill={item.color}
+                    stroke="var(--white)"
+                    strokeWidth="2"
+                  />
+                );
+              })
+            : null}
+          <circle cx={cx} cy={cy} r={innerRadius} fill="var(--white-soft)" />
+          <text
+            x={cx}
+            y={cy - 8}
+            textAnchor="middle"
+            fill="var(--ink-soft)"
+            fontSize="12"
+          >
+            Net monthly
+          </text>
+          <text
+            x={cx}
+            y={cy + 10}
+            textAnchor="middle"
+            fill={netFlow >= 0 ? "var(--ink)" : "var(--danger)"}
+            fontSize="18"
+            fontWeight="700"
+          >
+            {usd(netFlow)}
+          </text>
+        </svg>
+      </div>
+      <div className="grid gap-2">
+        {items.map((item) => (
+          <div
+            key={item.label}
+            className="flex items-center justify-between gap-4 border-b border-(--line) py-2"
+          >
+            <div className="inline-flex items-center gap-3">
+              <i
+                className="inline-block h-3 w-3"
+                style={{ background: item.color }}
+              />
+              <span className="text-(--ink-soft)">{item.label}</span>
+            </div>
+            <strong>{usd(item.value)}</strong>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function createDerivedProjectionBuckets(assetState) {
+  const pinnedState = ensurePinnedRetirementBuckets(assetState);
+  const buckets = [...pinnedState.buckets];
+
+  if (!buckets.some((bucket) => bucket.id === CASH_BUCKET_ID)) {
+    buckets.unshift({
+      id: CASH_BUCKET_ID,
+      taxTreatment: "none",
+      name: "Cash",
+      current: "0",
+      contribution: "0",
+      growth: "0",
+      basis: "0",
+      detailsOpen: false,
+    });
+  }
+
+  const pinnedRetirementTargets = Object.values(getPinnedRetirementTargets());
+  const pinnedIds = [CASH_BUCKET_ID, ...pinnedRetirementTargets];
+
+  return {
+    ...pinnedState,
+    buckets: buckets
+      .map((bucket) =>
+        bucket.id === CASH_BUCKET_ID
+          ? {
+              ...bucket,
+              growth: "0",
+              basis: bucket.current || "0",
+            }
+          : bucket,
+      )
+      .sort((left, right) => {
+        const leftIndex = pinnedIds.indexOf(left.id);
+        const rightIndex = pinnedIds.indexOf(right.id);
+
+        if (leftIndex !== -1 || rightIndex !== -1) {
+          if (leftIndex === -1) {
+            return 1;
+          }
+          if (rightIndex === -1) {
+            return -1;
+          }
+          return leftIndex - rightIndex;
+        }
+
+        return 0;
+      }),
+  };
+}
+
 export function ProjectionPage() {
   const [state, setState] = useStoredState(
     PROJECTION_STATE_KEY,
@@ -503,23 +671,26 @@ export function ProjectionPage() {
     () => normalizeExpensesState(rawExpensesState, createDefaultExpenseState()),
     [rawExpensesState],
   );
-  const projectionAssetState = useMemo(
-    () => ({
-      ...assetState,
-      buckets: assetState.buckets.map((bucket) => {
+  const projectionAssetState = useMemo(() => {
+    const derivedState = createDerivedProjectionBuckets(assetState);
+
+    return {
+      ...derivedState,
+      buckets: derivedState.buckets.map((bucket) => {
         const override = state.assetOverrides?.[bucket.id] ?? {};
         return {
           ...bucket,
-          contribution:
-            typeof override.contribution === "string"
-              ? override.contribution
-              : "",
-          growth: typeof override.growth === "string" ? override.growth : "",
+          contribution: bucket.id === CASH_BUCKET_ID ? "0" : bucket.contribution,
+          growth:
+            bucket.id === CASH_BUCKET_ID
+              ? "0"
+              : typeof override.growth === "string"
+                ? override.growth
+                : "",
         };
       }),
-    }),
-    [assetState, state.assetOverrides],
-  );
+    };
+  }, [assetState, state.assetOverrides]);
   const projectionExpenseState = useMemo(
     () => ({
       ...expenseState,
@@ -549,7 +720,11 @@ export function ProjectionPage() {
   );
   const projectionInputs = useMemo(
     () =>
-      normalizeProjectionInputs(state, assetInputs, incomeDirectedContributions),
+      normalizeProjectionInputs(
+        state,
+        assetInputs,
+        incomeDirectedContributions,
+      ),
     [state, assetInputs, incomeDirectedContributions],
   );
   const assetSnapshot = useMemo(
@@ -647,14 +822,6 @@ export function ProjectionPage() {
     }));
   }
 
-  const allocationPercentTotal = projectionInputs.allocationPercentTotal;
-  const normalizedAllocationPercentTotal = Math.min(allocationPercentTotal, 100);
-  const allocationAmountTotal = projectionInputs.allocationAmountTotal;
-  const allocationNote =
-    allocationPercentTotal > 100
-      ? `Percent allocations total ${allocationPercentTotal.toFixed(1)}%. Remaining free cash is scaled down proportionally to 100% after fixed dollar allocations.`
-      : `Fixed dollar allocations apply first. Unallocated remainder stays in reserve cash. Current unallocated percent share: ${(100 - normalizedAllocationPercentTotal).toFixed(1)}%. Fixed dollar total: ${usd(allocationAmountTotal)}.`;
-
   const selectedRow =
     projectionInputs.currentYear === 0
       ? {
@@ -671,24 +838,25 @@ export function ProjectionPage() {
             results.fixedMortgageAnnual -
             results.annualExpenseTotal,
           allocatedFreeCash: 0,
-          rsuGross:
-            Number.isFinite(incomeSummary.rsuGrossNextYear)
-              ? incomeSummary.rsuGrossNextYear
-              : 0,
-          rsuNet:
-            Number.isFinite(incomeSummary.rsuNetNextYear)
-              ? incomeSummary.rsuNetNextYear
-              : 0,
+          rsuGross: Number.isFinite(incomeSummary.rsuGrossNextYear)
+            ? incomeSummary.rsuGrossNextYear
+            : 0,
+          rsuNet: Number.isFinite(incomeSummary.rsuNetNextYear)
+            ? incomeSummary.rsuNetNextYear
+            : 0,
           bucketSnapshots: results.currentAssetSnapshots,
           bucketSnapshotsById: results.currentAssetSnapshotsById,
           expenseSnapshots: results.currentExpenseSnapshots,
           expenseSnapshotsById: results.currentExpenseSnapshotsById,
+          vestedRsuBalance: results.currentVestedRsuBalance,
           assetsGross: results.currentAssetsGross,
           assetEmbeddedTax: results.currentAssetEmbeddedTax,
+          capitalGainsTax: results.currentCapitalGainsTax,
           homeEquity: Number.isFinite(mortgageSummary.currentEquity)
             ? mortgageSummary.currentEquity
             : 0,
-          residualCash: 0,
+          residualCash:
+            results.currentAssetSnapshotsById?.[CASH_BUCKET_ID]?.balance ?? 0,
           netWorth: results.currentNetWorth,
         }
       : (results.projection.find(
@@ -721,53 +889,137 @@ export function ProjectionPage() {
       ),
     },
     {
-      label: "Reserve cash",
+      label: "Capital gains tax",
       value: usd(
         toDisplayValue(
-          selectedRow.residualCash ?? 0,
+          selectedRow.capitalGainsTax ?? results.currentCapitalGainsTax,
           projectionInputs.currentYear,
           projectionInputs,
         ),
       ),
     },
     {
-      label: "Asset embedded tax",
+      label: "Total capital gains",
       value: usd(
         toDisplayValue(
-          selectedRow.assetEmbeddedTax ?? results.currentAssetEmbeddedTax,
+          selectedRow.totalCapitalGains ?? results.currentTotalCapitalGains,
           projectionInputs.currentYear,
           projectionInputs,
         ),
       ),
     },
     {
-      label: "RSU gross vest",
+      label: "Vested RSUs",
       value: usd(
         toDisplayValue(
-          selectedRow.rsuGross ?? 0,
-          projectionInputs.currentYear,
-          projectionInputs,
-        ),
-      ),
-    },
-    {
-      label: "RSU net vest",
-      value: usd(
-        toDisplayValue(
-          selectedRow.rsuNet ?? 0,
+          selectedRow.vestedRsuBalance ?? results.currentVestedRsuBalance,
           projectionInputs.currentYear,
           projectionInputs,
         ),
       ),
     },
   ];
+  const monthlyCashFlow = useMemo(() => {
+    const growthFactor = Math.pow(
+      1 + projectionInputs.takeHomeGrowthRate,
+      Math.max(projectionInputs.currentYear, 0),
+    );
+    const grossIncome = toDisplayValue(
+      Math.max(
+        0,
+        ((Number(incomeSummary.grossSalary) || 0) * growthFactor) / 12,
+      ),
+      projectionInputs.currentYear,
+      projectionInputs,
+    );
+    const retirementSaving = toDisplayValue(
+      (Math.max(0, Number(incomeSummary.employee401k) || 0) +
+        Math.max(0, Number(incomeSummary.iraContribution) || 0) +
+        Math.max(0, Number(incomeSummary.megaBackdoor) || 0) +
+        Math.max(0, Number(incomeSummary.hsaContribution) || 0)) / 12,
+      projectionInputs.currentYear,
+      projectionInputs,
+    );
+    const takeHome = Math.max(
+      0,
+      toDisplayValue(
+        (selectedRow.takeHome ?? 0) / 12,
+        projectionInputs.currentYear,
+        projectionInputs,
+      ),
+    );
+    const taxes = Math.max(0, grossIncome - retirementSaving - takeHome);
+    const mortgage = Math.max(
+      0,
+      toDisplayValue(
+        (selectedRow.mortgageLineItem ?? 0) / 12,
+        projectionInputs.currentYear,
+        projectionInputs,
+      ),
+    );
+    const expenses = Math.max(
+      0,
+      toDisplayValue(
+        (selectedRow.nonHousingExpenses ?? 0) / 12,
+        projectionInputs.currentYear,
+        projectionInputs,
+      ),
+    );
+    const excess = Math.max(
+      0,
+      grossIncome - taxes - retirementSaving - mortgage - expenses,
+    );
+    const shortfall = Math.max(
+      0,
+      taxes + retirementSaving + mortgage + expenses - grossIncome,
+    );
+    const items = [
+      {
+        label: "Taxes",
+        value: taxes,
+        color: "#d18a5b",
+      },
+      {
+        label: "Retirement savings",
+        value: retirementSaving,
+        color: "#0d6a73",
+      },
+      {
+        label: "Mortgage",
+        value: mortgage,
+        color: "#7c8e97",
+      },
+      {
+        label: "Expenses",
+        value: expenses,
+        color: "#9cadb5",
+      },
+      {
+        label: "Excess",
+        value: excess,
+        color: "#b8d8d9",
+      },
+      {
+        label: "Shortfall",
+        value: shortfall,
+        color: "var(--danger)",
+      },
+    ].filter((item) => item.value > 0);
+
+    return {
+      items,
+      netFlow: excess - shortfall,
+      total: grossIncome,
+    };
+  }, [incomeSummary, projectionInputs, selectedRow]);
+  const pinnedProjectionBucketIds = new Set([
+    CASH_BUCKET_ID,
+    ...Object.values(getPinnedRetirementTargets()),
+  ]);
 
   function getAssetOverrideSummary(bucket) {
     const override = state.assetOverrides?.[bucket.id] ?? {};
     const parts = [];
-    if ((override.contribution ?? "") !== "") {
-      parts.push(`Annual add ${usd(Number(override.contribution) || 0)}`);
-    }
     if ((override.growth ?? "") !== "") {
       parts.push(`Growth ${override.growth}%`);
     }
@@ -782,9 +1034,7 @@ export function ProjectionPage() {
   const snapshotLabelClass = "font-bold text-(--ink)";
   const snapshotValueClass = "mt-1 font-bold text-(--ink)";
   return (
-    <PageShell
-      actions={<ActionButton onClick={reset}>Reset</ActionButton>}
-    >
+    <PageShell actions={<ActionButton onClick={reset}>Reset</ActionButton>}>
       <main className={surfaceClass}>
         <WorkspaceLayout
           summary={
@@ -798,8 +1048,8 @@ export function ProjectionPage() {
                 </p>
                 <div className="flex items-end justify-between gap-4">
                   <strong
-                    className="block font-serif text-5xl leading-none tracking-tight
-                      text-(--teal) md:text-6xl"
+                    className="block font-serif text-5xl leading-none
+                      tracking-tight text-(--teal) md:text-6xl"
                   >
                     {usd(
                       toDisplayValue(
@@ -846,7 +1096,6 @@ export function ProjectionPage() {
                   </div>
                   <NumberField
                     label="Horizon"
-                    htmlFor="horizonYearsSlider"
                     className="md:w-32"
                     suffix="years"
                     min="1"
@@ -869,7 +1118,6 @@ export function ProjectionPage() {
                 <div className="grid gap-3 md:grid-cols-2">
                   <NumberField
                     label="Inflation"
-                    htmlFor="inflationRate"
                     suffix="%"
                     min="0"
                     step="0.1"
@@ -880,7 +1128,6 @@ export function ProjectionPage() {
                   />
                   <NumberField
                     label="Baseline asset growth"
-                    htmlFor="assetGrowthRate"
                     suffix="%"
                     min="0"
                     step="0.1"
@@ -891,7 +1138,6 @@ export function ProjectionPage() {
                   />
                   <NumberField
                     label="RSU stock growth"
-                    htmlFor="rsuStockGrowthRate"
                     suffix="%"
                     min="-50"
                     step="0.1"
@@ -900,9 +1146,17 @@ export function ProjectionPage() {
                       updateState({ rsuStockGrowthRate: event.target.value })
                     }
                   />
+                  <CheckboxField
+                    label="Include vested RSUs"
+                    checked={state.includeVestedRsusInNetWorth}
+                    onChange={(event) =>
+                      updateState({
+                        includeVestedRsusInNetWorth: event.target.checked,
+                      })
+                    }
+                  />
                   <NumberField
                     label="Baseline expense growth"
-                    htmlFor="expenseGrowthRate"
                     suffix="%"
                     min="-20"
                     step="0.1"
@@ -913,7 +1167,6 @@ export function ProjectionPage() {
                   />
                   <NumberField
                     label="Take-home growth"
-                    htmlFor="takeHomeGrowthRate"
                     suffix="%"
                     min="-10"
                     step="0.1"
@@ -924,7 +1177,6 @@ export function ProjectionPage() {
                   />
                   <NumberField
                     label="Home appreciation"
-                    htmlFor="homeAppreciationRate"
                     suffix="%"
                     min="-10"
                     step="0.1"
@@ -935,7 +1187,6 @@ export function ProjectionPage() {
                   />
                   <SelectField
                     label="Down payment funded by"
-                    htmlFor="mortgageFundingBucketId"
                     value={state.mortgageFundingBucketId}
                     onChange={(event) =>
                       updateState({
@@ -950,27 +1201,17 @@ export function ProjectionPage() {
                       </option>
                     ))}
                   </SelectField>
-                  <NumberField
-                    label="Reserve cash yield"
-                    htmlFor="cashYieldRate"
-                    suffix="%"
-                    min="-10"
-                    step="0.1"
-                    value={state.cashYieldRate}
-                    onChange={(event) =>
-                      updateState({ cashYieldRate: event.target.value })
-                    }
-                  />
                 </div>
               </AdvancedPanel>
             </>
           }
         >
-          <Section title="Free Cash Allocation">
+          <Section title="Assets">
             <div className="grid gap-2.5">
               {assetInputs.buckets.map((bucket) => (
                 <RowItem
                   key={bucket.id}
+                  pinned={pinnedProjectionBucketIds.has(bucket.id)}
                   headerClassName="grid items-start gap-4 lg:grid-cols-4"
                   detailsTitle="Asset overrides"
                   detailsSummary={getAssetOverrideSummary(bucket)}
@@ -1021,23 +1262,51 @@ export function ProjectionPage() {
                       )}
                       <div className="grid min-w-0 gap-1">
                         <div className={fieldLabelClass}>Allocation</div>
-                        <div className="flex items-start gap-2">
-                          {(
-                            results.incomeDirectedContributions?.[bucket.id] ?? 0
-                          ) > 0 ? (
-                            <SegmentedToggle
-                              ariaLabel={`${bucket.label} allocation mode`}
-                              className="shrink-0"
-                              value="amount"
-                              onChange={() => {}}
-                              options={[{ value: "amount", label: "$" }]}
-                            />
-                          ) : (
+                        {bucket.id === CASH_BUCKET_ID ? (
+                          <NumberField
+                            label={null}
+                            className="min-w-0"
+                            suffix="%"
+                            inputClassName="text-(--ink-soft)"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={String(
+                              Math.max(
+                                0,
+                                100 -
+                                  Math.min(
+                                    projectionInputs.allocationPercentTotal,
+                                    100,
+                                  ),
+                              ),
+                            )}
+                            disabled
+                            onChange={() => {}}
+                          />
+                        ) : (results.incomeDirectedContributions?.[bucket.id] ??
+                            0) > 0 ? (
+                          <NumberField
+                            label={null}
+                            className="min-w-0"
+                            prefix="$"
+                            inputClassName="text-(--ink-soft)"
+                            min="0"
+                            step="500"
+                            value={String(
+                              results.incomeDirectedContributions[bucket.id],
+                            )}
+                            disabled
+                            onChange={() => {}}
+                          />
+                        ) : (
+                          <div className="flex items-start gap-2">
                             <SegmentedToggle
                               ariaLabel={`${bucket.label} allocation mode`}
                               className="shrink-0"
                               value={
-                                state.allocations?.[bucket.id]?.mode ?? "percent"
+                                state.allocations?.[bucket.id]?.mode ??
+                                "percent"
                               }
                               onChange={(mode) =>
                                 updateAllocationMode(bucket.id, mode)
@@ -1047,69 +1316,37 @@ export function ProjectionPage() {
                                 { value: "percent", label: "%" },
                               ]}
                             />
-                          )}
-                          <NumberField
-                            label={null}
-                            className="min-w-0 flex-1"
-                            htmlFor={`allocation-${bucket.id}`}
-                            min="0"
-                            max={
-                              (state.allocations?.[bucket.id]?.mode ??
-                                "percent") === "percent"
-                                ? "100"
-                                : undefined
-                            }
-                            step={
-                              (state.allocations?.[bucket.id]?.mode ??
-                                "percent") === "percent"
-                                ? "1"
-                                : "500"
-                            }
-                            value={
-                              (
-                                results.incomeDirectedContributions?.[bucket.id] ??
-                                0
-                              ) > 0
-                                ? String(
-                                    results.incomeDirectedContributions[bucket.id],
-                                  )
-                                : (state.allocations?.[bucket.id]?.value ?? "0")
-                            }
-                            disabled={
-                              (
-                                results.incomeDirectedContributions?.[bucket.id] ??
-                                0
-                              ) > 0
-                            }
-                            onChange={(event) =>
-                              updateAllocation(bucket.id, event.target.value)
-                            }
-                          />
-                        </div>
+                            <NumberField
+                              label={null}
+                              className="min-w-0 flex-1"
+                              min="0"
+                              max={
+                                (state.allocations?.[bucket.id]?.mode ??
+                                  "percent") === "percent"
+                                  ? "100"
+                                  : undefined
+                              }
+                              step={
+                                (state.allocations?.[bucket.id]?.mode ??
+                                  "percent") === "percent"
+                                  ? "1"
+                                  : "500"
+                              }
+                              value={
+                                state.allocations?.[bucket.id]?.value ?? "0"
+                              }
+                              onChange={(event) =>
+                                updateAllocation(bucket.id, event.target.value)
+                              }
+                            />
+                          </div>
+                        )}
                       </div>
                     </>
                   }
                 >
                   <NumberField
-                    label="Annual add"
-                    htmlFor={`assetContribution-${bucket.id}`}
-                    prefix="$"
-                    min="0"
-                    step="500"
-                    compact
-                    value={
-                      state.assetOverrides?.[bucket.id]?.contribution ?? ""
-                    }
-                    placeholder="0"
-                    onChange={(event) =>
-                      updateAssetOverride(bucket.id, {
-                        contribution: event.target.value,
-                      })
-                    }
-                  />
-                  <NumberField
                     label="Growth override"
-                    htmlFor={`assetGrowth-${bucket.id}`}
                     suffix="%"
                     min="0"
                     step="0.1"
@@ -1125,13 +1362,9 @@ export function ProjectionPage() {
                 </RowItem>
               ))}
             </div>
-
-            <div className="text-sm leading-relaxed text-(--ink-soft)">
-              {allocationNote}
-            </div>
           </Section>
 
-          <Section title="Expense Growth Overrides" divider>
+          <Section title="Expenses" divider>
             <div className="grid gap-2.5">
               {expenseInputs.expenses.map((expense) => (
                 <RowItem
@@ -1208,7 +1441,6 @@ export function ProjectionPage() {
                 >
                   <NumberField
                     label="Growth override"
-                    htmlFor={`expenseGrowth-${expense.id}`}
                     suffix="%"
                     min="-20"
                     step="0.1"
@@ -1228,55 +1460,14 @@ export function ProjectionPage() {
             </div>
           </Section>
 
-          <Section title="Current Inputs Snapshot" divider>
-            <table>
-              <thead>
-                <tr>
-                  <th>Source</th>
-                  <th>Current value</th>
-                  <th>Modeled line item</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Income</td>
-                  <td>{usd(results.annualTakeHomeBase)}</td>
-                  <td>
-                    {usd(
-                      (Number.isFinite(incomeSummary.annualTakeHome)
-                        ? incomeSummary.annualTakeHome
-                        : 0) || 0,
-                    )}{" "}
-                    base annual take-home
-                    {Number.isFinite(incomeSummary.rsuNetNextYear) &&
-                    incomeSummary.rsuNetNextYear > 0
-                      ? ` + ${usd(incomeSummary.rsuNetNextYear)} next-12m RSU net`
-                      : ""}
-                  </td>
-                </tr>
-                <tr>
-                  <td>Assets</td>
-                  <td>{usd(assetSnapshot.totals.currentTotal)}</td>
-                  <td>
-                    {usd(results.baseAssetPlan)} annual additions
-                  </td>
-                </tr>
-                <tr>
-                  <td>Mortgage</td>
-                  <td>{usd(results.fixedMortgageAnnual)}</td>
-                  <td>
-                    {usd(results.fixedMortgageAnnual)} annual fixed line item
-                  </td>
-                </tr>
-                <tr>
-                  <td>Expenses</td>
-                  <td>{usd(results.annualExpenseTotal)}</td>
-                  <td>
-                    {usd(results.annualExpenseTotal)} annual non-housing spend
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <Section divider>
+            <ChartPanel title={`Monthly Cash Flow For ${selectedYearLabel}`}>
+              <MonthlyCashFlowPanel
+                items={monthlyCashFlow.items}
+                netFlow={monthlyCashFlow.netFlow}
+                total={monthlyCashFlow.total}
+              />
+            </ChartPanel>
           </Section>
 
           <Section divider>
@@ -1299,10 +1490,10 @@ export function ProjectionPage() {
 
           <Section divider>
             <ChartPanel
-              title="Asset Growth And Tax"
+              title="Asset Growth And Capital Gains"
               legend={[
                 { label: "Gross assets", color: "#0c6a7c" },
-                { label: "Embedded tax", color: "#d28a47" },
+                { label: "Capital gains tax", color: "#d28a47" },
               ]}
             >
               <AssetTaxChart
@@ -1348,7 +1539,7 @@ export function ProjectionPage() {
                     <td>
                       {usd(
                         toDisplayValue(
-                          row.assetEmbeddedTax,
+                          row.capitalGainsTax,
                           row.year,
                           projectionInputs,
                         ),

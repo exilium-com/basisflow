@@ -84,7 +84,6 @@ export function TaxConfigPage() {
             <div className="mt-4 grid grid-cols-2 gap-4 max-md:grid-cols-1">
               <NumberField
                 label="401(k) annual additions limit"
-                htmlFor="annualAdditionsLimit"
                 prefix="$"
                 min="0"
                 step="100"
@@ -95,7 +94,6 @@ export function TaxConfigPage() {
               />
               <NumberField
                 label="Federal standard deduction"
-                htmlFor="federalStandardDeduction"
                 prefix="$"
                 min="0"
                 step="50"
@@ -106,7 +104,6 @@ export function TaxConfigPage() {
               />
               <NumberField
                 label="California standard deduction"
-                htmlFor="stateStandardDeduction"
                 prefix="$"
                 min="0"
                 step="50"
@@ -117,7 +114,6 @@ export function TaxConfigPage() {
               />
               <NumberField
                 label="CA SDI rate"
-                htmlFor="caSdiRate"
                 suffix="%"
                 min="0"
                 step="0.1"
@@ -126,19 +122,16 @@ export function TaxConfigPage() {
               />
               <TextAreaField
                 label="Federal brackets"
-                htmlFor="federalBrackets"
                 value={federalBrackets}
                 onChange={(event) => setFederalBrackets(event.target.value)}
               />
               <TextAreaField
                 label="State brackets"
-                htmlFor="stateBrackets"
                 value={stateBrackets}
                 onChange={(event) => setStateBrackets(event.target.value)}
               />
               <TextAreaField
                 label="Long-term capital gains"
-                htmlFor="longTermCapitalGains"
                 value={longTermCapitalGains}
                 onChange={(event) =>
                   setLongTermCapitalGains(event.target.value)

@@ -5,6 +5,7 @@ export function RowItem({
   header,
   headerClassName = "",
   action = null,
+  pinned = false,
   selected = false,
   onSelect,
   removeLabel,
@@ -16,14 +17,14 @@ export function RowItem({
   detailsContentClassName = "",
   children,
 }) {
-  const defaultHeaderPadding = onRemove
-    ? "px-4 pt-3 pb-3 pr-12"
-    : "px-4 pt-3 pb-3";
+  const detailsId = React.useId();
+  const headerPadding = onRemove ? "px-4 pt-3 pb-3 pr-12" : "px-4 pt-3 pb-3";
 
   return (
     <article
       className={cx(
         "relative border border-(--line) bg-(--white-soft)",
+        pinned && "!border-(--teal-soft) !bg-(--teal-tint)",
         selected && "border-(--teal) bg-(--white)",
         onSelect && "cursor-pointer",
       )}
@@ -42,9 +43,32 @@ export function RowItem({
         </button>
       ) : null}
 
-      <div className={defaultHeaderPadding}>
+      <div className={headerPadding}>
         <div className="flex items-start justify-between gap-3">
-          <div className={cx("min-w-0 flex-1", headerClassName)}>{header}</div>
+          <div className={cx("min-w-0 flex-1", headerClassName)}>
+            {header}
+            {detailsTitle ? (
+              <button
+                className="inline-flex items-center gap-2 text-xs text-(--ink)
+                  focus-visible:outline-none"
+                type="button"
+                aria-controls={detailsId}
+                aria-expanded={detailsOpen}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onToggleDetails?.(!detailsOpen);
+                }}
+              >
+                <span aria-hidden="true" className="text-(--teal)">
+                  {detailsOpen ? "−" : "+"}
+                </span>
+                <span>{detailsTitle}</span>
+                {detailsSummary ? (
+                  <span className="text-(--ink-soft)">{detailsSummary}</span>
+                ) : null}
+              </button>
+            ) : null}
+          </div>
           {action ? (
             <div
               className="flex-none"
@@ -56,40 +80,17 @@ export function RowItem({
         </div>
       </div>
 
-      <details
-        open={detailsOpen}
-        onClick={(event) => event.stopPropagation()}
-        onToggle={(event) => onToggleDetails?.(event.currentTarget.open)}
-      >
-        <summary
-          className="relative flex cursor-pointer list-none items-center
-            justify-between gap-3 px-4 pt-2 pb-3 text-xs font-extrabold
-            tracking-wide text-(--ink) uppercase"
-        >
-          <span
+      {detailsTitle && detailsOpen ? (
+        <div id={detailsId}>
+          <div
             aria-hidden="true"
-            className="absolute top-0 right-6 left-6 border-t
-              border-(--line-soft)"
+            className="mx-6 border-t border-(--line-soft)"
           />
-          <span className="inline-flex items-center gap-2">
-            <span aria-hidden="true" className="text-(--teal)">
-              {detailsOpen ? "−" : "+"}
-            </span>
-            <span>{detailsTitle}</span>
-          </span>
-          {detailsSummary ? (
-            <span
-              className="text-right text-sm font-semibold tracking-normal
-                text-(--ink-soft) normal-case"
-            >
-              {detailsSummary}
-            </span>
-          ) : null}
-        </summary>
-        <div className={cx("px-4 pb-4", detailsContentClassName)}>
-          {children}
+          <div className={cx("px-4 pt-2 pb-4", detailsContentClassName)}>
+            {children}
+          </div>
         </div>
-      </details>
+      ) : null}
     </article>
   );
 }

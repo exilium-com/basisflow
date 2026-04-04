@@ -1,3 +1,5 @@
+import { roundTo } from "./format";
+
 export const STORAGE_KEY = "finance_tools_tax_config_v1";
 
 export const DEFAULT_CONFIG = {
@@ -15,14 +17,14 @@ export const DEFAULT_CONFIG = {
     { top: null, rate: 37 },
   ],
   stateBrackets: [
-    { top: 10412, rate: 1 },
-    { top: 24684, rate: 2 },
-    { top: 38959, rate: 4 },
-    { top: 54081, rate: 6 },
-    { top: 68350, rate: 8 },
-    { top: 349137, rate: 9.3 },
-    { top: 418961, rate: 10.3 },
-    { top: 698271, rate: 11.3 },
+    { top: 11079, rate: 1 },
+    { top: 26264, rate: 2 },
+    { top: 41452, rate: 4 },
+    { top: 57542, rate: 6 },
+    { top: 72724, rate: 8 },
+    { top: 371479, rate: 9.3 },
+    { top: 445771, rate: 10.3 },
+    { top: 742953, rate: 11.3 },
     { top: 1000000, rate: 12.3 },
     { top: null, rate: 13.3 },
   ],
@@ -150,7 +152,7 @@ export function computeProgressiveTax(income, brackets) {
     }
   }
 
-  return total;
+  return roundTo(total, 2);
 }
 
 export function computeAdditionalTax(baseIncome, addedIncome, brackets) {

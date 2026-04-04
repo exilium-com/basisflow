@@ -1,4 +1,4 @@
-import { clamp } from "./format";
+import { clamp, roundTo } from "./format";
 import { computeProgressiveTax } from "./taxConfig";
 
 function annualizeSalary(amount, frequency = "annual") {
@@ -21,18 +21,24 @@ function averageGrowthFactor(growthRate, startYearOffset) {
 }
 
 
-export function computeFica(grossSalary, hsaPayrollAmount) {
-  const ficaWages = Math.max(0, grossSalary - hsaPayrollAmount);
+export function computeFica(grossSalary) {
+  const ficaWages = Math.max(0, grossSalary);
   const socialSecurityWageBase = 184500;
-  const socialSecurity = Math.min(ficaWages, socialSecurityWageBase) * 0.062;
-  const medicare = ficaWages * 0.0145;
-  const additionalMedicare = Math.max(0, ficaWages - 200000) * 0.009;
+  const socialSecurity = roundTo(
+    Math.min(ficaWages, socialSecurityWageBase) * 0.062,
+    2,
+  );
+  const medicare = roundTo(ficaWages * 0.0145, 2);
+  const additionalMedicare = roundTo(
+    Math.max(0, ficaWages - 200000) * 0.009,
+    2,
+  );
 
   return {
     socialSecurity,
     medicare,
     additionalMedicare,
-    total: socialSecurity + medicare + additionalMedicare,
+    total: roundTo(socialSecurity + medicare + additionalMedicare, 2),
   };
 }
 
@@ -89,15 +95,17 @@ export function computeAnnualTaxes(inputs, taxConfig, extraOrdinaryIncome = 0) {
     taxConfig.stateBrackets,
   );
 
-  const fica = computeFica(grossIncome, inputs.hsaContribution);
-  const caSdi = grossIncome * (taxConfig.caSdiRate / 100);
+  const fica = computeFica(grossIncome);
+  const caSdi = roundTo(grossIncome * (taxConfig.caSdiRate / 100), 2);
 
   return {
+    federalTaxableIncome,
+    californiaTaxableIncome,
     federalTax,
     californiaTax,
     fica,
     caSdi,
-    totalTaxes: federalTax + californiaTax + fica.total + caSdi,
+    totalTaxes: roundTo(federalTax + californiaTax + fica.total + caSdi, 2),
   };
 }
 
@@ -109,13 +117,14 @@ export function computeIncrementalTakeHome(inputs, taxConfig, extraOrdinaryIncom
 
   const baseTaxes = computeAnnualTaxes(inputs, taxConfig, 0).totalTaxes;
   const extraTaxes = computeAnnualTaxes(inputs, taxConfig, safeExtra).totalTaxes;
-  return safeExtra - (extraTaxes - baseTaxes);
+  return roundTo(safeExtra - (extraTaxes - baseTaxes), 2);
 }
 
 export function computeRsuGrossForYear(
   rsus,
   yearIndex,
   stockGrowthRate = 0,
+  refresherGrowthRate = 0,
 ) {
   const grantAmount = Math.max(0, rsus.grantAmount);
   const refresherAmount = Math.max(0, rsus.refresherAmount);
@@ -136,8 +145,10 @@ export function computeRsuGrossForYear(
     if (yearIndex - refresherIndex >= vestYears || refresherAmount <= 0) {
       continue;
     }
+    const grownRefresherAmount =
+      refresherAmount * Math.pow(1 + refresherGrowthRate, refresherIndex - 1);
     total +=
-      (refresherAmount / vestYears) *
+      (grownRefresherAmount / vestYears) *
       averageGrowthFactor(stockGrowthRate, yearIndex - refresherIndex);
   }
 
@@ -148,29 +159,36 @@ export function computeRsuGrossForItems(
   rsuItems = [],
   yearIndex,
   stockGrowthRate = 0,
+  refresherGrowthRate = 0,
 ) {
   return rsuItems.reduce(
-    (sum, rsu) => sum + computeRsuGrossForYear(rsu, yearIndex, stockGrowthRate),
+    (sum, rsu) =>
+      sum +
+      computeRsuGrossForYear(
+        rsu,
+        yearIndex,
+        stockGrowthRate,
+        refresherGrowthRate,
+      ),
     0,
   );
 }
 
 export function calculateIncome(inputs, taxConfig) {
-  const grossSalary = getAnnualSalaryTotal(inputs.salaryItems);
+  const grossSalary = Math.max(0, inputs.grossSalary ?? 0);
   const savings = computeSavings(inputs, taxConfig);
   const taxInputs = { ...inputs, grossSalary };
   const taxes = computeAnnualTaxes(taxInputs, taxConfig, 0);
-  const annualTakeHome =
+  const annualTakeHome = roundTo(
     grossSalary -
     taxInputs.employee401k -
     taxInputs.hsaContribution -
     savings.iraContribution -
     savings.mega -
-    taxes.totalTaxes;
-  const rsuGrossNextYear = computeRsuGrossForItems(
-    inputs.rsuItems,
-    0,
+    taxes.totalTaxes,
+    2,
   );
+  const rsuGrossNextYear = Math.max(0, inputs.rsuGrossNextYear ?? 0);
   const rsuNetNextYear = computeIncrementalTakeHome(
     taxInputs,
     taxConfig,
@@ -186,7 +204,7 @@ export function calculateIncome(inputs, taxConfig) {
     totalTaxes: taxes.totalTaxes,
     grossSalary,
     annualTakeHome,
-    monthlyTakeHome: annualTakeHome / 12,
+    monthlyTakeHome: roundTo(annualTakeHome / 12, 2),
     rsuGrossNextYear,
     rsuNetNextYear,
   };

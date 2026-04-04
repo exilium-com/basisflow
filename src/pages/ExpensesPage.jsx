@@ -89,8 +89,10 @@ export function ExpensesPage() {
   }
 
   const summaryItems = [
-    { label: "Annual run-rate spend", value: usd(results.annualExpenseTotal) },
-    { label: "Expense lines", value: String(results.expenseCount) },
+    {
+      label: "Monthly run-rate spend",
+      value: usd(results.annualExpenseTotal / 12),
+    },
   ];
 
   return (
@@ -190,7 +192,6 @@ export function ExpensesPage() {
                     {expense.frequency === "one_off" ? (
                       <NumberField
                         label="Relative year"
-                        htmlFor={`oneOffYear-${expense.id}`}
                         min="1"
                         step="1"
                         value={expense.oneOffYear ?? ""}

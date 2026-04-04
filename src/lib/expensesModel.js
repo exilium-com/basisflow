@@ -134,7 +134,7 @@ export function getAnnualNonHousingExpenses(expenses, year) {
         ? expense.oneOffYear === year
           ? expense.amount
           : 0
-        : expense.annualBase * Math.pow(1 + expense.growthRate, year - 1)),
+        : expense.annualBase * Math.pow(1 + expense.growthRate, Math.max(year, 0))),
     0,
   );
 }

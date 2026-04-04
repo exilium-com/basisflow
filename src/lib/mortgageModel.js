@@ -10,14 +10,12 @@ export const LOAN_OPTIONS = [
       {
         field: "rate",
         label: "Interest rate",
-        htmlFor: "rate_fixed30",
         suffix: "%",
         step: "0.001",
       },
       {
         field: "term",
         label: "Loan term",
-        htmlFor: "term_fixed30",
         suffix: "years",
         step: "1",
       },
@@ -33,14 +31,12 @@ export const LOAN_OPTIONS = [
       {
         field: "initialRate",
         label: "Initial rate",
-        htmlFor: "rate_arm76_initial",
         suffix: "%",
         step: "0.001",
       },
       {
         field: "adjustedRate",
         label: "Reset rate",
-        htmlFor: "rate_arm76_adjusted",
         suffix: "%",
         step: "0.001",
         placeholderFrom: "initialRate",
@@ -48,7 +44,6 @@ export const LOAN_OPTIONS = [
       {
         field: "term",
         label: "Loan term",
-        htmlFor: "term_arm76",
         suffix: "years",
         step: "1",
       },
@@ -64,14 +59,12 @@ export const LOAN_OPTIONS = [
       {
         field: "initialRate",
         label: "Initial rate",
-        htmlFor: "rate_arm106_initial",
         suffix: "%",
         step: "0.001",
       },
       {
         field: "adjustedRate",
         label: "Reset rate",
-        htmlFor: "rate_arm106_adjusted",
         suffix: "%",
         step: "0.001",
         placeholderFrom: "initialRate",
@@ -79,7 +72,6 @@ export const LOAN_OPTIONS = [
       {
         field: "term",
         label: "Loan term",
-        htmlFor: "term_arm106",
         suffix: "years",
         step: "1",
       },

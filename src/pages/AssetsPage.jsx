@@ -1,6 +1,6 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { ActionButton } from "../components/ActionButton";
-import { CheckboxField, NumberField, TextField } from "../components/Field";
+import { NumberField, SelectField, TextField } from "../components/Field";
 import { PageShell } from "../components/PageShell";
 import { ResultList } from "../components/ResultList";
 import { RowItem } from "../components/RowItem";
@@ -11,10 +11,13 @@ import { usd } from "../lib/format";
 import {
   createBlankBucket,
   createDefaultAssetsState,
+  ensurePinnedRetirementBuckets,
+  getPinnedRetirementTargets,
   normalizeAssetInputs,
   normalizeAssetsState,
 } from "../lib/assetsModel";
 import {
+  CASH_BUCKET_ID,
   createDefaultProjectionState,
   normalizeProjectionState,
 } from "../lib/projectionModel";
@@ -43,19 +46,88 @@ export function AssetsPage() {
       ),
     [state],
   );
+  const syncedState = useMemo(
+    () => {
+      const nextState = ensurePinnedRetirementBuckets(state);
+
+      if (nextState.buckets.some((bucket) => bucket.id === CASH_BUCKET_ID)) {
+        return nextState;
+      }
+
+      return {
+        ...nextState,
+        buckets: [
+          {
+            id: CASH_BUCKET_ID,
+            taxTreatment: "none",
+            name: "Cash",
+            current: "",
+            contribution: "",
+            growth: "0",
+            basis: "",
+            detailsOpen: false,
+          },
+          ...nextState.buckets,
+        ],
+      };
+    },
+    [state],
+  );
+  const pinnedBucketIds = useMemo(
+    () =>
+      new Set(
+        [
+          CASH_BUCKET_ID,
+          ...Object.values(getPinnedRetirementTargets()),
+        ],
+      ),
+    [],
+  );
+  const bucketIdSignature = state.buckets.map((bucket) => bucket.id).join("|");
+  const syncedBucketIdSignature = syncedState.buckets
+    .map((bucket) => bucket.id)
+    .join("|");
+
+  useEffect(() => {
+    if (bucketIdSignature !== syncedBucketIdSignature) {
+      setState(syncedState);
+    }
+  }, [bucketIdSignature, syncedBucketIdSignature, syncedState, setState]);
+
   const inputs = useMemo(
-    () => normalizeAssetInputs(state, projectionState.assetGrowthRate),
-    [state, projectionState.assetGrowthRate],
+    () => normalizeAssetInputs(syncedState, projectionState.assetGrowthRate),
+    [syncedState, projectionState.assetGrowthRate],
+  );
+  const orderedBuckets = useMemo(
+    () =>
+      [...syncedState.buckets].sort((left, right) => {
+        const leftPinned = pinnedBucketIds.has(left.id);
+        const rightPinned = pinnedBucketIds.has(right.id);
+
+        if (leftPinned === rightPinned) {
+          return 0;
+        }
+
+        return leftPinned ? -1 : 1;
+      }),
+    [syncedState.buckets, pinnedBucketIds],
   );
   const totals = useMemo(
     () => ({
       currentTotal: inputs.buckets.reduce((sum, bucket) => sum + bucket.current, 0),
       taxableCurrentTotal: inputs.buckets.reduce(
-        (sum, bucket) => sum + (bucket.taxFree ? 0 : bucket.current),
+        (sum, bucket) =>
+          sum + (bucket.taxTreatment === "none" ? bucket.current : 0),
         0,
       ),
-      taxFreeCurrentTotal: inputs.buckets.reduce(
-        (sum, bucket) => sum + (bucket.taxFree ? bucket.current : 0),
+      taxDeductibleCurrentTotal: inputs.buckets.reduce(
+        (sum, bucket) =>
+          sum + (bucket.taxTreatment === "taxDeductible" ? bucket.current : 0),
+        0,
+      ),
+      taxDeferredCurrentTotal: inputs.buckets.reduce(
+        (sum, bucket) =>
+          sum + (bucket.taxTreatment === "taxDeferred" ? bucket.current : 0),
         0,
       ),
     }),
@@ -72,12 +144,12 @@ export function AssetsPage() {
 
         const nextBucket = { ...bucket, ...patch };
         if (
-          typeof patch.taxFree === "boolean" &&
-          patch.taxFree !== bucket.taxFree
+          typeof patch.taxTreatment === "string" &&
+          patch.taxTreatment !== bucket.taxTreatment
         ) {
           return {
             ...nextBucket,
-            basis: "",
+            basis: patch.taxTreatment === "none" ? nextBucket.basis : "",
           };
         }
         return nextBucket;
@@ -97,6 +169,9 @@ export function AssetsPage() {
   }
 
   function removeBucket(bucketId) {
+    if (pinnedBucketIds.has(bucketId)) {
+      return;
+    }
     setState((current) => ({
       ...current,
       buckets: current.buckets.filter((bucket) => bucket.id !== bucketId),
@@ -106,8 +181,12 @@ export function AssetsPage() {
   const summaryItems = [
     { label: "Taxable assets", value: usd(totals.taxableCurrentTotal) },
     {
-      label: "Tax-free assets",
-      value: usd(totals.taxFreeCurrentTotal),
+      label: "Tax-deductible assets",
+      value: usd(totals.taxDeductibleCurrentTotal),
+    },
+    {
+      label: "Tax-deferred assets",
+      value: usd(totals.taxDeferredCurrentTotal),
     },
     { label: "Bucket count", value: String(inputs.buckets.length) },
   ];
@@ -141,12 +220,20 @@ export function AssetsPage() {
             }
           >
             <div className="grid gap-2.5">
-              {state.buckets.map((bucket) => {
+              {orderedBuckets.map((bucket) => {
+                const isPinnedRetirementBucket = pinnedBucketIds.has(bucket.id);
                 return (
                   <RowItem
                     key={bucket.id}
-                    removeLabel="Remove asset"
-                    onRemove={() => removeBucket(bucket.id)}
+                    pinned={isPinnedRetirementBucket}
+                    removeLabel={
+                      isPinnedRetirementBucket ? undefined : "Remove asset"
+                    }
+                    onRemove={
+                      isPinnedRetirementBucket
+                        ? undefined
+                        : () => removeBucket(bucket.id)
+                    }
                     detailsTitle="Bucket details"
                     detailsOpen={bucket.detailsOpen}
                     onToggleDetails={(open) =>
@@ -160,6 +247,10 @@ export function AssetsPage() {
                           label="Asset name"
                           value={bucket.name}
                           placeholder="Asset name"
+                          disabled={isPinnedRetirementBucket}
+                          inputClassName={
+                            isPinnedRetirementBucket ? "text-(--ink-soft)" : ""
+                          }
                           onChange={(event) =>
                             updateBucket(bucket.id, { name: event.target.value })
                           }
@@ -171,6 +262,9 @@ export function AssetsPage() {
                           step="1000"
                           value={bucket.current}
                           placeholder="0"
+                          inputClassName={
+                            isPinnedRetirementBucket ? "text-(--ink-soft)" : ""
+                          }
                           onChange={(event) =>
                             updateBucket(bucket.id, {
                               current: event.target.value,
@@ -180,14 +274,21 @@ export function AssetsPage() {
                       </>
                     }
                   >
-                    <CheckboxField
-                      label="Tax-free growth"
-                      checked={bucket.taxFree}
+                    <SelectField
+                      label="Tax treatment"
+                      value={bucket.taxTreatment}
+                      disabled={isPinnedRetirementBucket}
                       onChange={(event) =>
-                        updateBucket(bucket.id, { taxFree: event.target.checked })
+                        updateBucket(bucket.id, {
+                          taxTreatment: event.target.value,
+                        })
                       }
-                    />
-                    {!bucket.taxFree ? (
+                    >
+                      <option value="none">None</option>
+                      <option value="taxDeductible">Tax-deductible</option>
+                      <option value="taxDeferred">Tax-deferred</option>
+                    </SelectField>
+                    {bucket.taxTreatment === "none" ? (
                       <NumberField
                         label="Current basis"
                         prefix="$"
@@ -195,6 +296,9 @@ export function AssetsPage() {
                         step="1000"
                         value={bucket.basis}
                         placeholder="0"
+                        inputClassName={
+                          isPinnedRetirementBucket ? "text-(--ink-soft)" : ""
+                        }
                         onChange={(event) =>
                           updateBucket(bucket.id, { basis: event.target.value })
                         }

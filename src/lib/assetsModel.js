@@ -1,32 +1,71 @@
-import { clamp, readNumber } from "./format";
+import { clamp, readNumber, roundTo } from "./format";
 import { computeAdditionalTax } from "./taxConfig";
 
 export const TYPE_DEFAULTS = {
-  taxable: {
+  none: {
     name: "Taxable Asset",
     current: 320000,
     contribution: 24000,
     growth: 7,
     basis: 210000,
   },
-  taxFree: {
-    name: "Tax-Free Asset",
+  taxDeferred: {
+    name: "Tax-Deferred Asset",
     current: 95000,
     contribution: 10000,
     growth: 7,
   },
 };
 
-export function createSeedBucket(taxFree, detailsOpen = false) {
-  const defaults = TYPE_DEFAULTS[taxFree ? "taxFree" : "taxable"];
+export const PINNED_RETIREMENT_BUCKETS = {
+  retirementBucketId: {
+    id: "traditional-401k",
+    name: "401(k)",
+    taxTreatment: "taxDeductible",
+  },
+  iraBucketId: {
+    id: "ira-bucket",
+    name: "IRA",
+    taxTreatment: "taxDeferred",
+  },
+  megaBucketId: {
+    id: "roth-401k",
+    name: "Roth 401(k)",
+    taxTreatment: "taxDeferred",
+  },
+  hsaBucketId: {
+    id: "hsa-bucket",
+    name: "HSA",
+    taxTreatment: "taxDeferred",
+  },
+};
+
+function normalizeTaxTreatment(rawBucket) {
+  if (rawBucket?.taxTreatment === "taxDeductible") {
+    return "taxDeductible";
+  }
+  if (rawBucket?.taxTreatment === "taxDeferred") {
+    return "taxDeferred";
+  }
+  if (typeof rawBucket?.taxFree === "boolean") {
+    return rawBucket.taxFree ? "taxDeferred" : "none";
+  }
+  if (rawBucket?.type === "tax_free") {
+    return "taxDeferred";
+  }
+  return "none";
+}
+
+export function createSeedBucket(taxTreatment, detailsOpen = false) {
+  const defaults = TYPE_DEFAULTS[taxTreatment] ?? TYPE_DEFAULTS.none;
   return {
     id: crypto.randomUUID(),
-    taxFree,
+    taxTreatment,
     name: defaults.name,
     current: String(defaults.current),
     contribution: String(defaults.contribution),
     growth: String(defaults.growth),
-    basis: taxFree ? "" : String(defaults.basis),
+    basis: taxTreatment === "none" ? String(defaults.basis) : "",
     detailsOpen,
   };
 }
@@ -34,7 +73,7 @@ export function createSeedBucket(taxFree, detailsOpen = false) {
 export function createBlankBucket() {
   return {
     id: crypto.randomUUID(),
-    taxFree: false,
+    taxTreatment: "none",
     name: "",
     current: "",
     contribution: "",
@@ -44,25 +83,32 @@ export function createBlankBucket() {
   };
 }
 
+export function createPinnedBucket({ id, name, taxTreatment }) {
+  return {
+    id,
+    name,
+    taxTreatment,
+    current: "",
+    contribution: "",
+    growth: "",
+    basis: taxTreatment === "none" ? "" : "",
+    detailsOpen: false,
+  };
+}
+
 export function createDefaultAssetsState() {
   return {
-    buckets: [createSeedBucket(false), createSeedBucket(true)],
+    buckets: [createSeedBucket("none"), createSeedBucket("taxDeferred")],
   };
 }
 
 export function normalizeBucket(rawBucket) {
-  const rawType = rawBucket?.type;
-  const taxFree =
-    typeof rawBucket?.taxFree === "boolean"
-      ? rawBucket.taxFree
-      : rawType === "tax_free";
-
   return {
     id:
       typeof rawBucket?.id === "string" && rawBucket.id
         ? rawBucket.id
         : crypto.randomUUID(),
-    taxFree,
+    taxTreatment: normalizeTaxTreatment(rawBucket),
     name: typeof rawBucket?.name === "string" ? rawBucket.name : "",
     current: typeof rawBucket?.current === "string" ? rawBucket.current : "",
     contribution:
@@ -73,9 +119,9 @@ export function normalizeBucket(rawBucket) {
   };
 }
 
-function isLegacySeedBucket(bucket, taxFree) {
+function isLegacySeedBucket(bucket, taxTreatment) {
   return (
-    bucket.taxFree === taxFree &&
+    bucket.taxTreatment === taxTreatment &&
     bucket.name === "" &&
     bucket.current === "" &&
     bucket.contribution === "" &&
@@ -91,11 +137,11 @@ export function normalizeAssetsState(parsed, fallback) {
       : fallback.buckets;
   const buckets =
     rawBuckets.length === 2 &&
-    isLegacySeedBucket(rawBuckets[0], false) &&
-    isLegacySeedBucket(rawBuckets[1], true)
+    isLegacySeedBucket(rawBuckets[0], "none") &&
+    isLegacySeedBucket(rawBuckets[1], "taxDeferred")
       ? [
-          createSeedBucket(false, rawBuckets[0].detailsOpen),
-          createSeedBucket(true, rawBuckets[1].detailsOpen),
+          createSeedBucket("none", rawBuckets[0].detailsOpen),
+          createSeedBucket("taxDeferred", rawBuckets[1].detailsOpen),
         ]
       : rawBuckets;
 
@@ -104,31 +150,72 @@ export function normalizeAssetsState(parsed, fallback) {
   };
 }
 
-export function defaultLabelForBucket(bucket) {
-  return (
-    bucket.name.trim() ||
-    TYPE_DEFAULTS[bucket.taxFree ? "taxFree" : "taxable"].name
+export function getPinnedRetirementTargets() {
+  return Object.fromEntries(
+    Object.entries(PINNED_RETIREMENT_BUCKETS).map(([key, config]) => [
+      key,
+      config.id,
+    ]),
   );
+}
+
+export function ensurePinnedRetirementBuckets(state) {
+  const targets = getPinnedRetirementTargets();
+  const buckets = [...state.buckets];
+
+  Object.entries(PINNED_RETIREMENT_BUCKETS).forEach(([key, config]) => {
+    const targetId = targets[key];
+    const existingIndex = buckets.findIndex((bucket) => bucket.id === targetId);
+
+    if (existingIndex === -1) {
+      buckets.push(
+        createPinnedBucket({
+          id: targetId,
+          name: config.name,
+          taxTreatment: config.taxTreatment,
+        }),
+      );
+      return;
+    }
+
+    buckets[existingIndex] = {
+      ...buckets[existingIndex],
+      id: targetId,
+      name: config.name,
+      taxTreatment: config.taxTreatment,
+      basis: config.taxTreatment === "none" ? buckets[existingIndex].basis : "",
+    };
+  });
+
+  return {
+    ...state,
+    buckets,
+  };
+}
+
+export function defaultLabelForBucket(bucket) {
+  return bucket.name.trim() || TYPE_DEFAULTS[bucket.taxTreatment].name;
 }
 
 export function normalizeAssetInputs(
   state,
-  baselineGrowthRate = TYPE_DEFAULTS.taxable.growth,
+  baselineGrowthRate = TYPE_DEFAULTS.none.growth,
 ) {
   return {
     baselineGrowthRate:
-      readNumber(baselineGrowthRate, TYPE_DEFAULTS.taxable.growth) / 100,
+      readNumber(baselineGrowthRate, TYPE_DEFAULTS.none.growth) / 100,
     buckets: state.buckets.map((bucket) => {
       const current = Math.max(0, readNumber(bucket.current, 0));
       const contribution = Math.max(0, readNumber(bucket.contribution, 0));
       const growth =
         readNumber(
           bucket.growth,
-          readNumber(baselineGrowthRate, TYPE_DEFAULTS.taxable.growth),
+          readNumber(baselineGrowthRate, TYPE_DEFAULTS.none.growth),
         ) / 100;
-      const basis = !bucket.taxFree
-        ? clamp(readNumber(bucket.basis, current), 0, current)
-        : current;
+      const basis =
+        bucket.taxTreatment === "none"
+          ? clamp(readNumber(bucket.basis, current), 0, current)
+          : 0;
 
       return {
         ...bucket,
@@ -142,32 +229,63 @@ export function normalizeAssetInputs(
   };
 }
 
-function computeCapitalGainsTax(amount, taxConfig) {
-  const federal = computeAdditionalTax(
-    0,
-    amount,
-    taxConfig.longTermCapitalGains,
+function computeCapitalGainsRate(amount, brackets) {
+  const safeAmount = Math.max(0, amount);
+
+  for (const bracket of brackets) {
+    if (bracket.top === null || safeAmount <= bracket.top) {
+      return bracket.rate / 100;
+    }
+  }
+
+  return 0;
+}
+
+function computeCapitalGainsTax(
+  amount,
+  taxConfig,
+  { federalTaxableIncome = 0 } = {},
+) {
+  const gain = Math.max(0, amount);
+  return roundTo(
+    computeAdditionalTax(
+      federalTaxableIncome,
+      gain,
+      taxConfig.longTermCapitalGains,
+    ),
+    2,
   );
+}
+
+function computeOrdinaryWithdrawalTax(amount, taxConfig) {
+  const federal = computeAdditionalTax(0, amount, taxConfig.federalBrackets);
   const state = computeAdditionalTax(0, amount, taxConfig.stateBrackets);
-  return federal + state;
+  return roundTo(federal + state, 2);
 }
 
 export function createProjectedBucketState(bucket) {
   return {
     ...bucket,
     balance: bucket.current,
-    basisValue: bucket.taxFree ? bucket.current : bucket.basis,
+    basisValue:
+      bucket.taxTreatment === "none" ? bucket.basis : bucket.current,
   };
 }
 
 export function advanceProjectedBucket(bucketState, annualContribution = 0) {
   const contribution = Math.max(0, annualContribution);
-  const balance =
+  const balance = roundTo(
     bucketState.balance * (1 + bucketState.growth) +
-    contribution * (1 + bucketState.growth / 2);
-  const basisValue = bucketState.taxFree
-    ? balance
-    : bucketState.basisValue + contribution;
+      contribution * (1 + bucketState.growth / 2),
+    2,
+  );
+  const basisValue = roundTo(
+    bucketState.taxTreatment === "none" ||
+    bucketState.taxTreatment === "taxDeferred"
+      ? bucketState.basisValue + contribution
+      : bucketState.basisValue,
+    2,
+  );
 
   return {
     ...bucketState,
@@ -176,23 +294,38 @@ export function advanceProjectedBucket(bucketState, annualContribution = 0) {
   };
 }
 
-export function snapshotProjectedBucket(bucketState, taxConfig) {
-  const taxDue = bucketState.taxFree
-    ? 0
-    : computeCapitalGainsTax(
-        Math.max(0, bucketState.balance - bucketState.basisValue),
-        taxConfig,
-      );
+export function snapshotProjectedBucket(bucketState, taxConfig, taxBases) {
+  const taxDue = roundTo(
+    bucketState.taxTreatment === "none"
+      ? computeCapitalGainsTax(
+          Math.max(0, bucketState.balance - bucketState.basisValue),
+          taxConfig,
+          taxBases,
+        )
+      : bucketState.taxTreatment === "taxDeductible"
+        ? computeOrdinaryWithdrawalTax(bucketState.balance, taxConfig)
+        : computeOrdinaryWithdrawalTax(
+            Math.max(0, bucketState.balance - bucketState.basisValue),
+            taxConfig,
+          ),
+    2,
+  );
 
   return {
     id: bucketState.id,
     label: bucketState.label,
-    type: bucketState.taxFree ? "tax_free" : "taxable",
-    balance: bucketState.balance,
-    basis: bucketState.basisValue,
+    type:
+      bucketState.taxTreatment === "none"
+        ? "none"
+        : bucketState.taxTreatment === "taxDeductible"
+          ? "tax_deductible"
+          : "tax_deferred",
+    taxTreatment: bucketState.taxTreatment,
+    balance: roundTo(bucketState.balance, 2),
+    basis: roundTo(bucketState.basisValue, 2),
     taxDue,
-    afterTax: bucketState.balance - taxDue,
-    annualContribution: bucketState.contribution,
+    afterTax: roundTo(bucketState.balance - taxDue, 2),
+    annualContribution: roundTo(bucketState.contribution, 2),
   };
 }
 
@@ -205,20 +338,23 @@ export function calculateAssetSnapshot(inputs, taxConfig) {
   );
 
   const totals = {
-    currentTotal: inputs.buckets.reduce(
-      (sum, bucket) => sum + bucket.current,
-      0,
-    ),
+    currentTotal: inputs.buckets.reduce((sum, bucket) => sum + bucket.current, 0),
     annualContributionTotal: inputs.buckets.reduce(
       (sum, bucket) => sum + bucket.contribution,
       0,
     ),
     taxableCurrentTotal: inputs.buckets.reduce(
-      (sum, bucket) => sum + (bucket.taxFree ? 0 : bucket.current),
+      (sum, bucket) => sum + (bucket.taxTreatment === "none" ? bucket.current : 0),
       0,
     ),
-    taxFreeCurrentTotal: inputs.buckets.reduce(
-      (sum, bucket) => sum + (bucket.taxFree ? bucket.current : 0),
+    taxDeductibleCurrentTotal: inputs.buckets.reduce(
+      (sum, bucket) =>
+        sum + (bucket.taxTreatment === "taxDeductible" ? bucket.current : 0),
+      0,
+    ),
+    taxDeferredCurrentTotal: inputs.buckets.reduce(
+      (sum, bucket) =>
+        sum + (bucket.taxTreatment === "taxDeferred" ? bucket.current : 0),
       0,
     ),
     currentEmbeddedTax: buckets.reduce((sum, bucket) => sum + bucket.taxDue, 0),
@@ -228,7 +364,7 @@ export function calculateAssetSnapshot(inputs, taxConfig) {
     ),
     basisProtected: buckets.reduce(
       (sum, bucket) =>
-        bucket.type === "taxable" ? sum + bucket.basis : sum + bucket.balance,
+        bucket.type === "none" ? sum + bucket.basis : sum + bucket.balance,
       0,
     ),
   };

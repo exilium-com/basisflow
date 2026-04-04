@@ -11,7 +11,7 @@ import { Section } from "../components/Section";
 import { SegmentedToggle } from "../components/SegmentedToggle";
 import { SummaryStrip } from "../components/SummaryStrip";
 import { WorkspaceLayout } from "../components/WorkspaceLayout";
-import { years, usd } from "../lib/format";
+import { usd } from "../lib/format";
 import {
   ADVANCED_FIELDS,
   buildMortgageScenario,
@@ -129,14 +129,7 @@ export function MortgagePage() {
     { label: "Monthly property tax", value: usd(scenario.monthlyTax) },
     { label: "Monthly insurance", value: usd(scenario.monthlyInsurance) },
     { label: "Monthly HOA", value: usd(scenario.monthlyHoa) },
-    {
-      label: "Total interest over modeled period",
-      value: usd(scenario.totalInterest),
-    },
-    {
-      label: "Modeled payoff horizon",
-      value: years(Math.ceil(scenario.modeledMonths / 12)),
-    },
+    { label: "Total interest", value: usd(scenario.totalInterest) },
   ];
 
   function updateState(patch) {
@@ -328,7 +321,6 @@ export function MortgagePage() {
           <NumberField
             key={config.field}
             label={config.label}
-            htmlFor={config.htmlFor}
             prefix={config.prefix}
             suffix={config.suffix}
             invalid={loanValidation[config.field]}
@@ -365,7 +357,6 @@ export function MortgagePage() {
                 <div className="grid gap-4">
                   <NumberField
                     label="Home price"
-                    htmlFor="homePrice"
                     prefix="$"
                     invalid={validation.homePrice}
                     value={state.homePrice}
@@ -393,7 +384,6 @@ export function MortgagePage() {
                       />
                       <NumberField
                         label={null}
-                        htmlFor="downPayment"
                         className="min-w-0 flex-1"
                         invalid={validation.downPayment}
                         value={state.downPayment}
@@ -428,7 +418,6 @@ export function MortgagePage() {
                     <NumberField
                       key={config.field}
                       label={config.label}
-                      htmlFor={config.field}
                       prefix={config.prefix}
                       suffix={config.suffix}
                       invalid={validation[config.field]}

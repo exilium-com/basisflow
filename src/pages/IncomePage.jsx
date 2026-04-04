@@ -4,7 +4,6 @@ import { AdvancedPanel } from "../components/AdvancedPanel";
 import { MetricGrid } from "../components/MetricGrid";
 import {
   NumberField,
-  SelectField,
   TextField,
   fieldLabelClass,
 } from "../components/Field";
@@ -19,18 +18,17 @@ import { useStoredState } from "../hooks/useStoredState";
 import { readNumber, usd } from "../lib/format";
 import {
   calculateIncome,
+  computeRsuGrossForItems,
   getAnnualSalaryTotal,
 } from "../lib/incomeModel";
 import { loadStoredJson, saveJson } from "../lib/storage";
 import { loadTaxConfig } from "../lib/taxConfig";
 import {
-  createDefaultAssetsState,
-  defaultLabelForBucket,
   normalizeAssetsState,
+  PINNED_RETIREMENT_BUCKETS,
 } from "../lib/assetsModel";
 import { INCOME_STATE_KEY, INCOME_SUMMARY_KEY } from "../lib/storageKeys";
 import { surfaceClass } from "../lib/ui";
-import { ASSETS_STATE_KEY } from "../lib/storageKeys";
 
 function createSalaryItem(overrides = {}) {
   return {
@@ -64,10 +62,6 @@ const DEFAULTS = {
   iraContribution: "7000",
   megaBackdoorInput: "35250",
   hsaContribution: "4400",
-  retirementBucketId: "",
-  iraBucketId: "",
-  megaBucketId: "",
-  hsaBucketId: "",
   incomeParametersOpen: false,
 };
 
@@ -154,22 +148,6 @@ function normalizeState(parsed, fallback) {
       typeof parsed?.hsaContribution === "string"
         ? parsed.hsaContribution
         : fallback.hsaContribution,
-    retirementBucketId:
-      typeof parsed?.retirementBucketId === "string"
-        ? parsed.retirementBucketId
-        : fallback.retirementBucketId,
-    iraBucketId:
-      typeof parsed?.iraBucketId === "string"
-        ? parsed.iraBucketId
-        : fallback.iraBucketId,
-    megaBucketId:
-      typeof parsed?.megaBucketId === "string"
-        ? parsed.megaBucketId
-        : fallback.megaBucketId,
-    hsaBucketId:
-      typeof parsed?.hsaBucketId === "string"
-        ? parsed.hsaBucketId
-        : fallback.hsaBucketId,
     incomeParametersOpen: Boolean(parsed?.incomeParametersOpen),
   };
 }
@@ -219,30 +197,18 @@ export function IncomePage() {
   );
   const inputs = useMemo(
     () => ({
-      salaryItems,
-      rsuItems,
+      grossSalary: getAnnualSalaryTotal(salaryItems),
+      rsuGrossNextYear: computeRsuGrossForItems(rsuItems, 0),
       employee401k: readNumber(state.employee401k, 0),
       matchRate: readNumber(state.matchRate, 0),
       iraContribution: readNumber(state.iraContribution, 0),
       megaBackdoorInput: readNumber(state.megaBackdoorInput, 0),
       hsaContribution: readNumber(state.hsaContribution, 0),
+      rsuItems,
     }),
     [salaryItems, rsuItems, state],
   );
   const taxConfig = useMemo(() => loadTaxConfig(), []);
-  const assetOptions = useMemo(() => {
-    const rawAssetsState =
-      loadStoredJson(ASSETS_STATE_KEY, true) ?? createDefaultAssetsState();
-    const assetState = normalizeAssetsState(
-      rawAssetsState,
-      createDefaultAssetsState(),
-    );
-
-    return assetState.buckets.map((bucket) => ({
-      id: bucket.id,
-      label: defaultLabelForBucket(bucket),
-    }));
-  }, []);
   const results = useMemo(
     () => calculateIncome(inputs, taxConfig),
     [inputs, taxConfig],
@@ -253,6 +219,12 @@ export function IncomePage() {
       grossSalary: results.grossSalary,
       annualTakeHome: results.annualTakeHome,
       monthlyTakeHome: results.monthlyTakeHome,
+      federalTax: results.federalTax,
+      californiaTax: results.californiaTax,
+      socialSecurityTax: results.fica.socialSecurity,
+      medicareTax: results.fica.medicare,
+      additionalMedicareTax: results.fica.additionalMedicare,
+      caSdi: results.caSdi,
       totalTaxes: results.totalTaxes,
       employee401k: inputs.employee401k,
       employerMatch: results.employerMatch,
@@ -260,25 +232,11 @@ export function IncomePage() {
       megaBackdoor: results.mega,
       hsaContribution: inputs.hsaContribution,
       matchRate: inputs.matchRate,
-      contributionDestinations: {
-        retirementBucketId: state.retirementBucketId,
-        iraBucketId: state.iraBucketId,
-        megaBucketId: state.megaBucketId,
-        hsaBucketId: state.hsaBucketId,
-      },
-      salaryItems: inputs.salaryItems,
       rsuItems: inputs.rsuItems,
       rsuGrossNextYear: results.rsuGrossNextYear,
       rsuNetNextYear: results.rsuNetNextYear,
     });
-  }, [
-    inputs,
-    results,
-    state.retirementBucketId,
-    state.iraBucketId,
-    state.megaBucketId,
-    state.hsaBucketId,
-  ]);
+  }, [inputs, results]);
 
   function updateField(field, value) {
     setState((current) => ({ ...current, [field]: value }));
@@ -382,6 +340,22 @@ export function IncomePage() {
                       label: "Total taxes",
                       value: usd(results.totalTaxes, 2),
                     },
+                    {
+                      label: "Federal tax",
+                      value: usd(results.federalTax, 2),
+                    },
+                    {
+                      label: "California tax",
+                      value: usd(results.californiaTax, 2),
+                    },
+                    {
+                      label: "FICA",
+                      value: usd(results.fica.total, 2),
+                    },
+                    {
+                      label: "CA SDI",
+                      value: usd(results.caSdi, 2),
+                    },
                   ]}
                 />
               </div>
@@ -397,7 +371,6 @@ export function IncomePage() {
                 <div className="grid gap-4">
                   <NumberField
                     label="Employer match rate"
-                    htmlFor="matchRate"
                     suffix="%"
                     min="0"
                     max="100"
@@ -453,7 +426,6 @@ export function IncomePage() {
                         <>
                           <TextField
                             label="Income name"
-                            htmlFor={`incomeName-${item.id}`}
                             value={item.name}
                             onChange={(event) =>
                               updateIncomeItem(item.id, {
@@ -463,7 +435,6 @@ export function IncomePage() {
                           />
                           <NumberField
                             label="Amount"
-                            htmlFor={`incomeAmount-${item.id}`}
                             prefix="$"
                             min="0"
                             step="1000"
@@ -515,7 +486,6 @@ export function IncomePage() {
                       <>
                         <TextField
                           label="Income name"
-                          htmlFor={`incomeName-${item.id}`}
                           value={item.name}
                           onChange={(event) =>
                             updateIncomeItem(item.id, {
@@ -525,7 +495,6 @@ export function IncomePage() {
                         />
                         <NumberField
                           label="Unvested remaining"
-                          htmlFor={`grantAmount-${item.id}`}
                           prefix="$"
                           min="0"
                           step="1000"
@@ -542,7 +511,6 @@ export function IncomePage() {
                     <div className="grid gap-4 md:grid-cols-2">
                       <NumberField
                         label="Annual refresher"
-                        htmlFor={`refresherAmount-${item.id}`}
                         prefix="$"
                         min="0"
                         step="1000"
@@ -555,7 +523,6 @@ export function IncomePage() {
                       />
                       <NumberField
                         label="Years left to vest"
-                        htmlFor={`vestingYears-${item.id}`}
                         suffix="years"
                         min="1"
                         step="1"
@@ -574,41 +541,26 @@ export function IncomePage() {
           </Section>
 
           <Section title="Retirement Savings" divider>
-            <div className="grid gap-4">
-              <div className="grid gap-3 border-b border-(--line-soft) pb-4 md:grid-cols-[140px_minmax(0,1fr)_220px] md:items-start">
-                <div className="pt-1 text-sm text-(--ink-soft)">
-                  Traditional 401(k)
-                </div>
+              <div className="grid gap-4">
+                <div className="grid gap-3 border-b border-(--line-soft) pb-4 md:grid-cols-[140px_minmax(0,1fr)] md:items-start">
+                  <div className="pt-1 text-sm text-(--ink-soft)">
+                    Traditional 401(k)
+                  </div>
                 <SliderField
                   id="employee401k"
                   label="Employee contribution"
                   valueLabel={usd(inputs.employee401k)}
                   min="0"
                   max="24500"
-                  step="100"
+                  step="50"
                   value={state.employee401k}
                   onChange={(event) =>
                     updateField("employee401k", event.target.value)
                   }
                 />
-                <SelectField
-                  label="Destination"
-                  htmlFor="retirementBucketId"
-                  value={state.retirementBucketId}
-                  onChange={(event) =>
-                    updateField("retirementBucketId", event.target.value)
-                  }
-                >
-                  <option value="">None</option>
-                  {assetOptions.map((bucket) => (
-                    <option key={bucket.id} value={bucket.id}>
-                      {bucket.label}
-                    </option>
-                  ))}
-                </SelectField>
               </div>
 
-              <div className="grid gap-3 border-b border-(--line-soft) pb-4 md:grid-cols-[140px_minmax(0,1fr)_220px] md:items-start">
+              <div className="grid gap-3 border-b border-(--line-soft) pb-4 md:grid-cols-[140px_minmax(0,1fr)] md:items-start">
                 <div className="pt-1 text-sm text-(--ink-soft)">Roth 401(k)</div>
                 <SliderField
                   id="megaBackdoorInput"
@@ -616,7 +568,7 @@ export function IncomePage() {
                   valueLabel={usd(results.mega)}
                   min="0"
                   max={Math.max(0, Math.round(results.availableMegaRoom))}
-                  step="100"
+                  step="50"
                   value={Math.min(
                     readNumber(state.megaBackdoorInput, 0),
                     Math.max(0, Math.round(results.availableMegaRoom)),
@@ -625,24 +577,9 @@ export function IncomePage() {
                     updateField("megaBackdoorInput", event.target.value)
                   }
                 />
-                <SelectField
-                  label="Destination"
-                  htmlFor="megaBucketId"
-                  value={state.megaBucketId}
-                  onChange={(event) =>
-                    updateField("megaBucketId", event.target.value)
-                  }
-                >
-                  <option value="">None</option>
-                  {assetOptions.map((bucket) => (
-                    <option key={bucket.id} value={bucket.id}>
-                      {bucket.label}
-                    </option>
-                  ))}
-                </SelectField>
               </div>
 
-              <div className="grid gap-3 border-b border-(--line-soft) pb-4 md:grid-cols-[140px_minmax(0,1fr)_220px] md:items-start">
+              <div className="grid gap-3 border-b border-(--line-soft) pb-4 md:grid-cols-[140px_minmax(0,1fr)] md:items-start">
                 <div className="pt-1 text-sm text-(--ink-soft)">IRA</div>
                 <SliderField
                   id="iraContribution"
@@ -650,30 +587,15 @@ export function IncomePage() {
                   valueLabel={usd(inputs.iraContribution)}
                   min="0"
                   max="7000"
-                  step="100"
+                  step="50"
                   value={state.iraContribution}
                   onChange={(event) =>
                     updateField("iraContribution", event.target.value)
                   }
                 />
-                <SelectField
-                  label="Destination"
-                  htmlFor="iraBucketId"
-                  value={state.iraBucketId}
-                  onChange={(event) =>
-                    updateField("iraBucketId", event.target.value)
-                  }
-                >
-                  <option value="">None</option>
-                  {assetOptions.map((bucket) => (
-                    <option key={bucket.id} value={bucket.id}>
-                      {bucket.label}
-                    </option>
-                  ))}
-                </SelectField>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-[140px_minmax(0,1fr)_220px] md:items-start">
+              <div className="grid gap-3 md:grid-cols-[140px_minmax(0,1fr)] md:items-start">
                 <div className="pt-1 text-sm text-(--ink-soft)">HSA</div>
                 <SliderField
                   id="hsaContribution"
@@ -687,21 +609,6 @@ export function IncomePage() {
                     updateField("hsaContribution", event.target.value)
                   }
                 />
-                <SelectField
-                  label="Destination"
-                  htmlFor="hsaBucketId"
-                  value={state.hsaBucketId}
-                  onChange={(event) =>
-                    updateField("hsaBucketId", event.target.value)
-                  }
-                >
-                  <option value="">None</option>
-                  {assetOptions.map((bucket) => (
-                    <option key={bucket.id} value={bucket.id}>
-                      {bucket.label}
-                    </option>
-                  ))}
-                </SelectField>
               </div>
             </div>
           </Section>

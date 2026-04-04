@@ -81,10 +81,13 @@ export function TextField({
   inputClassName = "",
   ...inputProps
 }) {
+  const resolvedId = React.useId();
+  const inputId = htmlFor ?? resolvedId;
+
   return (
     <Field
       label={label}
-      htmlFor={htmlFor}
+      htmlFor={inputId}
       className={className}
       labelClassName={labelClassName}
     >
@@ -95,7 +98,7 @@ export function TextField({
         className={frameClassName}
       >
         <input
-          id={htmlFor}
+          id={inputId}
           type={type}
           className={cx(inputBaseClassName, inputClassName)}
           {...inputProps}
@@ -118,10 +121,13 @@ export function NumberField({
   inputClassName = "",
   ...inputProps
 }) {
+  const resolvedId = React.useId();
+  const inputId = htmlFor ?? resolvedId;
+
   return (
     <Field
       label={label}
-      htmlFor={htmlFor}
+      htmlFor={inputId}
       className={className}
       labelClassName={labelClassName}
     >
@@ -132,7 +138,7 @@ export function NumberField({
         className={cx(compact && "min-h-9 px-2", frameClassName)}
       >
         <input
-          id={htmlFor}
+          id={inputId}
           type="number"
           className={cx(inputBaseClassName, compact && "text-sm", inputClassName)}
           {...inputProps}
@@ -152,15 +158,18 @@ export function SelectField({
   children,
   ...inputProps
 }) {
+  const resolvedId = React.useId();
+  const inputId = htmlFor ?? resolvedId;
+
   return (
     <Field
       label={label}
-      htmlFor={htmlFor}
+      htmlFor={inputId}
       className={className}
       labelClassName={labelClassName}
     >
       <InputFrame invalid={invalid} className={frameClassName}>
-        <select id={htmlFor} className={selectClassName} {...inputProps}>
+        <select id={inputId} className={selectClassName} {...inputProps}>
           {children}
         </select>
         <span
@@ -184,6 +193,9 @@ export function CheckboxField({
   inputClassName = "",
   ...inputProps
 }) {
+  const resolvedId = React.useId();
+  const inputId = htmlFor ?? resolvedId;
+
   return (
     <div className={cx("grid min-w-0 gap-1", className)}>
       <div
@@ -198,10 +210,10 @@ export function CheckboxField({
       >
         <label
           className={cx(checkboxLabelClassName, labelClassName)}
-          htmlFor={htmlFor}
+          htmlFor={inputId}
         >
           <input
-            id={htmlFor}
+            id={inputId}
             type="checkbox"
             className={cx("h-4 w-4 shrink-0 accent-(--teal)", inputClassName)}
             {...inputProps}
@@ -220,14 +232,17 @@ export function TextAreaField({
   labelClassName = "",
   ...props
 }) {
+  const resolvedId = React.useId();
+  const inputId = htmlFor ?? resolvedId;
+
   return (
     <Field
       label={label}
-      htmlFor={htmlFor}
+      htmlFor={inputId}
       className={className}
       labelClassName={labelClassName}
     >
-      <textarea id={htmlFor} className={textAreaClassName} {...props} />
+      <textarea id={inputId} className={textAreaClassName} {...props} />
     </Field>
   );
 }
