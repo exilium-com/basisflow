@@ -1,4 +1,4 @@
-import { percent } from "./format";
+import { percent, readNumber } from "./format";
 
 export const LOAN_OPTIONS = [
   {
@@ -79,14 +79,7 @@ export const LOAN_OPTIONS = [
   },
 ];
 
-export const FIELD_CONFIGS = {
-  homePrice: { kind: "currency", decimals: 0, min: 1, max: 100000000 },
-  propertyTaxRate: { kind: "percent", decimals: 3, min: 0, max: 10 },
-  insurancePerYear: { kind: "currency", decimals: 0, min: 0, max: 1000000 },
-  hoaPerMonth: { kind: "currency", decimals: 0, min: 0, max: 100000 },
-};
-
-export const NUMERIC_DEFAULTS = {
+export const MORTGAGE_DEFAULTS = {
   homePrice: 800000,
   downPaymentPercent: 20,
   propertyTaxRate: 1.18,
@@ -120,24 +113,90 @@ export const ADVANCED_FIELDS = [
 export const DEFAULT_ACTIVE_LOAN = LOAN_OPTIONS[0].type;
 export const DEFAULT_COMPARE_LOAN = LOAN_OPTIONS[1].type;
 
-const RATE_CONFIG = { kind: "percent", decimals: 3, min: 0, max: 25 };
-const TERM_CONFIG = { kind: "integer", decimals: 0, min: 1, max: 50 };
+export const DEFAULT_MORTGAGE_STATE = {
+  homePrice: String(MORTGAGE_DEFAULTS.homePrice),
+  downPaymentMode: "percent",
+  downPayment: String(MORTGAGE_DEFAULTS.downPaymentPercent),
+  propertyTaxRate: String(MORTGAGE_DEFAULTS.propertyTaxRate),
+  insurancePerYear: String(MORTGAGE_DEFAULTS.insurancePerYear),
+  hoaPerMonth: String(MORTGAGE_DEFAULTS.hoaPerMonth),
+  advancedOpen: false,
+  activeLoanType: DEFAULT_ACTIVE_LOAN,
+  compareLoanType: DEFAULT_COMPARE_LOAN,
+  loanOptions: Object.fromEntries(
+    LOAN_OPTIONS.map((option) => [
+      option.type,
+      Object.fromEntries(
+        option.fields.map((field) => [
+          field.field,
+          field.field === "adjustedRate" ? "" : String(option.defaults[field.field]),
+        ]),
+      ),
+    ]),
+  ),
+};
 
-export const LOAN_FIELD_CONFIGS = Object.fromEntries(
-  LOAN_OPTIONS.map((option) => [
-    option.type,
-    Object.fromEntries(option.fields.map((field) => [field.field, field.field === "term" ? TERM_CONFIG : RATE_CONFIG])),
-  ]),
-);
+export function buildMortgageInputs(state = DEFAULT_MORTGAGE_STATE) {
+  const homePrice = readNumber(state.homePrice ?? MORTGAGE_DEFAULTS.homePrice, MORTGAGE_DEFAULTS.homePrice);
+  const downPaymentMode = state.downPaymentMode === "dollar" ? "dollar" : "percent";
+  const downPaymentInput = readNumber(
+    state.downPayment ?? MORTGAGE_DEFAULTS.downPaymentPercent,
+    MORTGAGE_DEFAULTS.downPaymentPercent,
+  );
 
-export function getLoanFieldFallback(type, field) {
-  const definition = LOAN_OPTIONS.find((option) => option.type === type) ?? LOAN_OPTIONS[0];
+  return {
+    homePrice,
+    downPaymentMode,
+    downPaymentInput,
+    downPaymentAmount: downPaymentMode === "percent" ? (homePrice * downPaymentInput) / 100 : downPaymentInput,
+    propertyTaxRate: readNumber(
+      state.propertyTaxRate ?? MORTGAGE_DEFAULTS.propertyTaxRate,
+      MORTGAGE_DEFAULTS.propertyTaxRate,
+    ),
+    insurancePerYear: readNumber(
+      state.insurancePerYear ?? MORTGAGE_DEFAULTS.insurancePerYear,
+      MORTGAGE_DEFAULTS.insurancePerYear,
+    ),
+    hoaPerMonth: readNumber(state.hoaPerMonth ?? MORTGAGE_DEFAULTS.hoaPerMonth, MORTGAGE_DEFAULTS.hoaPerMonth),
+    activeLoanType: LOAN_OPTIONS.some((option) => option.type === state.activeLoanType)
+      ? state.activeLoanType
+      : DEFAULT_ACTIVE_LOAN,
+    compareLoanType: LOAN_OPTIONS.some((option) => option.type === state.compareLoanType)
+      ? state.compareLoanType
+      : DEFAULT_COMPARE_LOAN,
+    loanOptions: Object.fromEntries(
+      LOAN_OPTIONS.map((option) => {
+        const loanState = state.loanOptions?.[option.type] ?? {};
+        const values = Object.fromEntries(
+          option.fields.map((field) => {
+            if (field.field === "adjustedRate") {
+              return [
+                field.field,
+                loanState.adjustedRate === "" || loanState.adjustedRate == null
+                  ? readNumber(loanState.initialRate ?? option.defaults.initialRate, option.defaults.initialRate)
+                  : readNumber(loanState.adjustedRate, option.defaults.adjustedRate),
+              ];
+            }
 
-  if (field === "adjustedRate") {
-    return definition.defaults.initialRate ?? 0;
-  }
+            return [
+              field.field,
+              readNumber(loanState[field.field] ?? option.defaults[field.field], option.defaults[field.field]),
+            ];
+          }),
+        );
 
-  return definition.defaults[field] ?? 0;
+        return [
+          option.type,
+          {
+            kind: option.kind,
+            label: option.label,
+            ...(option.fixedYears ? { fixedYears: option.fixedYears } : {}),
+            ...values,
+          },
+        ];
+      }),
+    ),
+  };
 }
 
 export function getMortgageLoanMeta(loanOption) {

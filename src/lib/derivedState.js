@@ -1,10 +1,8 @@
 import { calculateIncome, computeRsuGrossForItems, getAnnualSalaryTotal } from "./incomeModel";
-import { buildMortgageScenario } from "./mortgageSchedule";
 import {
-  createDefaultMortgageState,
-  normalizeMortgageInputs,
-  normalizeMortgageState,
-} from "./mortgageNormalization";
+  buildMortgageInputs,
+} from "./mortgageConfig";
+import { buildMortgageScenario } from "./mortgageSchedule";
 import { INCOME_STATE_KEY, INCOME_SUMMARY_KEY, MORTGAGE_STATE_KEY, MORTGAGE_SUMMARY_KEY } from "./storageKeys";
 import { normalizeConfig, STORAGE_KEY as TAX_CONFIG_KEY } from "./taxConfig";
 
@@ -69,8 +67,7 @@ function rebuildMortgageSummary(documentValue) {
     return;
   }
 
-  const normalizedState = normalizeMortgageState(mortgageState, createDefaultMortgageState());
-  const inputs = normalizeMortgageInputs(normalizedState);
+  const inputs = buildMortgageInputs(mortgageState);
   const scenario = buildMortgageScenario(inputs, inputs.activeLoanType);
   const yearlyLoan = scenario.yearlyBreakdown.map((row) => {
     const monthIndex = Math.min(row.year * 12, scenario.schedule.length) - 1;

@@ -2,13 +2,12 @@ import React from "react";
 import { NumberField } from "./Field";
 import { RowItem } from "./RowItem";
 import { usd } from "../lib/format";
-import { getMortgageLoanMeta, LOAN_FIELD_CONFIGS, LOAN_OPTIONS } from "../lib/mortgageConfig";
+import { getMortgageLoanMeta, LOAN_OPTIONS } from "../lib/mortgageConfig";
 
 function MortgageLoanOptionCard({
   expandedLoanType,
   inputs,
   loanType,
-  onCommitLoanField,
   onSelectLoan,
   onSetCompareLoanType,
   onSetExpandedLoanType,
@@ -61,12 +60,9 @@ function MortgageLoanOptionCard({
           prefix={config.prefix}
           suffix={config.suffix}
           value={loanState[config.field]}
-          min={LOAN_FIELD_CONFIGS[loanType][config.field].min}
-          max={LOAN_FIELD_CONFIGS[loanType][config.field].max}
           step={config.step}
           placeholder={config.placeholderFrom ? String(loanInputs[config.placeholderFrom]) : undefined}
           onChange={(event) => onUpdateLoanField(loanType, config.field, event.target.value)}
-          onBlur={() => onCommitLoanField(loanType, config.field)}
         />
       ))}
     </RowItem>

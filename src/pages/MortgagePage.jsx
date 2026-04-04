@@ -10,18 +10,14 @@ import { Section } from "../components/Section";
 import { SegmentedToggle } from "../components/SegmentedToggle";
 import { SummaryStrip } from "../components/SummaryStrip";
 import { WorkspaceLayout } from "../components/WorkspaceLayout";
-import { usd } from "../lib/format";
-import { ADVANCED_FIELDS, FIELD_CONFIGS, getLoanFieldFallback, LOAN_FIELD_CONFIGS, LOAN_OPTIONS, NUMERIC_DEFAULTS } from "../lib/mortgageConfig";
-import { buildMortgageScenario } from "../lib/mortgageSchedule";
+import { roundTo, usd } from "../lib/format";
 import {
-  createDefaultMortgageState,
-  getDownPaymentNumericValue,
-  normalizeMortgageInputs,
-  normalizeMortgageState,
-  readSafeMortgageValue,
-  sanitizeMortgageDownPayment,
-  sanitizeMortgageValue,
-} from "../lib/mortgageNormalization";
+  ADVANCED_FIELDS,
+  buildMortgageInputs,
+  DEFAULT_MORTGAGE_STATE,
+  LOAN_OPTIONS,
+} from "../lib/mortgageConfig";
+import { buildMortgageScenario } from "../lib/mortgageSchedule";
 import { buildMortgageComparisonRows, buildMortgageSummaryItems, serializeMortgageSummary } from "../lib/mortgagePage";
 import { saveJson } from "../lib/storage";
 import { MORTGAGE_STATE_KEY, MORTGAGE_SUMMARY_KEY } from "../lib/storageKeys";
@@ -30,10 +26,24 @@ import { surfaceClass } from "../lib/ui";
 
 export function MortgagePage() {
   const [expandedLoanType, setExpandedLoanType] = useState(null);
-  const [state, setState] = useStoredState(MORTGAGE_STATE_KEY, createDefaultMortgageState, {
-    normalize: normalizeMortgageState,
-  });
-  const inputs = useMemo(() => normalizeMortgageInputs(state), [state]);
+  const [storedState, setState] = useStoredState(MORTGAGE_STATE_KEY, DEFAULT_MORTGAGE_STATE);
+  const state = useMemo(
+    () => ({
+      ...DEFAULT_MORTGAGE_STATE,
+      ...storedState,
+      loanOptions: Object.fromEntries(
+        LOAN_OPTIONS.map((option) => [
+          option.type,
+          {
+            ...DEFAULT_MORTGAGE_STATE.loanOptions[option.type],
+            ...(storedState.loanOptions?.[option.type] ?? {}),
+          },
+        ]),
+      ),
+    }),
+    [storedState],
+  );
+  const inputs = useMemo(() => buildMortgageInputs(state), [state]);
   const scenariosByType = useMemo(
     () => Object.fromEntries(LOAN_OPTIONS.map((option) => [option.type, buildMortgageScenario(inputs, option.type)])),
     [inputs],
@@ -71,64 +81,25 @@ export function MortgagePage() {
     }));
   }
 
-  function commitTopField(field) {
-    setState((current) => ({
-      ...current,
-      [field]: sanitizeMortgageValue(current[field], FIELD_CONFIGS[field], NUMERIC_DEFAULTS[field]),
-    }));
-  }
-
-  function commitDownPayment() {
-    setState((current) => {
-      const homePrice = readSafeMortgageValue(current.homePrice, FIELD_CONFIGS.homePrice, NUMERIC_DEFAULTS.homePrice);
-
-      return {
-        ...current,
-        downPayment: sanitizeMortgageDownPayment(current.downPayment, homePrice, current.downPaymentMode),
-      };
-    });
-  }
-
-  function commitLoanField(type, field) {
-    setState((current) => {
-      const config = LOAN_FIELD_CONFIGS[type][field];
-      const allowBlank = field === "adjustedRate";
-
-      return {
-        ...current,
-        loanOptions: {
-          ...current.loanOptions,
-          [type]: {
-            ...current.loanOptions[type],
-            [field]: sanitizeMortgageValue(
-              current.loanOptions[type][field],
-              config,
-              getLoanFieldFallback(type, field),
-              { allowBlank },
-            ),
-          },
-        },
-      };
-    });
-  }
-
   function handleDownPaymentMode(mode) {
     setState((current) => {
       if (current.downPaymentMode === mode) {
         return current;
       }
 
-      const homePrice = readSafeMortgageValue(current.homePrice, FIELD_CONFIGS.homePrice, NUMERIC_DEFAULTS.homePrice);
-      const currentRaw = getDownPaymentNumericValue(homePrice, current.downPayment, current.downPaymentMode);
-      const currentAmount = current.downPaymentMode === "percent" ? (homePrice * currentRaw) / 100 : currentRaw;
+      const inputs = buildMortgageInputs(current);
+      const currentAmount =
+        current.downPaymentMode === "percent" ? (inputs.homePrice * inputs.downPaymentInput) / 100 : inputs.downPaymentInput;
       const convertedValue =
-        mode === "percent" ? (homePrice > 0 ? (currentAmount / homePrice) * 100 : 0) : currentAmount;
+        mode === "percent" ? (inputs.homePrice > 0 ? (currentAmount / inputs.homePrice) * 100 : 0) : currentAmount;
 
       return {
         ...current,
         downPaymentMode: mode,
         downPayment:
-          mode === "percent" ? convertedValue.toFixed(3).replace(/\.?0+$/, "") : String(Math.round(convertedValue)),
+          mode === "percent"
+            ? String(roundTo(convertedValue, 3)).replace(/\.?0+$/, "")
+            : String(Math.round(convertedValue)),
       };
     });
   }
@@ -166,11 +137,8 @@ export function MortgagePage() {
                     label="Home price"
                     prefix="$"
                     value={state.homePrice}
-                    min={FIELD_CONFIGS.homePrice.min}
-                    max={FIELD_CONFIGS.homePrice.max}
                     step="1"
                     onChange={(event) => updateState({ homePrice: event.target.value })}
-                    onBlur={() => commitTopField("homePrice")}
                   />
 
                   <div className="grid min-w-0 gap-1">
@@ -190,11 +158,8 @@ export function MortgagePage() {
                         label={null}
                         className="min-w-0 flex-1"
                         value={state.downPayment}
-                        min="0"
-                        max={state.downPaymentMode === "dollar" ? inputs.homePrice : 100}
                         step={state.downPaymentMode === "dollar" ? "1" : "0.001"}
                         onChange={(event) => updateState({ downPayment: event.target.value })}
-                        onBlur={commitDownPayment}
                       />
                     </div>
                   </div>
@@ -215,11 +180,8 @@ export function MortgagePage() {
                       prefix={config.prefix}
                       suffix={config.suffix}
                       value={state[config.field]}
-                      min={FIELD_CONFIGS[config.field].min}
-                      max={FIELD_CONFIGS[config.field].max}
                       step={config.step}
                       onChange={(event) => updateState({ [config.field]: event.target.value })}
-                      onBlur={() => commitTopField(config.field)}
                     />
                   ))}
                 </div>
@@ -237,7 +199,6 @@ export function MortgagePage() {
               onSetCompareLoanType={(loanType) => updateState({ compareLoanType: loanType })}
               onSetExpandedLoanType={setExpandedLoanType}
               onUpdateLoanField={updateLoanField}
-              onCommitLoanField={commitLoanField}
             />
           </Section>
 
