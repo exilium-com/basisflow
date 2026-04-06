@@ -213,3 +213,27 @@ export function calculateIncome(inputs: IncomeInputs, taxConfig: TaxConfig) {
     rsuNetNextYear,
   };
 }
+
+export function buildIncomeSummary(inputs: IncomeInputs, results: IncomeResults): IncomeSummary {
+  return {
+    grossSalary: results.grossSalary,
+    annualTakeHome: results.annualTakeHome,
+    monthlyTakeHome: results.monthlyTakeHome,
+    federalTax: results.federalTax,
+    californiaTax: results.californiaTax,
+    socialSecurityTax: results.fica.socialSecurity,
+    medicareTax: results.fica.medicare,
+    additionalMedicareTax: results.fica.additionalMedicare,
+    caSdi: results.caSdi,
+    totalTaxes: results.totalTaxes,
+    employee401k: inputs.employee401k,
+    employerMatch: results.employerMatch,
+    iraContribution: inputs.iraContribution,
+    megaBackdoor: results.mega,
+    hsaContribution: inputs.hsaContribution,
+    matchRate: inputs.matchRate,
+    rsuItems: inputs.rsuItems ?? [],
+    rsuGrossNextYear: results.rsuGrossNextYear,
+    rsuNetNextYear: results.rsuNetNextYear,
+  };
+}

@@ -1,24 +1,18 @@
 import { clamp, roundTo } from "./format";
 import {
+  advanceProjectedBucket,
+  buildIncomeDirectedContributions,
   PINNED_BUCKETS,
   deriveProjectedBucketValues,
   type AssetInputs,
   type ProjectedBucketValues,
   type ProjectedBucketState,
 } from "./assetsModel";
-import { getAnnualNonHousingExpenses, type ExpenseInputs } from "./expensesModel";
-import { computeIncrementalTakeHome, computeRsuGrossForItems, type IncomeSummary } from "./incomeModel";
-import { buildIncomeDirectedContributions, type ProjectionInputs } from "./projectionState";
-import {
-  advanceProjectionBuckets,
-  buildExpenseSnapshots,
-  computeDeductionTaxSavings,
-  fundHomeEquityFromBuckets,
-  getTaxBases,
-  mapSnapshotsById,
-  type ProjectionRow,
-} from "./projectionUtils";
-import { type TaxConfig } from "./taxConfig";
+import { getAnnualNonHousingExpenses, type ExpenseInputs, type ExpenseSnapshot } from "./expensesModel";
+import { computeAnnualTaxes, computeIncrementalTakeHome, computeRsuGrossForItems, type IncomeSummary } from "./incomeModel";
+import { type ProjectionInputs } from "./projectionState";
+import { type ProjectionRow } from "./projectionUtils";
+import { computeAdditionalTax, type TaxConfig } from "./taxConfig";
 
 type ProjectionMortgageSummary = {
   totalMonthlyPayment?: number;
@@ -66,7 +60,7 @@ type ProjectionSimulation = {
 
 type ProjectionSnapshot = ProjectionAssetSummary & {
   assetSnapshots: ProjectedBucketValues[];
-  expenseSnapshots: ReturnType<typeof buildExpenseSnapshots>;
+  expenseSnapshots: ExpenseSnapshot[];
 };
 
 type ProjectionAssetSummary = {
@@ -96,6 +90,157 @@ export type ProjectionResults = {
   incomeDirectedContributions: Record<string, number>;
   projection: ProjectionRow[];
 };
+
+function getTaxBases(
+  grossSalary: number,
+  employee401k: number,
+  hsaContribution: number,
+  rsuGross: number,
+  taxConfig: TaxConfig,
+) {
+  const taxes = computeAnnualTaxes(
+    {
+      grossSalary,
+      employee401k,
+      hsaContribution,
+    },
+    taxConfig,
+    rsuGross,
+  );
+
+  return {
+    federalTaxableIncome: taxes.federalTaxableIncome,
+  };
+}
+
+function buildExpenseSnapshots(expenses: ExpenseInputs["expenses"], year: number): ExpenseSnapshot[] {
+  return expenses.map((expense) => buildExpenseSnapshot(expense, year));
+}
+
+function buildExpenseSnapshot(expense: ExpenseInputs["expenses"][number], year: number): ExpenseSnapshot {
+  if (expense.frequency === "one_off") {
+    const active = year > 0 && expense.oneOffYear === year;
+    return {
+      id: expense.id,
+      label: expense.label,
+      frequency: expense.frequency,
+      amount: active ? expense.amount : 0,
+      annualAmount: active ? expense.amount : 0,
+      cadenceLabel: "One-off",
+    };
+  }
+
+  const annualAmount = expense.annualBase * Math.pow(1 + expense.growthRate, Math.max(year, 0));
+
+  return {
+    id: expense.id,
+    label: expense.label,
+    frequency: expense.frequency,
+    amount: expense.frequency === "monthly" ? annualAmount / 12 : annualAmount,
+    annualAmount,
+    cadenceLabel: expense.frequency === "annual" ? "Annual" : "Monthly",
+  };
+}
+
+function mapSnapshotsById<T extends { id: string }>(snapshots: T[]) {
+  return Object.fromEntries(snapshots.map((snapshot) => [snapshot.id, snapshot])) as Record<string, T>;
+}
+
+function computeDeductionTaxSavings(baseIncome: number, deduction: number, taxConfig: TaxConfig) {
+  if (deduction <= 0) {
+    return 0;
+  }
+
+  const taxableBase = Math.max(0, baseIncome - deduction);
+  const federal = computeAdditionalTax(taxableBase, deduction, taxConfig.federalBrackets);
+  const state = computeAdditionalTax(taxableBase, deduction, taxConfig.stateBrackets);
+  return roundTo(federal + state, 2);
+}
+
+function fundHomeEquityFromBuckets(
+  bucketStates: ProjectedBucketState[],
+  fundingBucketId: string,
+  amount: number,
+) {
+  if (!fundingBucketId || amount <= 0) {
+    return bucketStates;
+  }
+
+  return bucketStates.map((bucketState) => {
+    if (bucketState.id !== fundingBucketId) {
+      return bucketState;
+    }
+
+    const fundedAmount = Math.min(bucketState.balance, amount);
+    if (fundedAmount <= 0) {
+      return bucketState;
+    }
+
+    const nextBalance = bucketState.balance - fundedAmount;
+    const nextBasisValue =
+      bucketState.taxTreatment === "none" || bucketState.taxTreatment === "taxDeferred"
+        ? bucketState.balance > 0
+          ? bucketState.basisValue * (nextBalance / bucketState.balance)
+          : bucketState.basisValue
+        : 0;
+
+    return {
+      ...bucketState,
+      balance: nextBalance,
+      basisValue: Math.max(0, nextBasisValue),
+    };
+  });
+}
+
+function advanceProjectedBucketWithNetContribution(
+  bucketState: ProjectedBucketState,
+  annualContribution = 0,
+): ProjectedBucketState {
+  const nextBalance = roundTo(
+    bucketState.balance * (1 + bucketState.growth) + annualContribution * (1 + bucketState.growth / 2),
+    2,
+  );
+  const nextBasisValue =
+    bucketState.taxTreatment === "none" || bucketState.taxTreatment === "taxDeferred"
+      ? annualContribution >= 0
+        ? roundTo(bucketState.basisValue + annualContribution, 2)
+        : bucketState.balance > 0
+          ? roundTo(bucketState.basisValue * (Math.max(0, nextBalance) / bucketState.balance), 2)
+          : 0
+      : 0;
+
+  return {
+    ...bucketState,
+    balance: nextBalance,
+    basisValue: Math.max(0, nextBasisValue),
+  };
+}
+
+function advanceProjectionBuckets({
+  bucketStates,
+  extraContributionByBucket,
+  incomeDirectedContributions,
+  reserveCashFlow,
+}: {
+  bucketStates: ProjectedBucketState[];
+  extraContributionByBucket: Record<string, number>;
+  incomeDirectedContributions: Record<string, number>;
+  reserveCashFlow: number;
+}) {
+  const reserveCashBucketId = PINNED_BUCKETS.reserveCashBucketId.id;
+
+  return bucketStates.map((bucketState) => {
+    const totalContribution =
+      bucketState.contribution +
+      (incomeDirectedContributions[bucketState.id] ?? 0) +
+      (extraContributionByBucket[bucketState.id] ?? 0) +
+      (bucketState.id === reserveCashBucketId ? reserveCashFlow : 0);
+
+    return bucketState.id === reserveCashBucketId
+      ? advanceProjectedBucketWithNetContribution(bucketState, totalContribution)
+      : advanceProjectedBucket(bucketState, totalContribution);
+  });
+}
 
 function createProjectionSimulation({
   incomeSummary,

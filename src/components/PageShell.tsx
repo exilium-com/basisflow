@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import clsx from "clsx";
 import { NavLink } from "react-router-dom";
 import { NAV_ITEMS } from "../lib/nav";
-import { clearAppState, deleteProfile, hasSavedProfile, listProfiles, loadProfile, saveProfile } from "../lib/storage";
+import { clearAppState, deleteProfile, listProfiles, loadProfile, saveProfile } from "../lib/storage";
 import { ActionButton } from "./ActionButton";
 import { ProfileLoadDialog } from "./ProfileLoadDialog";
 import { ProfileSaveDialog } from "./ProfileSaveDialog";
@@ -25,8 +25,8 @@ const PENDING_TOAST_KEY = "basisflow_pending_toast";
 
 type ShellActionsProps = {
   actions?: React.ReactNode;
-  onOpenSaveDialog: () => void;
   onOpenLoadDialog: () => void;
+  onOpenSaveDialog: () => void;
   onResetAll: () => void;
   profileAvailable: boolean;
   statusMessage: string;
@@ -60,8 +60,8 @@ function ToolNavLinks() {
 
 function ShellActions({
   actions,
-  onOpenSaveDialog,
   onOpenLoadDialog,
+  onOpenSaveDialog,
   onResetAll,
   profileAvailable,
   statusMessage,
@@ -93,8 +93,8 @@ export function PageShell({ actions = null, children }: PageShellProps) {
   const [loadDialogOpen, setLoadDialogOpen] = useState(false);
   const [profileName, setProfileName] = useState("");
   const [profileNamePlaceholder, setProfileNamePlaceholder] = useState("");
-  const savedProfiles = useMemo(() => listProfiles(), [statusMessage, saveDialogOpen, loadDialogOpen]);
-  const profileAvailable = hasSavedProfile();
+  const savedProfiles = listProfiles();
+  const profileAvailable = savedProfiles.length > 0;
 
   useEffect(() => {
     try {
@@ -205,8 +205,8 @@ export function PageShell({ actions = null, children }: PageShellProps) {
           <div className="ml-auto">
             <ShellActions
               actions={actions}
-              onOpenSaveDialog={openSaveDialog}
               onOpenLoadDialog={openLoadDialog}
+              onOpenSaveDialog={openSaveDialog}
               onResetAll={handleResetAll}
               profileAvailable={profileAvailable}
               statusMessage={statusMessage}
@@ -221,8 +221,8 @@ export function PageShell({ actions = null, children }: PageShellProps) {
           <div className="mt-2 flex justify-end">
             <ShellActions
               actions={actions}
-              onOpenSaveDialog={openSaveDialog}
               onOpenLoadDialog={openLoadDialog}
+              onOpenSaveDialog={openSaveDialog}
               onResetAll={handleResetAll}
               profileAvailable={profileAvailable}
               statusMessage={statusMessage}

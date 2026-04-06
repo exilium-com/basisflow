@@ -1,4 +1,5 @@
 import { clamp, readNumber, roundTo } from "./format";
+import { type IncomeSummary } from "./incomeModel";
 import { computeAdditionalTax, type TaxConfig } from "./taxConfig";
 
 export type AssetTaxTreatment = "none" | "taxDeductible" | "taxDeferred";
@@ -145,15 +146,6 @@ export function createAssetBucket(overrides: Partial<AssetBucketState> = {}): As
   };
 }
 
-function hasMeaningfulBucketValues(bucket: Partial<AssetBucketState> | null | undefined) {
-  return (
-    Math.max(0, bucket?.current ?? 0) > 0 ||
-    Math.max(0, bucket?.contribution ?? 0) > 0 ||
-    Math.max(0, bucket?.basis ?? 0) > 0 ||
-    bucket?.growth != null
-  );
-}
-
 export function normalizeBucket(rawBucket: Partial<AssetBucketState> | null | undefined): AssetBucketState {
   return createAssetBucket({
     id: typeof rawBucket?.id === "string" && rawBucket.id ? rawBucket.id : crypto.randomUUID(),
@@ -181,74 +173,63 @@ export function normalizeAssetsState(parsed: unknown, fallback: AssetsState): As
   };
 }
 
-function isPinnedBucketId(bucketId: string) {
-  return Object.values(PINNED_BUCKETS).some((config) => config.id === bucketId);
-}
+export function buildIncomeDirectedContributions(summary: Partial<IncomeSummary> = {}) {
+  const contributions: Record<string, number> = {};
 
-function sortBucketsByPinnedIds<T extends { id: string }>(
-  buckets: T[],
-  pinnedBucketIds: Iterable<string>,
-) {
-  const pinnedIds = Array.from(pinnedBucketIds);
-
-  return [...buckets].sort((left, right) => {
-    const leftIndex = pinnedIds.indexOf(left.id);
-    const rightIndex = pinnedIds.indexOf(right.id);
-
-    if (leftIndex !== -1 || rightIndex !== -1) {
-      if (leftIndex === -1) {
-        return 1;
-      }
-      if (rightIndex === -1) {
-        return -1;
-      }
-      return leftIndex - rightIndex;
+  function add(bucketId: string, amount = 0) {
+    if (amount > 0) {
+      contributions[bucketId] = (contributions[bucketId] ?? 0) + amount;
     }
+  }
 
-    return 0;
-  });
+  add(PINNED_BUCKETS.retirementBucketId.id, (summary.employee401k ?? 0) + (summary.employerMatch ?? 0));
+  add(PINNED_BUCKETS.megaBucketId.id, summary.megaBackdoor ?? 0);
+  add(PINNED_BUCKETS.hsaBucketId.id, summary.hsaContribution ?? 0);
+  add(PINNED_BUCKETS.iraBucketId.id, summary.iraContribution ?? 0);
+
+  return contributions;
 }
 
-function getPinnedBucketIds(
-  state: AssetsState,
-  incomeDirectedContributions: Record<string, number> = {},
-) {
-  const visibleIds = new Set<string>(
-    Object.values(PINNED_BUCKETS)
-      .filter((config) => config.reserveCash)
-      .map((config) => config.id),
+function hasMeaningfulBucketValues(bucket: Partial<AssetBucketState>) {
+  return (
+    (bucket.current ?? 0) > 0 ||
+    (bucket.contribution ?? 0) > 0 ||
+    (bucket.basis ?? 0) > 0 ||
+    bucket.growth != null
   );
-
-  state.buckets.forEach((bucket) => {
-    if (isPinnedBucketId(bucket.id) && hasMeaningfulBucketValues(bucket)) {
-      visibleIds.add(bucket.id);
-    }
-  });
-
-  Object.values(PINNED_BUCKETS).forEach((config) => {
-    if ((incomeDirectedContributions[config.id] ?? 0) > 0) {
-      visibleIds.add(config.id);
-    }
-  });
-
-  return visibleIds;
 }
 
 export function resolvePinnedBuckets(
   state: AssetsState,
   incomeDirectedContributions: Record<string, number> = {},
 ): ResolvedPinnedBuckets {
-  const pinnedBucketIds = getPinnedBucketIds(state, incomeDirectedContributions);
-  const buckets = [...state.buckets].filter((bucket) => {
-    if (!isPinnedBucketId(bucket.id)) {
-      return true;
-    }
+  const pinnedConfigs = Object.values(PINNED_BUCKETS);
+  const allPinnedBucketIds = new Set(pinnedConfigs.map((config) => config.id));
+  const pinnedBucketIds = new Set(
+    pinnedConfigs.filter((config) => config.reserveCash).map((config) => config.id),
+  );
 
-    return pinnedBucketIds.has(bucket.id) || hasMeaningfulBucketValues(bucket);
+  state.buckets.forEach((bucket) => {
+    if (allPinnedBucketIds.has(bucket.id) && hasMeaningfulBucketValues(bucket)) {
+      pinnedBucketIds.add(bucket.id);
+    }
   });
+
+  pinnedConfigs.forEach((config) => {
+    if ((incomeDirectedContributions[config.id] ?? 0) > 0) {
+      pinnedBucketIds.add(config.id);
+    }
+  });
+
+  const buckets = state.buckets.filter(
+    (bucket) =>
+      !allPinnedBucketIds.has(bucket.id) ||
+      pinnedBucketIds.has(bucket.id) ||
+      hasMeaningfulBucketValues(bucket),
+  );
   let changed = buckets.length !== state.buckets.length;
 
-  Object.values(PINNED_BUCKETS).forEach((config) => {
+  pinnedConfigs.forEach((config) => {
     if (!config.reserveCash && !pinnedBucketIds.has(config.id)) {
       return;
     }
@@ -284,11 +265,27 @@ export function resolvePinnedBuckets(
   });
 
   const nextState = changed ? { ...state, buckets } : state;
+  const orderedBuckets = [...nextState.buckets].sort((left, right) => {
+    const leftIndex = pinnedConfigs.findIndex((config) => config.id === left.id);
+    const rightIndex = pinnedConfigs.findIndex((config) => config.id === right.id);
+
+    if (leftIndex === -1 && rightIndex === -1) {
+      return 0;
+    }
+    if (leftIndex === -1) {
+      return 1;
+    }
+    if (rightIndex === -1) {
+      return -1;
+    }
+
+    return leftIndex - rightIndex;
+  });
 
   return {
     state: nextState,
     pinnedBucketIds,
-    orderedBuckets: sortBucketsByPinnedIds(nextState.buckets, pinnedBucketIds),
+    orderedBuckets,
   };
 }
 
@@ -414,12 +411,4 @@ export function deriveProjectedBucketValues(
     afterTax: roundTo(bucketState.balance - taxDue, 2),
     annualContribution: roundTo(bucketState.contribution, 2),
   };
-}
-
-export function deriveProjectedBucketValuesList(
-  bucketStates: ProjectedBucketState[],
-  taxConfig: TaxConfig,
-  taxBases: { federalTaxableIncome?: number } | undefined = undefined,
-) {
-  return bucketStates.map((bucketState) => deriveProjectedBucketValues(bucketState, taxConfig, taxBases));
 }

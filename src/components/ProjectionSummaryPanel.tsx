@@ -1,7 +1,7 @@
 import React from "react";
 import { AdvancedPanel } from "./AdvancedPanel";
 import { CheckboxField, NumberField, SelectField, fieldLabelClass } from "./Field";
-import { DisplayToggle } from "./DisplayToggle";
+import { SegmentedToggle } from "./SegmentedToggle";
 import { ResultList } from "./ResultList";
 import { usd } from "../lib/format";
 import { toDisplayValue, type ProjectionState, type ProjectionInputs } from "../lib/projectionState";
@@ -42,7 +42,15 @@ export function ProjectionSummaryPanel({
           <strong className="block font-serif text-5xl leading-none tracking-tight text-(--teal) md:text-6xl">
             {usd(toDisplayValue(currentRow.netWorth, projectionInputs.currentYear, projectionInputs))}
           </strong>
-          <DisplayToggle value={state.displayMode} onChange={(mode) => onUpdateState({ displayMode: mode })} />
+          <SegmentedToggle
+            ariaLabel="Display mode"
+            value={state.displayMode}
+            onChange={(mode) => onUpdateState({ displayMode: mode })}
+            options={[
+              { value: "nominal", label: "Nominal" },
+              { value: "real", label: "Real" },
+            ]}
+          />
         </div>
       </div>
       <div className="mt-4 border-b border-(--line) pb-4">

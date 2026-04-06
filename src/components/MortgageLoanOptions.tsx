@@ -92,20 +92,49 @@ function MortgageLoanOptionCard({
       onToggleDetails={(open) => onSetExpandedLoanType(open ? loanType : null)}
       detailsContentClassName="grid gap-3 sm:grid-cols-3"
     >
-      {option.fields.map((config) => (
-        <NumberField
-          key={config.field}
-          label={config.label}
-          prefix={config.prefix}
-          suffix={config.suffix}
-          value={loanState[config.field]}
-          step={config.step}
-          placeholder={
-            config.placeholderFrom && loanInputs.kind === "arm" ? String(loanInputs[config.placeholderFrom]) : undefined
-          }
-          onValueChange={(value) => onUpdateLoanField(loanType, config.field, value)}
-        />
-      ))}
+      {option.kind === "fixed" ? (
+        <>
+          <NumberField
+            label="Interest rate"
+            suffix="%"
+            value={loanState.rate}
+            step="0.001"
+            onValueChange={(value) => onUpdateLoanField(loanType, "rate", value)}
+          />
+          <NumberField
+            label="Loan term"
+            suffix="years"
+            value={loanState.term}
+            step="1"
+            onValueChange={(value) => onUpdateLoanField(loanType, "term", value)}
+          />
+        </>
+      ) : (
+        <>
+          <NumberField
+            label="Initial rate"
+            suffix="%"
+            value={loanState.initialRate}
+            step="0.001"
+            onValueChange={(value) => onUpdateLoanField(loanType, "initialRate", value)}
+          />
+          <NumberField
+            label="Reset rate"
+            suffix="%"
+            value={loanState.adjustedRate}
+            placeholder={loanInputs.kind === "arm" ? String(loanInputs.initialRate) : undefined}
+            step="0.001"
+            onValueChange={(value) => onUpdateLoanField(loanType, "adjustedRate", value)}
+          />
+          <NumberField
+            label="Loan term"
+            suffix="years"
+            value={loanState.term}
+            step="1"
+            onValueChange={(value) => onUpdateLoanField(loanType, "term", value)}
+          />
+        </>
+      )}
     </RowItem>
   );
 }
@@ -135,19 +164,19 @@ export function MortgageComparisonTable({
     {
       key: "label",
       header: "Metric",
-      align: "left",
+      align: "text-left",
       render: (row) => row.label,
     },
     {
       key: "left",
       header: scenario.typeLabel,
-      align: "right",
+      align: "text-right",
       render: (row) => row.left,
     },
     {
       key: "right",
       header: compareScenario.typeLabel,
-      align: "right",
+      align: "text-right",
       render: (row) => row.right,
     },
   ];

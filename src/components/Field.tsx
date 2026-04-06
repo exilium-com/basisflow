@@ -60,7 +60,7 @@ type NumberFieldProps = BaseFieldProps &
     invalid?: boolean;
     compact?: boolean;
     value?: number | string | null;
-    onChange?: React.ChangeEventHandler<HTMLInputElement>;
+    onChange?: React.ChangeEventHandler<HTMLInputElement> | null;
     onValueChange?: (value: number | null, rawValue: string) => void;
   };
 
@@ -127,7 +127,7 @@ export function TextField({
 }
 
 export function NumberField({
-  label,
+  label = null,
   htmlFor,
   prefix = null,
   suffix = null,
@@ -138,7 +138,7 @@ export function NumberField({
   frameClassName = "",
   inputClassName = "",
   value = "",
-  onChange,
+  onChange = null,
   onValueChange,
   ...inputProps
 }: NumberFieldProps) {
@@ -176,7 +176,7 @@ export function NumberField({
     }
 
     const parsed = Number.parseFloat(event.target.value);
-    onValueChange(Number.isFinite(parsed) ? parsed : null, event.target.value);
+    onValueChange(Number.isNaN(parsed) ? null : parsed, event.target.value);
   }
 
   function handleBlur(event: React.FocusEvent<HTMLInputElement>) {

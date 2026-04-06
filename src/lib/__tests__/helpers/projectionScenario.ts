@@ -1,6 +1,7 @@
 import {
   DEFAULT_ASSETS_STATE,
   PINNED_BUCKETS,
+  buildIncomeDirectedContributions,
   normalizeAssetInputs,
   normalizeAssetsState,
   type AssetBucketState,
@@ -11,12 +12,7 @@ import {
   normalizeExpenseInputs,
   normalizeExpensesState,
 } from "../../expensesModel";
-import {
-  buildIncomeDirectedContributions,
-  DEFAULT_PROJECTION_STATE,
-  normalizeProjectionInputs,
-  normalizeProjectionState,
-} from "../../projectionState";
+import { DEFAULT_PROJECTION_STATE, normalizeProjectionInputs, normalizeProjectionState } from "../../projectionState";
 import { calculateProjection, type ProjectionResults } from "../../projectionCalculation";
 import { roundTo } from "../../format";
 import { DEFAULT_CONFIG, normalizeConfig, type TaxConfig } from "../../taxConfig";

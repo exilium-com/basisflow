@@ -1,22 +1,44 @@
-import { rebuildDerivedState } from "./derivedState";
+import { readNumber } from "./format";
+import { buildIncomeSummary, calculateIncome, computeRsuGrossForItems, getAnnualSalaryTotal } from "./incomeModel";
+import { buildMortgageInputs, DEFAULT_MORTGAGE_STATE, normalizeMortgageState } from "./mortgageConfig";
+import { serializeMortgageSummary } from "./mortgagePage";
+import { buildMortgageScenario } from "./mortgageSchedule";
+import { INCOME_STATE_KEY, INCOME_SUMMARY_KEY, MORTGAGE_STATE_KEY, MORTGAGE_SUMMARY_KEY } from "./storageKeys";
+import { normalizeConfig, STORAGE_KEY as TAX_CONFIG_KEY } from "./taxConfig";
 
 export const APP_STORAGE_KEY = "basisflow_app_state";
 export const SAVED_PROFILE_PREFIX = "basisflow_saved_";
 
 type StorageDocument = Record<string, unknown>;
-type NormalizeStoredValue<T> = (value: unknown, fallback: T) => T;
-type LoadStateOptions<T> = {
-  normalize?: NormalizeStoredValue<T>;
+
+type StoredIncomeItem = {
+  type?: "salary" | "rsu";
+  amount?: string | number;
+  frequency?: string;
+  grantAmount?: string | number;
+  refresherAmount?: string | number;
+  vestingYears?: string | number;
 };
 
-function cloneFallbackValue<T>(fallbackValue: T | (() => T)): T {
-  return typeof fallbackValue === "function"
-    ? (fallbackValue as () => T)()
-    : structuredClone(fallbackValue);
+type StoredIncomeState = {
+  incomeItems?: StoredIncomeItem[];
+  employee401k?: string | number;
+  matchRate?: string | number;
+  iraContribution?: string | number;
+  megaBackdoorInput?: string | number;
+  hsaContribution?: string | number;
+};
+
+function runStorage<T>(fallback: T, action: () => T) {
+  try {
+    return action();
+  } catch {
+    return fallback;
+  }
 }
 
 function readStorageDocumentForKey(storageKey: string): StorageDocument {
-  try {
+  return runStorage({}, () => {
     const raw = localStorage.getItem(storageKey);
     if (!raw) {
       return {};
@@ -24,17 +46,14 @@ function readStorageDocumentForKey(storageKey: string): StorageDocument {
 
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
+  });
 }
 
 function writeStorageDocumentForKey(storageKey: string, documentValue: StorageDocument) {
-  try {
+  runStorage(undefined, () => {
     localStorage.setItem(storageKey, JSON.stringify(documentValue));
-  } catch {
-    // Best effort.
-  }
+    return undefined;
+  });
 }
 
 function readStorageDocument(): StorageDocument {
@@ -49,6 +68,51 @@ function getProfileStorageKey(name: string) {
   return `${SAVED_PROFILE_PREFIX}${name}`;
 }
 
+function rebuildStoredSummaries(documentValue: StorageDocument) {
+  const incomeState = documentValue[INCOME_STATE_KEY];
+  if (incomeState && typeof incomeState === "object" && Array.isArray((incomeState as StoredIncomeState).incomeItems)) {
+    const state = incomeState as StoredIncomeState;
+    const salaryItems = state.incomeItems!
+      .filter((item) => item?.type === "salary")
+      .map((item) => ({
+        amount: readNumber(item?.amount, 0),
+        frequency: item?.frequency === "monthly" ? ("monthly" as const) : ("annual" as const),
+      }));
+    const rsuItems = state.incomeItems!
+      .filter((item) => item?.type === "rsu")
+      .map((item) => ({
+        grantAmount: readNumber(item?.grantAmount, 0),
+        refresherAmount: readNumber(item?.refresherAmount, 0),
+        vestingYears: readNumber(item?.vestingYears, 4),
+      }));
+    const inputs = {
+      grossSalary: getAnnualSalaryTotal(salaryItems),
+      rsuGrossNextYear: computeRsuGrossForItems(rsuItems, 0),
+      employee401k: readNumber(state.employee401k, 0),
+      matchRate: readNumber(state.matchRate, 0),
+      iraContribution: readNumber(state.iraContribution, 0),
+      megaBackdoorInput: readNumber(state.megaBackdoorInput, 0),
+      hsaContribution: readNumber(state.hsaContribution, 0),
+      rsuItems,
+    };
+    documentValue[INCOME_SUMMARY_KEY] = buildIncomeSummary(
+      inputs,
+      calculateIncome(inputs, normalizeConfig(documentValue[TAX_CONFIG_KEY])),
+    );
+  }
+
+  if (documentValue[MORTGAGE_STATE_KEY]) {
+    const inputs = buildMortgageInputs(
+      normalizeMortgageState(documentValue[MORTGAGE_STATE_KEY], DEFAULT_MORTGAGE_STATE),
+    );
+    documentValue[MORTGAGE_SUMMARY_KEY] = serializeMortgageSummary(
+      buildMortgageScenario(inputs, inputs.activeLoanType),
+    );
+  }
+
+  return documentValue;
+}
+
 export function loadStoredJson(name: string, _ignored?: unknown) {
   const documentValue = readStorageDocument();
   return Object.prototype.hasOwnProperty.call(documentValue, name) ? documentValue[name] : null;
@@ -60,48 +124,21 @@ export function saveJson(name: string, value: unknown) {
   writeStorageDocument(documentValue);
 }
 
-export function loadStateObject<T>(
-  name: string,
-  fallbackValue: T | (() => T),
-  options: LoadStateOptions<T> = {},
-): T {
-  const fallback = cloneFallbackValue(fallbackValue);
-  const value = loadStoredJson(name);
-
-  if (value === null) {
-    return fallback;
-  }
-
-  return options.normalize ? options.normalize(value, fallback) : (value as T);
-}
-
-export function saveStateObject(name: string, value: unknown) {
-  saveJson(name, value);
-}
-
 export function clearAppState() {
-  try {
+  return runStorage(false, () => {
     localStorage.removeItem(APP_STORAGE_KEY);
     return true;
-  } catch {
-    return false;
-  }
+  });
 }
 
 export function listProfiles() {
-  try {
-    return Object.keys(localStorage)
+  return runStorage<string[]>([], () =>
+    Object.keys(localStorage)
       .filter((key) => key.startsWith(SAVED_PROFILE_PREFIX))
       .map((key) => key.slice(SAVED_PROFILE_PREFIX.length))
       .filter(Boolean)
-      .sort((left, right) => left.localeCompare(right));
-  } catch {
-    return [];
-  }
-}
-
-export function hasSavedProfile() {
-  return listProfiles().length > 0;
+      .sort((left, right) => left.localeCompare(right)),
+  );
 }
 
 export function saveProfile(name: string) {
@@ -122,7 +159,7 @@ export function loadProfile(name: string) {
     return false;
   }
 
-  writeStorageDocument(rebuildDerivedState(structuredClone(selectedProfile)));
+  writeStorageDocument(rebuildStoredSummaries(structuredClone(selectedProfile)));
   return true;
 }
 
@@ -132,10 +169,8 @@ export function deleteProfile(name: string) {
     return false;
   }
 
-  try {
+  return runStorage(false, () => {
     localStorage.removeItem(getProfileStorageKey(trimmedName));
     return true;
-  } catch {
-    return false;
-  }
+  });
 }

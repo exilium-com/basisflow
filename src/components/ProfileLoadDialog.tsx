@@ -14,18 +14,21 @@ export function ProfileLoadDialog({ names, onClose, onDelete, onLoad }: ProfileL
       {names.length ? (
         <div className="grid gap-2">
           {names.map((name: string) => (
-            <button
+            <div
               key={name}
-              className="flex items-center justify-between gap-3 border border-(--line) bg-(--white-soft) px-4 py-3
-                text-left transition duration-150 hover:-translate-y-px hover:bg-(--white)"
-              onClick={() => onLoad(name)}
-              type="button"
+              className="flex items-center gap-2 border border-(--line) bg-(--white-soft)"
             >
-              <span className="font-semibold text-(--ink)">{name}</span>
+              <button
+                className="flex-1 px-4 py-3 text-left transition duration-150 hover:-translate-y-px hover:bg-(--white)"
+                onClick={() => onLoad(name)}
+                type="button"
+              >
+                <span className="font-semibold text-(--ink)">{name}</span>
+              </button>
               <button
                 aria-label={`Delete ${name}`}
                 className="inline-flex h-9 w-9 items-center justify-center border bg-(--white) text-sm font-extrabold
-                  transition duration-150 hover:-translate-y-px hover:bg-(--destructive-soft)"
+                  mr-2 transition duration-150 hover:-translate-y-px hover:bg-(--destructive-soft)"
                 style={{
                   borderColor: "var(--destructive-soft)",
                   color: "var(--destructive)",
@@ -38,7 +41,7 @@ export function ProfileLoadDialog({ names, onClose, onDelete, onLoad }: ProfileL
               >
                 X
               </button>
-            </button>
+            </div>
           ))}
         </div>
       ) : (

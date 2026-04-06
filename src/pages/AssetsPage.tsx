@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { produce } from "immer";
 import { ActionButton } from "../components/ActionButton";
 import { NumberField, SelectField, TextField } from "../components/Field";
@@ -13,39 +13,25 @@ import {
   DEFAULT_ASSETS_STATE,
   type AssetBucketState,
   type AssetTaxTreatment,
+  buildIncomeDirectedContributions,
   createAssetBucket,
   deriveAssetsState,
   normalizeAssetsState,
 } from "../lib/assetsModel";
-import {
-  buildIncomeDirectedContributions,
-  DEFAULT_PROJECTION_STATE,
-  normalizeProjectionState,
-} from "../lib/projectionState";
+import { type IncomeSummary } from "../lib/incomeModel";
 import { loadStoredJson } from "../lib/storage";
 import { useStoredState } from "../hooks/useStoredState";
 import { surfaceClass } from "../lib/ui";
-import { ASSETS_STATE_KEY, INCOME_SUMMARY_KEY, PROJECTION_STATE_KEY } from "../lib/storageKeys";
+import { ASSETS_STATE_KEY, INCOME_SUMMARY_KEY } from "../lib/storageKeys";
 
 export function AssetsPage() {
   const [storedState, setStoredState] = useStoredState(ASSETS_STATE_KEY, DEFAULT_ASSETS_STATE, {
     normalize: normalizeAssetsState,
   });
 
-  const projectionState = useMemo(
-    () =>
-      normalizeProjectionState(
-        loadStoredJson(PROJECTION_STATE_KEY, true) ?? DEFAULT_PROJECTION_STATE,
-        DEFAULT_PROJECTION_STATE,
-      ),
-    [storedState],
-  );
-  const incomeSummary = useMemo(() => loadStoredJson(INCOME_SUMMARY_KEY) ?? {}, [storedState]);
-  const incomeDirectedContributions = useMemo(() => buildIncomeDirectedContributions(incomeSummary), [incomeSummary]);
-  const assets = useMemo(
-    () => deriveAssetsState(storedState, projectionState.assetGrowthRate, incomeDirectedContributions),
-    [storedState, projectionState.assetGrowthRate, incomeDirectedContributions],
-  );
+  const incomeSummary = (loadStoredJson(INCOME_SUMMARY_KEY) ?? {}) as Partial<IncomeSummary>;
+  const incomeDirectedContributions = buildIncomeDirectedContributions(incomeSummary);
+  const assets = deriveAssetsState(storedState, undefined, incomeDirectedContributions);
 
   function updateBucket(bucketId: string, patch: Partial<AssetBucketState>) {
     setStoredState(
