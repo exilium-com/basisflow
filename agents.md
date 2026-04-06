@@ -41,6 +41,24 @@
   - Code cleanup is not a win if it changes focus behavior, calculation semantics, displayed defaults, toggle meaning, or other interaction contracts.
 - Verify the real workflow, not just the edited file.
   - Cross-page data flow, persistence, imported summaries, and shared config changes matter as much as local rendering.
+- Prefer deleting structure over adding structure.
+  - If an abstraction does not make the code easier to understand, remove it.
+- Organize code around the real flow of the program.
+  - The top-level code should read in the order the system actually works.
+- Merge duplicated logic by changing the shape.
+  - When two areas are doing nearly the same work, look for a small structural change that lets both use the same path.
+- Compute repeated selections once.
+  - If the same filtering, grouping, or categorization happens multiple times, do it up front and reuse it.
+- Reduce the number of simultaneously active ideas.
+  - Group stable context together and keep temporary values local so the reader is not tracking many similar intermediates at once.
+- Keep the main control flow visible.
+  - Hide detail, not flow.
+- Remove parallel representations when one will do.
+  - Standardize on one form of the data or one path through the logic instead of keeping similar variants alive.
+- Prefer helpers that remove mental work.
+  - If a helper only moves lines around or hides a trivial expression, inline it.
+- Refactor repeated patterns of thought, not just repeated text.
+  - The biggest simplifications usually come from making the same decision happen in one place instead of many.
 
 ## Interaction / Process Preferences
 

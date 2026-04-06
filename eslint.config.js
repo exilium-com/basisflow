@@ -1,14 +1,16 @@
 import { defineConfig } from "eslint/config";
 import js from "@eslint/js";
 import globals from "globals";
+import tseslint from "typescript-eslint";
 
 export default defineConfig([
   {
     ignores: ["dist/**", "node_modules/**"],
   },
   js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
-    files: ["**/*.{js,jsx}"],
+    files: ["**/*.{ts,tsx}"],
     languageOptions: {
       parserOptions: {
         ecmaFeatures: {
@@ -18,7 +20,9 @@ export default defineConfig([
       globals: globals.browser,
     },
     rules: {
-      "no-unused-vars": [
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-unused-vars": [
         "error",
         {
           argsIgnorePattern: "^_",
@@ -29,7 +33,7 @@ export default defineConfig([
     },
   },
   {
-    files: ["vite.config.js", "scripts/**/*.mjs"],
+    files: ["vite.config.ts", "scripts/**/*.mjs"],
     languageOptions: {
       globals: { ...globals.node, ...globals.nodeBuiltin },
     },
