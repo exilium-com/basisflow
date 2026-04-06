@@ -4,7 +4,6 @@ export type LoanType = "fixed30" | "arm76" | "arm106";
 export type MortgageDownPaymentMode = "percent" | "dollar";
 export type MortgageLoanKind = "fixed" | "arm";
 export type MortgageLoanField = "rate" | "term" | "initialRate" | "adjustedRate";
-export type MortgageAdvancedField = "propertyTaxRate" | "insurancePerYear" | "hoaPerMonth";
 
 type FixedLoanOption = {
   type: LoanType;
@@ -14,14 +13,6 @@ type FixedLoanOption = {
     term: number;
     rate: number;
   };
-  fields: Array<{
-    field: "rate" | "term";
-    label: string;
-    prefix?: string;
-    suffix?: string;
-    step: string;
-    placeholderFrom?: undefined;
-  }>;
   fixedYears?: undefined;
 };
 
@@ -35,14 +26,6 @@ type ArmLoanOption = {
     initialRate: number;
     adjustedRate: number;
   };
-  fields: Array<{
-    field: "initialRate" | "adjustedRate" | "term";
-    label: string;
-    prefix?: string;
-    suffix?: string;
-    step: string;
-    placeholderFrom?: "initialRate";
-  }>;
 };
 
 export type LoanOption = FixedLoanOption | ArmLoanOption;
@@ -104,10 +87,6 @@ export const LOAN_OPTIONS: LoanOption[] = [
     label: "30-year fixed",
     kind: "fixed",
     defaults: { term: 30, rate: 6.475 },
-    fields: [
-      { field: "rate", label: "Interest rate", suffix: "%", step: "0.001" },
-      { field: "term", label: "Loan term", suffix: "years", step: "1" },
-    ],
   },
   {
     type: "arm76",
@@ -115,11 +94,6 @@ export const LOAN_OPTIONS: LoanOption[] = [
     kind: "arm",
     fixedYears: 7,
     defaults: { term: 30, initialRate: 5.635, adjustedRate: 7.135 },
-    fields: [
-      { field: "initialRate", label: "Initial rate", suffix: "%", step: "0.001" },
-      { field: "adjustedRate", label: "Reset rate", suffix: "%", step: "0.001", placeholderFrom: "initialRate" },
-      { field: "term", label: "Loan term", suffix: "years", step: "1" },
-    ],
   },
   {
     type: "arm106",
@@ -127,11 +101,6 @@ export const LOAN_OPTIONS: LoanOption[] = [
     kind: "arm",
     fixedYears: 10,
     defaults: { term: 30, initialRate: 5.875, adjustedRate: 7.375 },
-    fields: [
-      { field: "initialRate", label: "Initial rate", suffix: "%", step: "0.001" },
-      { field: "adjustedRate", label: "Reset rate", suffix: "%", step: "0.001", placeholderFrom: "initialRate" },
-      { field: "term", label: "Loan term", suffix: "years", step: "1" },
-    ],
   },
 ];
 
@@ -142,18 +111,6 @@ export const MORTGAGE_DEFAULTS = {
   insurancePerYear: 1800,
   hoaPerMonth: 0,
 };
-
-export const ADVANCED_FIELDS: Array<{
-  field: MortgageAdvancedField;
-  label: string;
-  prefix?: string;
-  suffix?: string;
-  step: string;
-}> = [
-  { field: "propertyTaxRate", label: "Property tax rate", suffix: "%", step: "0.001" },
-  { field: "insurancePerYear", label: "Home insurance", prefix: "$", suffix: "/ year", step: "1" },
-  { field: "hoaPerMonth", label: "HOA", prefix: "$", suffix: "/ month", step: "1" },
-];
 
 export const DEFAULT_ACTIVE_LOAN = LOAN_OPTIONS[0].type;
 export const DEFAULT_COMPARE_LOAN = LOAN_OPTIONS[1].type;
@@ -193,14 +150,29 @@ export function normalizeMortgageState(parsed: unknown, fallback: MortgageState)
           : {};
       const fallbackLoanState = { ...option.defaults, ...fallback.loanOptions[option.type] };
 
+      if (option.kind === "fixed") {
+        return [
+          option.type,
+          {
+            rate: rawLoanState.rate == null ? fallbackLoanState.rate ?? null : readNumber(rawLoanState.rate, null),
+            term: rawLoanState.term == null ? fallbackLoanState.term ?? null : readNumber(rawLoanState.term, null),
+          },
+        ];
+      }
+
       return [
         option.type,
-        Object.fromEntries(
-          option.fields.map((field) => [
-            field.field,
-            rawLoanState[field.field] == null ? fallbackLoanState[field.field] ?? null : readNumber(rawLoanState[field.field], null),
-          ]),
-        ),
+        {
+          initialRate:
+            rawLoanState.initialRate == null
+              ? fallbackLoanState.initialRate ?? null
+              : readNumber(rawLoanState.initialRate, null),
+          adjustedRate:
+            rawLoanState.adjustedRate == null
+              ? fallbackLoanState.adjustedRate ?? null
+              : readNumber(rawLoanState.adjustedRate, null),
+          term: rawLoanState.term == null ? fallbackLoanState.term ?? null : readNumber(rawLoanState.term, null),
+        },
       ];
     }),
   ) as Record<LoanType, MortgageLoanState>;

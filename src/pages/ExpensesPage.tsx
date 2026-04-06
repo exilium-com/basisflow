@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { ActionButton } from "../components/ActionButton";
 import { Field, NumberField, TextField } from "../components/Field";
 import { PageShell } from "../components/PageShell";
@@ -25,8 +25,8 @@ export function ExpensesPage() {
     normalize: normalizeExpensesState,
   });
 
-  const inputs = useMemo(() => normalizeExpenseInputs(state), [state]);
-  const results = useMemo(() => calculateExpenseSnapshot(inputs), [inputs]);
+  const inputs = normalizeExpenseInputs(state);
+  const results = calculateExpenseSnapshot(inputs);
 
   function updateExpense(expenseId: string, patch: Partial<ExpenseStateItem>) {
     setState((draft) => {

@@ -4,8 +4,8 @@ import { NumberField, fieldLabelClass } from "./Field";
 import { SegmentedToggle } from "./SegmentedToggle";
 import { usd } from "../lib/format";
 import { toDisplayValue, type AllocationMode, type ProjectionInputs, type ProjectionState } from "../lib/projectionState";
-import { PINNED_BUCKETS, type AssetInputs, type AssetInputBucket } from "../lib/assetsModel";
-import { type ExpenseInputs, type ExpenseInput } from "../lib/expensesModel";
+import { PINNED_BUCKETS, type AssetInputs } from "../lib/assetsModel";
+import { type ExpenseInputs } from "../lib/expensesModel";
 import { type ProjectionResults } from "../lib/projectionCalculation";
 import { type ProjectionRow } from "../lib/projectionUtils";
 
@@ -19,6 +19,22 @@ function ProjectionSnapshot({ label, value }: { label: React.ReactNode; value: R
       <div className={snapshotValueClass}>{value}</div>
     </div>
   );
+}
+
+function SelectedYearSnapshot({
+  currentYear,
+  label,
+  value,
+}: {
+  currentYear: number;
+  label: string;
+  value: React.ReactNode;
+}) {
+  if (currentYear === 0) {
+    return <div aria-hidden="true" />;
+  }
+
+  return <ProjectionSnapshot label={label} value={value} />;
 }
 
 type ProjectionAssetRowsProps = {
@@ -60,117 +76,110 @@ export function ProjectionAssetRows({
 }: ProjectionAssetRowsProps) {
   const reserveCashBucketId = PINNED_BUCKETS.reserveCashBucketId.id;
 
-  function getAssetOverrideSummary(bucket: AssetInputBucket) {
-    const override = state.assetOverrides?.[bucket.id] ?? {};
-    const parts = [];
-    if (override.growth != null) {
-      parts.push(`Growth ${override.growth}%`);
-    }
-    return parts.length ? parts.join(" · ") : null;
-  }
-
   return (
     <div className="grid gap-2.5">
-      {assetInputs.buckets.map((bucket) => (
-        <RowItem
-          key={bucket.id}
-          pinned={pinnedProjectionBucketIds.has(bucket.id)}
-          headerClassName="grid items-start gap-4 lg:grid-cols-4"
-          detailsTitle="Asset overrides"
-          detailsSummary={getAssetOverrideSummary(bucket)}
-          detailsOpen={Boolean(state.assetOverrides?.[bucket.id]?.detailsOpen)}
-          onToggleDetails={(open) => onToggleAssetOverrideDetails(bucket.id, open)}
-          detailsContentClassName="grid gap-3 sm:grid-cols-2"
-          header={
-            <>
-              <div className="min-w-0">
-                <div className={snapshotLabelClass}>{bucket.name}</div>
-              </div>
-              <ProjectionSnapshot label="Current value" value={usd(bucket.current)} />
-              {projectionInputs.currentYear !== 0 ? (
-                <ProjectionSnapshot
-                    label={selectedYearLabel}
-                    value={usd(
-                      toDisplayValue(
-                        currentRow.bucketSnapshotsById[bucket.id]?.balance ?? bucket.current,
-                        projectionInputs.currentYear,
-                        projectionInputs,
-                      ),
+      {assetInputs.buckets.map((bucket) => {
+        const allocationMode = state.allocations?.[bucket.id]?.mode ?? "percent";
+        const override = state.assetOverrides?.[bucket.id];
+
+        return (
+          <RowItem
+            key={bucket.id}
+            pinned={pinnedProjectionBucketIds.has(bucket.id)}
+            headerClassName="grid items-start gap-4 lg:grid-cols-4"
+            detailsTitle="Asset overrides"
+            detailsSummary={override?.growth != null ? `Growth ${override.growth}%` : null}
+            detailsOpen={Boolean(override?.detailsOpen)}
+            onToggleDetails={(open) => onToggleAssetOverrideDetails(bucket.id, open)}
+            detailsContentClassName="grid gap-3 sm:grid-cols-2"
+            header={
+              <>
+                <div className="min-w-0">
+                  <div className={snapshotLabelClass}>{bucket.name}</div>
+                </div>
+                <ProjectionSnapshot label="Current value" value={usd(bucket.current)} />
+                <SelectedYearSnapshot
+                  currentYear={projectionInputs.currentYear}
+                  label={selectedYearLabel}
+                  value={usd(
+                    toDisplayValue(
+                      currentRow.bucketSnapshotsById[bucket.id]?.balance ?? bucket.current,
+                      projectionInputs.currentYear,
+                      projectionInputs,
+                    ),
                   )}
                 />
-              ) : (
-                <div aria-hidden="true" />
-              )}
-              <div className="grid min-w-0 gap-1">
-                <div className={fieldLabelClass}>Allocation</div>
-                {bucket.id === reserveCashBucketId ? (
-                  <NumberField
-                    label={null}
-                    className="min-w-0"
-                    suffix="%"
-                    inputClassName="text-(--ink-soft)"
-                    min="0"
-                    max="100"
-                    step="1"
-                    value={String(Math.max(0, 100 - Math.min(projectionInputs.allocationPercentTotal, 100)))}
-                    disabled
-                    onChange={() => {}}
-                  />
-                ) : (results.incomeDirectedContributions?.[bucket.id] ?? 0) > 0 ? (
-                  <NumberField
-                    label={null}
-                    className="min-w-0"
-                    prefix="$"
-                    inputClassName="text-(--ink-soft)"
-                    min="0"
-                    step="500"
-                    value={String(results.incomeDirectedContributions[bucket.id])}
-                    disabled
-                    onChange={() => {}}
-                  />
-                ) : (
-                  <div className="flex items-start gap-2">
-                    <SegmentedToggle
-                      ariaLabel={`${bucket.name} allocation mode`}
-                      className="shrink-0"
-                      value={state.allocations?.[bucket.id]?.mode ?? "percent"}
-                      onChange={(mode) => onUpdateAllocationMode(bucket.id, mode)}
-                      options={[
-                        { value: "amount", label: "$" },
-                        { value: "percent", label: "%" },
-                      ]}
-                    />
+                <div className="grid min-w-0 gap-1">
+                  <div className={fieldLabelClass}>Allocation</div>
+                  {bucket.id === reserveCashBucketId ? (
                     <NumberField
                       label={null}
-                      className="min-w-0 flex-1"
+                      className="min-w-0"
+                      suffix="%"
+                      inputClassName="text-(--ink-soft)"
                       min="0"
-                      max={(state.allocations?.[bucket.id]?.mode ?? "percent") === "percent" ? "100" : undefined}
-                      step={(state.allocations?.[bucket.id]?.mode ?? "percent") === "percent" ? "1" : "500"}
-                      value={state.allocations?.[bucket.id]?.value ?? 0}
-                      onValueChange={(value) => onUpdateAllocation(bucket.id, value)}
+                      max="100"
+                      step="1"
+                      value={String(Math.max(0, 100 - Math.min(projectionInputs.allocationPercentTotal, 100)))}
+                      disabled
+                      onChange={() => {}}
                     />
-                  </div>
-                )}
-              </div>
-            </>
-          }
-        >
-          <NumberField
-            label="Growth override"
-            suffix="%"
-            min="0"
-            step="0.1"
-            compact
-            value={state.assetOverrides?.[bucket.id]?.growth ?? null}
-            placeholder={String(state.assetGrowthRate)}
-            onValueChange={(value) =>
-              onUpdateAssetOverride(bucket.id, {
-                growth: value,
-              })
+                  ) : (results.incomeDirectedContributions?.[bucket.id] ?? 0) > 0 ? (
+                    <NumberField
+                      label={null}
+                      className="min-w-0"
+                      prefix="$"
+                      inputClassName="text-(--ink-soft)"
+                      min="0"
+                      step="500"
+                      value={String(results.incomeDirectedContributions[bucket.id])}
+                      disabled
+                      onChange={() => {}}
+                    />
+                  ) : (
+                    <div className="flex items-start gap-2">
+                      <SegmentedToggle
+                        ariaLabel={`${bucket.name} allocation mode`}
+                        className="shrink-0"
+                        value={allocationMode}
+                        onChange={(mode) => onUpdateAllocationMode(bucket.id, mode)}
+                        options={[
+                          { value: "amount", label: "$" },
+                          { value: "percent", label: "%" },
+                        ]}
+                      />
+                      <NumberField
+                        label={null}
+                        className="min-w-0 flex-1"
+                        min="0"
+                        max={allocationMode === "percent" ? "100" : undefined}
+                        step={allocationMode === "percent" ? "1" : "500"}
+                        value={state.allocations?.[bucket.id]?.value ?? 0}
+                        onValueChange={(value) => onUpdateAllocation(bucket.id, value)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </>
             }
-          />
-        </RowItem>
-      ))}
+          >
+            <NumberField
+              label="Growth override"
+              suffix="%"
+              min="0"
+              step="0.1"
+              compact
+              value={override?.growth ?? null}
+              placeholder={String(state.assetGrowthRate)}
+              onValueChange={(value) =>
+                onUpdateAssetOverride(bucket.id, {
+                  growth: value,
+                })
+              }
+            />
+          </RowItem>
+        );
+      })}
     </div>
   );
 }
@@ -184,68 +193,64 @@ export function ProjectionExpenseRows({
   onToggleExpenseOverrideDetails,
   onUpdateExpenseOverride,
 }: ProjectionExpenseRowsProps) {
-  function getExpenseOverrideSummary(expense: ExpenseInput) {
-    const growthRate = state.expenseOverrides?.[expense.id]?.growthRate;
-    return growthRate != null ? `Growth ${growthRate}%` : null;
-  }
-
   return (
     <div className="grid gap-2.5">
-      {expenseInputs.expenses.map((expense) => (
-        <RowItem
-          key={expense.id}
-          headerClassName="grid items-start gap-4 lg:grid-cols-4"
-          detailsTitle="Expense overrides"
-          detailsSummary={getExpenseOverrideSummary(expense)}
-          detailsOpen={Boolean(state.expenseOverrides?.[expense.id]?.detailsOpen)}
-          onToggleDetails={(open) => onToggleExpenseOverrideDetails(expense.id, open)}
-          detailsContentClassName="grid gap-3"
-          header={
-            <>
-              <div className="min-w-0">
-                <div className={snapshotLabelClass}>{expense.label}</div>
-              </div>
-              <ProjectionSnapshot label="Current amount" value={usd(expense.amount)} />
-              {projectionInputs.currentYear !== 0 ? (
-                <ProjectionSnapshot
-                    label={selectedYearLabel}
-                    value={usd(
-                      toDisplayValue(
-                        currentRow.expenseSnapshotsById[expense.id]?.amount ?? expense.amount,
-                        projectionInputs.currentYear,
-                        projectionInputs,
-                      ),
+      {expenseInputs.expenses.map((expense) => {
+        const override = state.expenseOverrides?.[expense.id];
+
+        return (
+          <RowItem
+            key={expense.id}
+            headerClassName="grid items-start gap-4 lg:grid-cols-4"
+            detailsTitle="Expense overrides"
+            detailsSummary={override?.growthRate != null ? `Growth ${override.growthRate}%` : null}
+            detailsOpen={Boolean(override?.detailsOpen)}
+            onToggleDetails={(open) => onToggleExpenseOverrideDetails(expense.id, open)}
+            detailsContentClassName="grid gap-3"
+            header={
+              <>
+                <div className="min-w-0">
+                  <div className={snapshotLabelClass}>{expense.label}</div>
+                </div>
+                <ProjectionSnapshot label="Current amount" value={usd(expense.amount)} />
+                <SelectedYearSnapshot
+                  currentYear={projectionInputs.currentYear}
+                  label={selectedYearLabel}
+                  value={usd(
+                    toDisplayValue(
+                      currentRow.expenseSnapshotsById[expense.id]?.amount ?? expense.amount,
+                      projectionInputs.currentYear,
+                      projectionInputs,
+                    ),
                   )}
                 />
-              ) : (
-                <div aria-hidden="true" />
-              )}
-              <ProjectionSnapshot
-                label="Cadence"
-                value={
-                  currentRow.expenseSnapshotsById[expense.id]?.cadenceLabel ??
-                  (expense.frequency === "annual" ? "Annual" : expense.frequency === "one_off" ? "One-off" : "Monthly")
-                }
-              />
-            </>
-          }
-        >
-          <NumberField
-            label="Growth override"
-            suffix="%"
-            min="-20"
-            step="0.1"
-            compact
-            value={state.expenseOverrides?.[expense.id]?.growthRate ?? null}
-            placeholder={String(state.expenseGrowthRate)}
-            onValueChange={(value) =>
-              onUpdateExpenseOverride(expense.id, {
-                growthRate: value,
-              })
+                <ProjectionSnapshot
+                  label="Cadence"
+                  value={
+                    currentRow.expenseSnapshotsById[expense.id]?.cadenceLabel ??
+                    (expense.frequency === "annual" ? "Annual" : expense.frequency === "one_off" ? "One-off" : "Monthly")
+                  }
+                />
+              </>
             }
-          />
-        </RowItem>
-      ))}
+          >
+            <NumberField
+              label="Growth override"
+              suffix="%"
+              min="-20"
+              step="0.1"
+              compact
+              value={override?.growthRate ?? null}
+              placeholder={String(state.expenseGrowthRate)}
+              onValueChange={(value) =>
+                onUpdateExpenseOverride(expense.id, {
+                  growthRate: value,
+                })
+              }
+            />
+          </RowItem>
+        );
+      })}
     </div>
   );
 }

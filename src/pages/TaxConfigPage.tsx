@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { ActionButton } from "../components/ActionButton";
 import { NumberField, TextAreaField } from "../components/Field";
 import { PageShell } from "../components/PageShell";
@@ -7,7 +7,7 @@ import { loadTaxConfig, saveTaxConfig, type TaxConfig } from "../lib/taxConfig";
 import { surfaceClass } from "../lib/ui";
 
 export function TaxConfigPage() {
-  const initialConfig = useMemo(() => loadTaxConfig(), []);
+  const initialConfig = loadTaxConfig();
   const [federalBrackets, setFederalBrackets] = useState(JSON.stringify(initialConfig.federalBrackets, null, 2));
   const [annualAdditionsLimit, setAnnualAdditionsLimit] = useState(String(initialConfig.annualAdditionsLimit));
   const [federalStandardDeduction, setFederalStandardDeduction] = useState(

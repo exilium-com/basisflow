@@ -176,7 +176,7 @@ export function NumberField({
     }
 
     const parsed = Number.parseFloat(event.target.value);
-    onValueChange(Number.isFinite(parsed) ? parsed : null, event.target.value);
+    onValueChange(Number.isNaN(parsed) ? null : parsed, event.target.value);
   }
 
   function handleBlur(event: React.FocusEvent<HTMLInputElement>) {

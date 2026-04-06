@@ -1,4 +1,4 @@
-import { roundTo } from "./format";
+import { readNumber, roundTo } from "./format";
 import { loadStoredJson, saveJson } from "./storage";
 
 export const STORAGE_KEY = "basisflow_tax_config";
@@ -52,7 +52,7 @@ export const DEFAULT_CONFIG = {
 };
 
 function cloneDefaultConfig(): TaxConfig {
-  return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  return structuredClone(DEFAULT_CONFIG);
 }
 
 function normalizeBracketList(list: unknown, fallback: TaxBracket[]): TaxBracket[] {
@@ -97,20 +97,25 @@ export function normalizeConfig(rawConfig: unknown): TaxConfig {
   const config = typeof rawConfig === "object" && rawConfig ? rawConfig : {};
 
   return {
-    annualAdditionsLimit: Number.isFinite(Number((config as { annualAdditionsLimit?: unknown }).annualAdditionsLimit))
-      ? Math.max(0, Number((config as { annualAdditionsLimit?: unknown }).annualAdditionsLimit))
-      : fallback.annualAdditionsLimit,
-    federalStandardDeduction: Number.isFinite(
-      Number((config as { federalStandardDeduction?: unknown }).federalStandardDeduction),
-    )
-      ? Math.max(0, Number((config as { federalStandardDeduction?: unknown }).federalStandardDeduction))
-      : fallback.federalStandardDeduction,
-    stateStandardDeduction: Number.isFinite(Number((config as { stateStandardDeduction?: unknown }).stateStandardDeduction))
-      ? Math.max(0, Number((config as { stateStandardDeduction?: unknown }).stateStandardDeduction))
-      : fallback.stateStandardDeduction,
-    caSdiRate: Number.isFinite(Number((config as { caSdiRate?: unknown }).caSdiRate))
-      ? Math.max(0, Number((config as { caSdiRate?: unknown }).caSdiRate))
-      : fallback.caSdiRate,
+    annualAdditionsLimit: Math.max(
+      0,
+      readNumber((config as { annualAdditionsLimit?: unknown }).annualAdditionsLimit, fallback.annualAdditionsLimit),
+    ),
+    federalStandardDeduction: Math.max(
+      0,
+      readNumber(
+        (config as { federalStandardDeduction?: unknown }).federalStandardDeduction,
+        fallback.federalStandardDeduction,
+      ),
+    ),
+    stateStandardDeduction: Math.max(
+      0,
+      readNumber(
+        (config as { stateStandardDeduction?: unknown }).stateStandardDeduction,
+        fallback.stateStandardDeduction,
+      ),
+    ),
+    caSdiRate: Math.max(0, readNumber((config as { caSdiRate?: unknown }).caSdiRate, fallback.caSdiRate)),
     federalBrackets: normalizeBracketList((config as { federalBrackets?: unknown }).federalBrackets, fallback.federalBrackets),
     stateBrackets: normalizeBracketList((config as { stateBrackets?: unknown }).stateBrackets, fallback.stateBrackets),
     longTermCapitalGains: normalizeBracketList(
@@ -137,7 +142,7 @@ export function resetTaxConfig(): TaxConfig {
 }
 
 export function computeProgressiveTax(income: number, brackets: TaxBracket[]) {
-  let remaining = Math.max(0, income);
+  let remaining = income < 0 ? 0 : income;
   let previousTop = 0;
   let total = 0;
 
@@ -160,7 +165,7 @@ export function computeProgressiveTax(income: number, brackets: TaxBracket[]) {
 }
 
 export function computeAdditionalTax(baseIncome: number, addedIncome: number, brackets: TaxBracket[]) {
-  const safeBase = Math.max(0, baseIncome);
-  const safeAdded = Math.max(0, addedIncome);
+  const safeBase = baseIncome < 0 ? 0 : baseIncome;
+  const safeAdded = addedIncome < 0 ? 0 : addedIncome;
   return computeProgressiveTax(safeBase + safeAdded, brackets) - computeProgressiveTax(safeBase, brackets);
 }

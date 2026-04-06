@@ -207,25 +207,3 @@ export function toDisplayValue(value: number, year: number, inputs: ProjectionIn
   }
   return value / Math.pow(1 + inputs.inflationRate, year);
 }
-
-export function buildIncomeDirectedContributions(incomeSummary: unknown) {
-  const summary = typeof incomeSummary === "object" && incomeSummary ? (incomeSummary as Record<string, unknown>) : {};
-  const contributions: Record<string, number> = {};
-
-  function add(bucketId: string, amount: number) {
-    if (!bucketId || amount <= 0) {
-      return;
-    }
-    contributions[bucketId] = (contributions[bucketId] ?? 0) + amount;
-  }
-
-  add(
-    PINNED_BUCKETS.retirementBucketId.id,
-    Math.max(0, Number(summary.employee401k) || 0) + Math.max(0, Number(summary.employerMatch) || 0),
-  );
-  add(PINNED_BUCKETS.megaBucketId.id, Math.max(0, Number(summary.megaBackdoor) || 0));
-  add(PINNED_BUCKETS.hsaBucketId.id, Math.max(0, Number(summary.hsaContribution) || 0));
-  add(PINNED_BUCKETS.iraBucketId.id, Math.max(0, Number(summary.iraContribution) || 0));
-
-  return contributions;
-}

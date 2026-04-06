@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { produce, type Draft } from "immer";
-import { loadStateObject, saveStateObject } from "../lib/storage";
+import { loadStoredJson, saveJson } from "../lib/storage";
 
 type NormalizeStoredValue<T> = (value: unknown, fallback: T) => T;
 type UseStoredStateOptions<T> = {
@@ -14,9 +14,11 @@ export function useStoredState<T>(
   fallbackValue: T | (() => T),
   options: UseStoredStateOptions<T> = {},
 ) {
-  const optionsRef = useRef(options);
-  optionsRef.current = options;
-  const [state, setReactState] = useState(() => loadStateObject(key, fallbackValue, options));
+  const [state, setReactState] = useState(() => {
+    const fallback = typeof fallbackValue === "function" ? (fallbackValue as () => T)() : structuredClone(fallbackValue);
+    const value = loadStoredJson(key);
+    return value === null ? fallback : options.normalize ? options.normalize(value, fallback) : (value as T);
+  });
 
   const setState = useCallback((nextState: StoredStateAction<T>) => {
     setReactState((current) =>
@@ -25,7 +27,7 @@ export function useStoredState<T>(
   }, []);
 
   useEffect(() => {
-    saveStateObject(key, state);
+    saveJson(key, state);
   }, [key, state]);
 
   return [state, setState] as const;

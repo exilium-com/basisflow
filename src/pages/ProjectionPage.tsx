@@ -13,6 +13,7 @@ import { useStoredState } from "../hooks/useStoredState";
 import {
   DEFAULT_ASSETS_STATE,
   PINNED_BUCKETS,
+  buildIncomeDirectedContributions,
   normalizeAssetInputs,
   normalizeAssetsState,
   resolvePinnedBuckets,
@@ -21,7 +22,6 @@ import { calculateProjection } from "../lib/projectionCalculation";
 import { DEFAULT_EXPENSES_STATE, normalizeExpenseInputs, normalizeExpensesState } from "../lib/expensesModel";
 import { usd } from "../lib/format";
 import {
-  buildIncomeDirectedContributions,
   type AllocationMode,
   type ProjectionAssetOverride,
   type ProjectionExpenseOverride,
@@ -31,7 +31,7 @@ import {
   normalizeProjectionState,
   toDisplayValue,
 } from "../lib/projectionState";
-import { buildMonthlyCashFlow, createDerivedProjectionBuckets } from "../lib/projectionUtils";
+import { buildMonthlyCashFlow } from "../lib/projectionUtils";
 import { loadStoredJson } from "../lib/storage";
 import {
   ASSETS_STATE_KEY,
@@ -42,13 +42,14 @@ import {
 } from "../lib/storageKeys";
 import { loadTaxConfig } from "../lib/taxConfig";
 import { surfaceClass } from "../lib/ui";
+import { type IncomeSummary } from "../lib/incomeModel";
 
 export function ProjectionPage() {
   const [state, setState] = useStoredState(PROJECTION_STATE_KEY, DEFAULT_PROJECTION_STATE, {
     normalize: normalizeProjectionState,
   });
   const taxConfig = loadTaxConfig();
-  const incomeSummary = loadStoredJson(INCOME_SUMMARY_KEY) ?? {};
+  const incomeSummary = (loadStoredJson(INCOME_SUMMARY_KEY) ?? {}) as Partial<IncomeSummary>;
   const mortgageSummary = loadStoredJson(MORTGAGE_SUMMARY_KEY) ?? {};
   const assetState = normalizeAssetsState(
     loadStoredJson(ASSETS_STATE_KEY, true) ?? DEFAULT_ASSETS_STATE,
@@ -59,14 +60,16 @@ export function ProjectionPage() {
     DEFAULT_EXPENSES_STATE,
   );
   const incomeDirectedContributions = buildIncomeDirectedContributions(incomeSummary);
+  const pinnedAssets = resolvePinnedBuckets(assetState, incomeDirectedContributions);
   const reserveCashBucketId = PINNED_BUCKETS.reserveCashBucketId.id;
   const projectionAssetState = produce(
-    createDerivedProjectionBuckets(assetState, incomeDirectedContributions),
+    pinnedAssets.state,
     (draft) => {
       draft.buckets.forEach((bucket) => {
         if (bucket.id === reserveCashBucketId) {
           bucket.contribution = 0;
           bucket.growth = 0;
+          bucket.basis = bucket.current ?? 0;
           return;
         }
         bucket.growth = state.assetOverrides?.[bucket.id]?.growth ?? null;
@@ -118,7 +121,7 @@ export function ProjectionPage() {
     projectionInputs,
     currentRow,
   });
-  const pinnedProjectionBucketIds = resolvePinnedBuckets(assetState, incomeDirectedContributions).pinnedBucketIds;
+  const pinnedProjectionBucketIds = pinnedAssets.pinnedBucketIds;
 
   function updateState(patch: Partial<ProjectionState>) {
     setState((draft) => {

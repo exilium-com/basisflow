@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect } from "react";
 import { AdvancedPanel } from "../components/AdvancedPanel";
 import { ActionButton } from "../components/ActionButton";
 import { MetricGrid } from "../components/MetricGrid";
@@ -13,10 +13,10 @@ import { WorkspaceLayout } from "../components/WorkspaceLayout";
 import { useStoredState } from "../hooks/useStoredState";
 import { readNumber, usd } from "../lib/format";
 import {
+  buildIncomeSummary,
   calculateIncome,
   computeRsuGrossForItems,
   getAnnualSalaryTotal,
-  type IncomeSummary,
   type RsuInputItem,
   type SalaryFrequency,
   type SalaryInputItem,
@@ -154,71 +154,38 @@ export function IncomePage() {
     normalize: normalizeState,
   });
 
-  const salaryItems = useMemo<SalaryInputItem[]>(
-    () =>
-      state.incomeItems
-        .filter((item): item is SalaryStateItem => item.type === "salary")
-        .map((item) => ({
-          id: item.id,
-          name: item.name,
-          amount: item.amount ?? 0,
-          frequency: item.frequency,
-        })),
-    [state.incomeItems],
-  );
-  const rsuItems = useMemo<RsuInputItem[]>(
-    () =>
-      state.incomeItems
-        .filter((item): item is RsuStateItem => item.type === "rsu")
-        .map((item) => ({
-          id: item.id,
-          name: item.name,
-          grantAmount: item.grantAmount ?? 0,
-          refresherAmount: item.refresherAmount ?? 0,
-          vestingYears: item.vestingYears ?? 4,
-        })),
-    [state.incomeItems],
-  );
-  const inputs = useMemo(
-    () => ({
-      grossSalary: getAnnualSalaryTotal(salaryItems),
-      rsuGrossNextYear: computeRsuGrossForItems(rsuItems, 0),
-      employee401k: state.employee401k,
-      matchRate: state.matchRate,
-      iraContribution: state.iraContribution,
-      megaBackdoorInput: state.megaBackdoorInput,
-      hsaContribution: state.hsaContribution,
-      rsuItems,
-    }),
-    [salaryItems, rsuItems, state],
-  );
-  const taxConfig = useMemo(() => loadTaxConfig(), []);
-  const results = useMemo(() => calculateIncome(inputs, taxConfig), [inputs, taxConfig]);
+  const salaryItems: SalaryInputItem[] = state.incomeItems
+    .filter((item): item is SalaryStateItem => item.type === "salary")
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      amount: item.amount ?? 0,
+      frequency: item.frequency,
+    }));
+  const rsuItems: RsuInputItem[] = state.incomeItems
+    .filter((item): item is RsuStateItem => item.type === "rsu")
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      grantAmount: item.grantAmount ?? 0,
+      refresherAmount: item.refresherAmount ?? 0,
+      vestingYears: item.vestingYears ?? 4,
+    }));
+  const inputs = {
+    grossSalary: getAnnualSalaryTotal(salaryItems),
+    rsuGrossNextYear: computeRsuGrossForItems(rsuItems, 0),
+    employee401k: state.employee401k,
+    matchRate: state.matchRate,
+    iraContribution: state.iraContribution,
+    megaBackdoorInput: state.megaBackdoorInput,
+    hsaContribution: state.hsaContribution,
+    rsuItems,
+  };
+  const taxConfig = loadTaxConfig();
+  const results = calculateIncome(inputs, taxConfig);
 
   useEffect(() => {
-    const summary: IncomeSummary = {
-      grossSalary: results.grossSalary,
-      annualTakeHome: results.annualTakeHome,
-      monthlyTakeHome: results.monthlyTakeHome,
-      federalTax: results.federalTax,
-      californiaTax: results.californiaTax,
-      socialSecurityTax: results.fica.socialSecurity,
-      medicareTax: results.fica.medicare,
-      additionalMedicareTax: results.fica.additionalMedicare,
-      caSdi: results.caSdi,
-      totalTaxes: results.totalTaxes,
-      employee401k: inputs.employee401k,
-      employerMatch: results.employerMatch,
-      iraContribution: inputs.iraContribution,
-      megaBackdoor: results.mega,
-      hsaContribution: inputs.hsaContribution,
-      matchRate: inputs.matchRate,
-      rsuItems: inputs.rsuItems,
-      rsuGrossNextYear: results.rsuGrossNextYear,
-      rsuNetNextYear: results.rsuNetNextYear,
-    };
-
-    saveJson(INCOME_SUMMARY_KEY, summary);
+    saveJson(INCOME_SUMMARY_KEY, buildIncomeSummary(inputs, results));
   }, [inputs, results]);
 
   function updateField(field: keyof Omit<IncomeState, "incomeItems">, value: IncomeState[keyof Omit<IncomeState, "incomeItems">]) {

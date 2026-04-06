@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { AdvancedPanel } from "../components/AdvancedPanel";
 import { ChartPanel } from "../components/ChartPanel";
 import { MortgageComparisonTable, MortgageLoanOptionList } from "../components/MortgageLoanOptions";
@@ -12,7 +12,6 @@ import { SummaryStrip } from "../components/SummaryStrip";
 import { WorkspaceLayout } from "../components/WorkspaceLayout";
 import { roundTo, usd } from "../lib/format";
 import {
-  ADVANCED_FIELDS,
   buildMortgageInputs,
   DEFAULT_MORTGAGE_STATE,
   LOAN_OPTIONS,
@@ -34,30 +33,19 @@ export function MortgagePage() {
   const [state, setState] = useStoredState(MORTGAGE_STATE_KEY, DEFAULT_MORTGAGE_STATE, {
     normalize: normalizeMortgageState,
   });
-  const inputs = useMemo(() => buildMortgageInputs(state), [state]);
-  const scenariosByType = useMemo<Record<LoanType, MortgageScenario>>(
-    () =>
-      Object.fromEntries(LOAN_OPTIONS.map((option) => [option.type, buildMortgageScenario(inputs, option.type)])) as Record<
-        LoanType,
-        MortgageScenario
-      >,
-    [inputs],
-  );
+  const inputs = buildMortgageInputs(state);
+  const scenariosByType = Object.fromEntries(
+    LOAN_OPTIONS.map((option) => [option.type, buildMortgageScenario(inputs, option.type)]),
+  ) as Record<LoanType, MortgageScenario>;
   const scenario = scenariosByType[inputs.activeLoanType];
-  const compareScenario = useMemo(
-    () => scenariosByType[inputs.compareLoanType],
-    [inputs.compareLoanType, scenariosByType],
-  );
+  const compareScenario = scenariosByType[inputs.compareLoanType];
 
   useEffect(() => {
     saveJson(MORTGAGE_SUMMARY_KEY, serializeMortgageSummary(scenario));
   }, [scenario]);
 
-  const comparisonRows = useMemo(
-    () => buildMortgageComparisonRows(scenario, compareScenario),
-    [compareScenario, scenario],
-  );
-  const summaryItems = useMemo(() => buildMortgageSummaryItems(scenario), [scenario]);
+  const comparisonRows = buildMortgageComparisonRows(scenario, compareScenario);
+  const summaryItems = buildMortgageSummaryItems(scenario);
 
   function updateState(patch: Partial<MortgageState>) {
     setState((draft) => {
@@ -154,17 +142,29 @@ export function MortgagePage() {
                 onToggle={(open) => updateState({ advancedOpen: open })}
               >
                 <div className="grid gap-4">
-                  {ADVANCED_FIELDS.map((config) => (
-                    <NumberField
-                      key={config.field}
-                      label={config.label}
-                      prefix={config.prefix}
-                      suffix={config.suffix}
-                      value={state[config.field]}
-                      step={config.step}
-                      onValueChange={(value) => updateState({ [config.field]: value ?? 0 } as Partial<MortgageState>)}
-                    />
-                  ))}
+                  <NumberField
+                    label="Property tax rate"
+                    suffix="%"
+                    value={state.propertyTaxRate}
+                    step="0.001"
+                    onValueChange={(value) => updateState({ propertyTaxRate: value ?? 0 })}
+                  />
+                  <NumberField
+                    label="Home insurance"
+                    prefix="$"
+                    suffix="/ year"
+                    value={state.insurancePerYear}
+                    step="1"
+                    onValueChange={(value) => updateState({ insurancePerYear: value ?? 0 })}
+                  />
+                  <NumberField
+                    label="HOA"
+                    prefix="$"
+                    suffix="/ month"
+                    value={state.hoaPerMonth}
+                    step="1"
+                    onValueChange={(value) => updateState({ hoaPerMonth: value ?? 0 })}
+                  />
                 </div>
               </AdvancedPanel>
             </>
