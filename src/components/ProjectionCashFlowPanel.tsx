@@ -13,6 +13,13 @@ type MonthlyCashFlowPanelProps = {
   netFlow: number;
 };
 
+function polarPoint(cx: number, cy: number, radius: number, angle: number) {
+  return {
+    x: cx + radius * Math.cos(angle),
+    y: cy + radius * Math.sin(angle),
+  };
+}
+
 function describeDonutSlice(
   cx: number,
   cy: number,
@@ -21,22 +28,10 @@ function describeDonutSlice(
   startAngle: number,
   endAngle: number,
 ) {
-  const startOuter = {
-    x: cx + outerRadius * Math.cos(startAngle),
-    y: cy + outerRadius * Math.sin(startAngle),
-  };
-  const endOuter = {
-    x: cx + outerRadius * Math.cos(endAngle),
-    y: cy + outerRadius * Math.sin(endAngle),
-  };
-  const startInner = {
-    x: cx + innerRadius * Math.cos(startAngle),
-    y: cy + innerRadius * Math.sin(startAngle),
-  };
-  const endInner = {
-    x: cx + innerRadius * Math.cos(endAngle),
-    y: cy + innerRadius * Math.sin(endAngle),
-  };
+  const startOuter = polarPoint(cx, cy, outerRadius, startAngle);
+  const endOuter = polarPoint(cx, cy, outerRadius, endAngle);
+  const startInner = polarPoint(cx, cy, innerRadius, startAngle);
+  const endInner = polarPoint(cx, cy, innerRadius, endAngle);
   const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
 
   return [

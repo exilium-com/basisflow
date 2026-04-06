@@ -114,30 +114,32 @@ function getTaxBases(
 }
 
 function buildExpenseSnapshots(expenses: ExpenseInputs["expenses"], year: number): ExpenseSnapshot[] {
-  return expenses.map((expense) => {
-    if (expense.frequency === "one_off") {
-      const active = year > 0 && expense.oneOffYear === year;
-      return {
-        id: expense.id,
-        label: expense.label,
-        frequency: expense.frequency,
-        amount: active ? expense.amount : 0,
-        annualAmount: active ? expense.amount : 0,
-        cadenceLabel: "One-off",
-      };
-    }
+  return expenses.map((expense) => buildExpenseSnapshot(expense, year));
+}
 
-    const annualAmount = expense.annualBase * Math.pow(1 + expense.growthRate, Math.max(year, 0));
-
+function buildExpenseSnapshot(expense: ExpenseInputs["expenses"][number], year: number): ExpenseSnapshot {
+  if (expense.frequency === "one_off") {
+    const active = year > 0 && expense.oneOffYear === year;
     return {
       id: expense.id,
       label: expense.label,
       frequency: expense.frequency,
-      amount: expense.frequency === "monthly" ? annualAmount / 12 : annualAmount,
-      annualAmount,
-      cadenceLabel: expense.frequency === "annual" ? "Annual" : "Monthly",
+      amount: active ? expense.amount : 0,
+      annualAmount: active ? expense.amount : 0,
+      cadenceLabel: "One-off",
     };
-  });
+  }
+
+  const annualAmount = expense.annualBase * Math.pow(1 + expense.growthRate, Math.max(year, 0));
+
+  return {
+    id: expense.id,
+    label: expense.label,
+    frequency: expense.frequency,
+    amount: expense.frequency === "monthly" ? annualAmount / 12 : annualAmount,
+    annualAmount,
+    cadenceLabel: expense.frequency === "annual" ? "Annual" : "Monthly",
+  };
 }
 
 function mapSnapshotsById<T extends { id: string }>(snapshots: T[]) {

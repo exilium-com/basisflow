@@ -113,7 +113,6 @@ export function ProjectionAssetRows({
                   <div className={fieldLabelClass}>Allocation</div>
                   {bucket.id === reserveCashBucketId ? (
                     <NumberField
-                      label={null}
                       className="min-w-0"
                       suffix="%"
                       inputClassName="text-(--ink-soft)"
@@ -122,11 +121,9 @@ export function ProjectionAssetRows({
                       step="1"
                       value={String(Math.max(0, 100 - Math.min(projectionInputs.allocationPercentTotal, 100)))}
                       disabled
-                      onChange={() => {}}
                     />
                   ) : (results.incomeDirectedContributions?.[bucket.id] ?? 0) > 0 ? (
                     <NumberField
-                      label={null}
                       className="min-w-0"
                       prefix="$"
                       inputClassName="text-(--ink-soft)"
@@ -134,7 +131,6 @@ export function ProjectionAssetRows({
                       step="500"
                       value={String(results.incomeDirectedContributions[bucket.id])}
                       disabled
-                      onChange={() => {}}
                     />
                   ) : (
                     <div className="flex items-start gap-2">
@@ -149,7 +145,6 @@ export function ProjectionAssetRows({
                         ]}
                       />
                       <NumberField
-                        label={null}
                         className="min-w-0 flex-1"
                         min="0"
                         max={allocationMode === "percent" ? "100" : undefined}

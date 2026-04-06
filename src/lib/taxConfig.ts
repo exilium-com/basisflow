@@ -55,6 +55,10 @@ function cloneDefaultConfig(): TaxConfig {
   return structuredClone(DEFAULT_CONFIG);
 }
 
+function readNonNegativeConfigNumber(value: unknown, fallback: number) {
+  return Math.max(0, readNumber(value, fallback));
+}
+
 function normalizeBracketList(list: unknown, fallback: TaxBracket[]): TaxBracket[] {
   if (!Array.isArray(list) || !list.length) {
     return fallback.map((item) => ({ ...item }));
@@ -97,25 +101,19 @@ export function normalizeConfig(rawConfig: unknown): TaxConfig {
   const config = typeof rawConfig === "object" && rawConfig ? rawConfig : {};
 
   return {
-    annualAdditionsLimit: Math.max(
-      0,
-      readNumber((config as { annualAdditionsLimit?: unknown }).annualAdditionsLimit, fallback.annualAdditionsLimit),
+    annualAdditionsLimit: readNonNegativeConfigNumber(
+      (config as { annualAdditionsLimit?: unknown }).annualAdditionsLimit,
+      fallback.annualAdditionsLimit,
     ),
-    federalStandardDeduction: Math.max(
-      0,
-      readNumber(
-        (config as { federalStandardDeduction?: unknown }).federalStandardDeduction,
-        fallback.federalStandardDeduction,
-      ),
+    federalStandardDeduction: readNonNegativeConfigNumber(
+      (config as { federalStandardDeduction?: unknown }).federalStandardDeduction,
+      fallback.federalStandardDeduction,
     ),
-    stateStandardDeduction: Math.max(
-      0,
-      readNumber(
-        (config as { stateStandardDeduction?: unknown }).stateStandardDeduction,
-        fallback.stateStandardDeduction,
-      ),
+    stateStandardDeduction: readNonNegativeConfigNumber(
+      (config as { stateStandardDeduction?: unknown }).stateStandardDeduction,
+      fallback.stateStandardDeduction,
     ),
-    caSdiRate: Math.max(0, readNumber((config as { caSdiRate?: unknown }).caSdiRate, fallback.caSdiRate)),
+    caSdiRate: readNonNegativeConfigNumber((config as { caSdiRate?: unknown }).caSdiRate, fallback.caSdiRate),
     federalBrackets: normalizeBracketList((config as { federalBrackets?: unknown }).federalBrackets, fallback.federalBrackets),
     stateBrackets: normalizeBracketList((config as { stateBrackets?: unknown }).stateBrackets, fallback.stateBrackets),
     longTermCapitalGains: normalizeBracketList(

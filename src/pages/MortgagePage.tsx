@@ -124,7 +124,6 @@ export function MortgagePage() {
                         ]}
                       />
                       <NumberField
-                        label={null}
                         className="min-w-0 flex-1"
                         value={state.downPayment}
                         step={state.downPaymentMode === "dollar" ? "1" : "0.001"}

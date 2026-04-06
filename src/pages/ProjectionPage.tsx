@@ -3,7 +3,7 @@ import React from "react";
 import { ChartPanel } from "../components/ChartPanel";
 import { MonthlyCashFlowPanel } from "../components/ProjectionCashFlowPanel";
 import { AssetTaxChart, NetWorthChart } from "../components/ProjectionLineCharts";
-import { ProjectionAssetRows, ProjectionExpenseRows } from "../components/ProjectionOverrides";
+import { ProjectionAssetRows, ProjectionExpenseRows } from "../components/ProjectionRows";
 import { PageShell } from "../components/PageShell";
 import { ProjectionSummaryPanel } from "../components/ProjectionSummaryPanel";
 import { ProjectionTable } from "../components/ProjectionTable";

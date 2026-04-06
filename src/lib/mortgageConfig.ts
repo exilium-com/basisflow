@@ -135,6 +135,55 @@ export const DEFAULT_MORTGAGE_STATE: MortgageState = {
   loanOptions: buildDefaultLoanOptions(),
 };
 
+function normalizeLoanOptionState(
+  option: LoanOption,
+  rawLoanState: Record<string, unknown>,
+  fallbackLoanState: MortgageLoanState,
+): MortgageLoanState {
+  if (option.kind === "fixed") {
+    return {
+      rate: rawLoanState.rate == null ? fallbackLoanState.rate ?? null : readNumber(rawLoanState.rate, null),
+      term: rawLoanState.term == null ? fallbackLoanState.term ?? null : readNumber(rawLoanState.term, null),
+    };
+  }
+
+  return {
+    initialRate:
+      rawLoanState.initialRate == null
+        ? fallbackLoanState.initialRate ?? null
+        : readNumber(rawLoanState.initialRate, null),
+    adjustedRate:
+      rawLoanState.adjustedRate == null
+        ? fallbackLoanState.adjustedRate ?? null
+        : readNumber(rawLoanState.adjustedRate, null),
+    term: rawLoanState.term == null ? fallbackLoanState.term ?? null : readNumber(rawLoanState.term, null),
+  };
+}
+
+function buildLoanOptionInputs(option: LoanOption, loanState: MortgageLoanState): MortgageLoanInputs {
+  const term = Math.max(1, Math.round(loanState.term ?? option.defaults.term));
+
+  if (option.kind === "fixed") {
+    return {
+      kind: "fixed",
+      label: option.label,
+      term,
+      rate: loanState.rate ?? option.defaults.rate,
+    };
+  }
+
+  const initialRate = loanState.initialRate ?? option.defaults.initialRate;
+
+  return {
+    kind: "arm",
+    label: option.label,
+    term,
+    fixedYears: option.fixedYears,
+    initialRate,
+    adjustedRate: loanState.adjustedRate ?? initialRate,
+  };
+}
+
 export function normalizeMortgageState(parsed: unknown, fallback: MortgageState): MortgageState {
   const state = typeof parsed === "object" && parsed ? (parsed as Record<string, unknown>) : {};
   const rawLoanOptions =
@@ -150,30 +199,7 @@ export function normalizeMortgageState(parsed: unknown, fallback: MortgageState)
           : {};
       const fallbackLoanState = { ...option.defaults, ...fallback.loanOptions[option.type] };
 
-      if (option.kind === "fixed") {
-        return [
-          option.type,
-          {
-            rate: rawLoanState.rate == null ? fallbackLoanState.rate ?? null : readNumber(rawLoanState.rate, null),
-            term: rawLoanState.term == null ? fallbackLoanState.term ?? null : readNumber(rawLoanState.term, null),
-          },
-        ];
-      }
-
-      return [
-        option.type,
-        {
-          initialRate:
-            rawLoanState.initialRate == null
-              ? fallbackLoanState.initialRate ?? null
-              : readNumber(rawLoanState.initialRate, null),
-          adjustedRate:
-            rawLoanState.adjustedRate == null
-              ? fallbackLoanState.adjustedRate ?? null
-              : readNumber(rawLoanState.adjustedRate, null),
-          term: rawLoanState.term == null ? fallbackLoanState.term ?? null : readNumber(rawLoanState.term, null),
-        },
-      ];
+      return [option.type, normalizeLoanOptionState(option, rawLoanState, fallbackLoanState)];
     }),
   ) as Record<LoanType, MortgageLoanState>;
 
@@ -209,34 +235,7 @@ export function buildMortgageInputs(state: MortgageState = DEFAULT_MORTGAGE_STAT
     compareLoanType: state.compareLoanType,
     loanOptions: Object.fromEntries(
       LOAN_OPTIONS.map((option) => {
-        const loanState = state.loanOptions[option.type] ?? {};
-        const term = Math.max(1, Math.round(loanState.term ?? option.defaults.term));
-
-        if (option.kind === "fixed") {
-          return [
-            option.type,
-            {
-              kind: "fixed",
-              label: option.label,
-              term,
-              rate: loanState.rate ?? option.defaults.rate,
-            },
-          ];
-        }
-
-        const initialRate = loanState.initialRate ?? option.defaults.initialRate;
-
-        return [
-          option.type,
-          {
-            kind: "arm",
-            label: option.label,
-            term,
-            fixedYears: option.fixedYears,
-            initialRate,
-            adjustedRate: loanState.adjustedRate ?? initialRate,
-          },
-        ];
+        return [option.type, buildLoanOptionInputs(option, state.loanOptions[option.type] ?? {})];
       }),
     ) as Record<LoanType, MortgageLoanInputs>,
   };

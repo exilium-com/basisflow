@@ -45,23 +45,29 @@ export const DEFAULT_EXPENSES_STATE: ExpensesState = {
   advancedOpen: false,
 };
 
+function normalizeExpense(
+  rawExpense: Partial<ExpenseStateItem> & { monthly?: string | number } = {},
+): ExpenseStateItem {
+  const frequency: ExpenseFrequency =
+    rawExpense.frequency === "annual" ? "annual" : rawExpense.frequency === "one_off" ? "one_off" : "monthly";
+
+  return {
+    id: typeof rawExpense.id === "string" && rawExpense.id ? rawExpense.id : crypto.randomUUID(),
+    name: typeof rawExpense.name === "string" ? rawExpense.name : "",
+    amount: rawExpense.amount != null ? readNumber(rawExpense.amount, null) : readNumber(rawExpense.monthly, null),
+    frequency,
+    oneOffYear: readNumber(rawExpense.oneOffYear, null),
+    growthRate: readNumber(rawExpense.growthRate, null),
+    detailsOpen: Boolean(rawExpense.detailsOpen),
+  };
+}
+
 export function normalizeExpensesState(parsed: unknown, fallback: ExpensesState): ExpensesState {
   const state = typeof parsed === "object" && parsed ? (parsed as { expenses?: unknown[]; advancedOpen?: unknown }) : {};
   const expenses = Array.isArray(state.expenses)
-    ? state.expenses.map((rawExpense) => {
-        const expense = (rawExpense as Partial<ExpenseStateItem> & { monthly?: string | number }) ?? {};
-        const frequency: ExpenseFrequency =
-          expense.frequency === "annual" ? "annual" : expense.frequency === "one_off" ? "one_off" : "monthly";
-        return {
-          id: typeof expense.id === "string" && expense.id ? expense.id : crypto.randomUUID(),
-          name: typeof expense.name === "string" ? expense.name : "",
-          amount: expense.amount != null ? readNumber(expense.amount, null) : readNumber(expense.monthly, null),
-          frequency,
-          oneOffYear: readNumber(expense.oneOffYear, null),
-          growthRate: readNumber(expense.growthRate, null),
-          detailsOpen: Boolean(expense.detailsOpen),
-        };
-      })
+    ? state.expenses.map((rawExpense) =>
+        normalizeExpense((rawExpense as Partial<ExpenseStateItem> & { monthly?: string | number }) ?? {}),
+      )
     : fallback.expenses;
 
   return {

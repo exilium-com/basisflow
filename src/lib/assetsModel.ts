@@ -190,6 +190,15 @@ export function buildIncomeDirectedContributions(summary: Partial<IncomeSummary>
   return contributions;
 }
 
+function hasMeaningfulBucketValues(bucket: Partial<AssetBucketState>) {
+  return (
+    (bucket.current ?? 0) > 0 ||
+    (bucket.contribution ?? 0) > 0 ||
+    (bucket.basis ?? 0) > 0 ||
+    bucket.growth != null
+  );
+}
+
 export function resolvePinnedBuckets(
   state: AssetsState,
   incomeDirectedContributions: Record<string, number> = {},
@@ -201,13 +210,7 @@ export function resolvePinnedBuckets(
   );
 
   state.buckets.forEach((bucket) => {
-    if (
-      allPinnedBucketIds.has(bucket.id) &&
-      ((bucket.current ?? 0) > 0 ||
-        (bucket.contribution ?? 0) > 0 ||
-        (bucket.basis ?? 0) > 0 ||
-        bucket.growth != null)
-    ) {
+    if (allPinnedBucketIds.has(bucket.id) && hasMeaningfulBucketValues(bucket)) {
       pinnedBucketIds.add(bucket.id);
     }
   });
@@ -222,10 +225,7 @@ export function resolvePinnedBuckets(
     (bucket) =>
       !allPinnedBucketIds.has(bucket.id) ||
       pinnedBucketIds.has(bucket.id) ||
-      (bucket.current ?? 0) > 0 ||
-      (bucket.contribution ?? 0) > 0 ||
-      (bucket.basis ?? 0) > 0 ||
-      bucket.growth != null,
+      hasMeaningfulBucketValues(bucket),
   );
   let changed = buckets.length !== state.buckets.length;
 
