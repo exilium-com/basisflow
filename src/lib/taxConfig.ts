@@ -1,4 +1,5 @@
 import { readNumber, roundTo } from "./format";
+import type { IncomeInputs } from "./incomeModel";
 import { loadStoredJson, saveJson } from "./storage";
 
 export const STORAGE_KEY = "basisflow_tax_config";
@@ -153,13 +154,13 @@ export function resetTaxConfig(): TaxConfig {
 
 export function getTaxDeductions(
   config: TaxConfig,
-  {
-    mortgageInterest = 0,
-    propertyTax = 0,
-    stateIncomeTax = 0,
-  }: { mortgageInterest?: number; propertyTax?: number; stateIncomeTax?: number } = {},
+  inputs?: IncomeInputs,
+  stateIncomeTax = 0,
 ) {
   if (config.deductionMode === "itemized") {
+    const mortgageInterest = inputs?.mortgageInterest ?? 0;
+    const propertyTax = inputs?.propertyTax ?? 0;
+
     return {
       federalDeduction: mortgageInterest + Math.min(propertyTax + stateIncomeTax, config.federalSaltCap),
       stateDeduction: mortgageInterest + propertyTax,

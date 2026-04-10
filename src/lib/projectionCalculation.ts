@@ -9,7 +9,13 @@ import {
   type ProjectedBucketState,
 } from "./assetsModel";
 import { getAnnualNonHousingExpenses, type ExpenseInputs, type ExpenseSnapshot } from "./expensesModel";
-import { computeAnnualTaxes, computeIncrementalTakeHome, computeRsuGrossForItems, type IncomeSummary } from "./incomeModel";
+import {
+  computeAnnualTaxes,
+  computeIncrementalTakeHome,
+  computeRsuGrossForItems,
+  type IncomeInputs,
+  type IncomeSummary,
+} from "./incomeModel";
 import { getMortgageYearInterest, getMortgageYearPropertyTax, type MortgageSummary } from "./mortgagePage";
 import { type ProjectionInputs } from "./projectionState";
 import { type ProjectionRow } from "./projectionUtils";
@@ -25,13 +31,7 @@ type ProjectionBase = {
   taxConfig: TaxConfig;
   income: {
     annualTakeHome: number;
-    grossSalary: number;
-    employee401k: number;
-    hsaContribution: number;
-    rsuGrossNextYear: number;
-    rsuItems: IncomeSummary["rsuItems"];
-    currentMortgageInterest: number;
-    propertyTax: number;
+    inputs: IncomeInputs;
   };
   mortgage: {
     annualPayment: number;
@@ -89,25 +89,11 @@ export type ProjectionResults = {
 };
 
 function getTaxBases(
-  grossSalary: number,
-  employee401k: number,
-  hsaContribution: number,
-  mortgageInterest: number,
-  propertyTax: number,
+  inputs: IncomeInputs,
   rsuGross: number,
   taxConfig: TaxConfig,
 ) {
-  const taxes = computeAnnualTaxes(
-    {
-      grossSalary,
-      employee401k,
-      hsaContribution,
-      mortgageInterest,
-      propertyTax,
-    },
-    taxConfig,
-    rsuGross,
-  );
+  const taxes = computeAnnualTaxes(inputs, taxConfig, rsuGross);
 
   return {
     federalTaxableIncome: taxes.federalTaxableIncome,
@@ -260,6 +246,18 @@ function createProjectionSimulation({
 }): ProjectionSimulation {
   const incomeDirectedContributions = buildIncomeDirectedContributions(incomeSummary);
   const reserveCashBucketId = PINNED_BUCKETS.reserveCashBucketId.id;
+  const incomeInputs: IncomeInputs = {
+    grossSalary: incomeSummary.grossSalary ?? 0,
+    rsuGrossNextYear: incomeSummary.rsuGrossNextYear ?? 0,
+    employee401k: incomeSummary.employee401k ?? 0,
+    matchRate: incomeSummary.matchRate ?? 0,
+    iraContribution: incomeSummary.iraContribution ?? 0,
+    megaBackdoorInput: incomeSummary.megaBackdoor ?? 0,
+    hsaContribution: incomeSummary.hsaContribution ?? 0,
+    mortgageInterest: getMortgageYearInterest(mortgageSummary, 1),
+    propertyTax: getMortgageYearPropertyTax(mortgageSummary),
+    rsuItems: incomeSummary.rsuItems ?? [],
+  };
   const base: ProjectionBase = {
     assetInputs,
     expenseInputs,
@@ -268,13 +266,7 @@ function createProjectionSimulation({
     taxConfig,
     income: {
       annualTakeHome: incomeSummary.annualTakeHome ?? 0,
-      grossSalary: incomeSummary.grossSalary ?? 0,
-      employee401k: incomeSummary.employee401k ?? 0,
-      hsaContribution: incomeSummary.hsaContribution ?? 0,
-      rsuGrossNextYear: incomeSummary.rsuGrossNextYear ?? 0,
-      rsuItems: incomeSummary.rsuItems ?? [],
-      currentMortgageInterest: getMortgageYearInterest(mortgageSummary, 1),
-      propertyTax: getMortgageYearPropertyTax(mortgageSummary),
+      inputs: incomeInputs,
     },
     mortgage: {
       annualPayment: (mortgageSummary.totalMonthlyPayment ?? 0) * 12,
@@ -307,15 +299,7 @@ function createProjectionSimulation({
     base.projectionInputs.mortgageFundingBucketId,
     base.mortgage.currentEquity,
   );
-  const currentTaxBases = getTaxBases(
-    base.income.grossSalary,
-    base.income.employee401k,
-    base.income.hsaContribution,
-    base.income.currentMortgageInterest,
-    base.income.propertyTax,
-    base.income.rsuGrossNextYear,
-    base.taxConfig,
-  );
+  const currentTaxBases = getTaxBases(base.income.inputs, base.income.inputs.rsuGrossNextYear ?? 0, base.taxConfig);
   const currentSnapshot = buildProjectionSnapshot({
     base,
     year: 0,
@@ -432,39 +416,22 @@ function buildProjectionRow({
 
 function buildProjectionYearContext(base: ProjectionBase, year: number): ProjectionYearContext {
   const growthFactor = Math.pow(1 + base.projectionInputs.takeHomeGrowthRate, year);
-  const mortgageInterest = getMortgageYearInterest(base.mortgageSummary, year);
+  const incomeInputs: IncomeInputs = {
+    ...base.income.inputs,
+    grossSalary: base.income.inputs.grossSalary * growthFactor,
+    mortgageInterest: getMortgageYearInterest(base.mortgageSummary, year),
+  };
   const rsuGross = computeRsuGrossForItems(
-    base.income.rsuItems,
+    incomeInputs.rsuItems,
     year - 1,
     base.projectionInputs.rsuStockGrowthRate,
     base.projectionInputs.takeHomeGrowthRate,
   );
-  const rsuNet = roundTo(
-    computeIncrementalTakeHome(
-      {
-        grossSalary: base.income.grossSalary,
-        employee401k: base.income.employee401k,
-        hsaContribution: base.income.hsaContribution,
-        mortgageInterest,
-        propertyTax: base.income.propertyTax,
-      },
-      base.taxConfig,
-      rsuGross,
-    ),
-    2,
-  );
+  const rsuNet = roundTo(computeIncrementalTakeHome(incomeInputs, base.taxConfig, rsuGross), 2);
   const takeHome = roundTo(base.income.annualTakeHome * growthFactor, 2);
   const nonHousingExpenses = roundTo(getAnnualNonHousingExpenses(base.expenseInputs.expenses, year), 2);
-  const ordinaryIncome = base.income.grossSalary * growthFactor;
-  const taxBases = getTaxBases(
-    ordinaryIncome,
-    base.income.employee401k,
-    base.income.hsaContribution,
-    mortgageInterest,
-    base.income.propertyTax,
-    rsuGross,
-    base.taxConfig,
-  );
+  const ordinaryIncome = incomeInputs.grossSalary;
+  const taxBases = getTaxBases(incomeInputs, rsuGross, base.taxConfig);
   const deductionTaxSavings = computeDeductionTaxSavings(
     ordinaryIncome,
     base.assetPlan.deductibleContributions,
