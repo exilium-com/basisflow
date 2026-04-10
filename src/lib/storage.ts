@@ -1,7 +1,7 @@
 import { readNumber } from "./format";
 import { buildIncomeSummary, calculateIncome, computeRsuGrossForItems, getAnnualSalaryTotal } from "./incomeModel";
 import { buildMortgageInputs, DEFAULT_MORTGAGE_STATE, normalizeMortgageState } from "./mortgageConfig";
-import { serializeMortgageSummary } from "./mortgagePage";
+import { getMortgageYearInterest, getMortgageYearPropertyTax, serializeMortgageSummary, type MortgageSummary } from "./mortgagePage";
 import { buildMortgageScenario } from "./mortgageSchedule";
 import { INCOME_STATE_KEY, INCOME_SUMMARY_KEY, MORTGAGE_STATE_KEY, MORTGAGE_SUMMARY_KEY } from "./storageKeys";
 import { normalizeConfig, STORAGE_KEY as TAX_CONFIG_KEY } from "./taxConfig";
@@ -69,9 +69,19 @@ function getProfileStorageKey(name: string) {
 }
 
 function rebuildStoredSummaries(documentValue: StorageDocument) {
+  if (documentValue[MORTGAGE_STATE_KEY]) {
+    const inputs = buildMortgageInputs(
+      normalizeMortgageState(documentValue[MORTGAGE_STATE_KEY], DEFAULT_MORTGAGE_STATE),
+    );
+    documentValue[MORTGAGE_SUMMARY_KEY] = serializeMortgageSummary(
+      buildMortgageScenario(inputs, inputs.activeLoanType),
+    );
+  }
+
   const incomeState = documentValue[INCOME_STATE_KEY];
   if (incomeState && typeof incomeState === "object" && Array.isArray((incomeState as StoredIncomeState).incomeItems)) {
     const state = incomeState as StoredIncomeState;
+    const mortgageSummary = (documentValue[MORTGAGE_SUMMARY_KEY] ?? {}) as Partial<MortgageSummary>;
     const salaryItems = state.incomeItems!
       .filter((item) => item?.type === "salary")
       .map((item) => ({
@@ -93,20 +103,13 @@ function rebuildStoredSummaries(documentValue: StorageDocument) {
       iraContribution: readNumber(state.iraContribution, 0),
       megaBackdoorInput: readNumber(state.megaBackdoorInput, 0),
       hsaContribution: readNumber(state.hsaContribution, 0),
+      mortgageInterest: getMortgageYearInterest(mortgageSummary, 1),
+      propertyTax: getMortgageYearPropertyTax(mortgageSummary),
       rsuItems,
     };
     documentValue[INCOME_SUMMARY_KEY] = buildIncomeSummary(
       inputs,
       calculateIncome(inputs, normalizeConfig(documentValue[TAX_CONFIG_KEY])),
-    );
-  }
-
-  if (documentValue[MORTGAGE_STATE_KEY]) {
-    const inputs = buildMortgageInputs(
-      normalizeMortgageState(documentValue[MORTGAGE_STATE_KEY], DEFAULT_MORTGAGE_STATE),
-    );
-    documentValue[MORTGAGE_SUMMARY_KEY] = serializeMortgageSummary(
-      buildMortgageScenario(inputs, inputs.activeLoanType),
     );
   }
 

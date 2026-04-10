@@ -10,17 +10,12 @@ import {
 } from "./assetsModel";
 import { getAnnualNonHousingExpenses, type ExpenseInputs, type ExpenseSnapshot } from "./expensesModel";
 import { computeAnnualTaxes, computeIncrementalTakeHome, computeRsuGrossForItems, type IncomeSummary } from "./incomeModel";
+import { getMortgageYearInterest, getMortgageYearPropertyTax, type MortgageSummary } from "./mortgagePage";
 import { type ProjectionInputs } from "./projectionState";
 import { type ProjectionRow } from "./projectionUtils";
 import { computeAdditionalTax, type TaxConfig } from "./taxConfig";
 
-type ProjectionMortgageSummary = {
-  totalMonthlyPayment?: number;
-  homePrice?: number;
-  currentEquity?: number;
-  loanAmount?: number;
-  yearlyLoan?: Array<{ year: number; principal: number; interest: number; endingBalance: number }>;
-};
+type ProjectionMortgageSummary = Partial<MortgageSummary>;
 
 type ProjectionBase = {
   assetInputs: AssetInputs;
@@ -35,6 +30,8 @@ type ProjectionBase = {
     hsaContribution: number;
     rsuGrossNextYear: number;
     rsuItems: IncomeSummary["rsuItems"];
+    currentMortgageInterest: number;
+    propertyTax: number;
   };
   mortgage: {
     annualPayment: number;
@@ -95,6 +92,8 @@ function getTaxBases(
   grossSalary: number,
   employee401k: number,
   hsaContribution: number,
+  mortgageInterest: number,
+  propertyTax: number,
   rsuGross: number,
   taxConfig: TaxConfig,
 ) {
@@ -103,6 +102,8 @@ function getTaxBases(
       grossSalary,
       employee401k,
       hsaContribution,
+      mortgageInterest,
+      propertyTax,
     },
     taxConfig,
     rsuGross,
@@ -272,6 +273,8 @@ function createProjectionSimulation({
       hsaContribution: incomeSummary.hsaContribution ?? 0,
       rsuGrossNextYear: incomeSummary.rsuGrossNextYear ?? 0,
       rsuItems: incomeSummary.rsuItems ?? [],
+      currentMortgageInterest: getMortgageYearInterest(mortgageSummary, 1),
+      propertyTax: getMortgageYearPropertyTax(mortgageSummary),
     },
     mortgage: {
       annualPayment: (mortgageSummary.totalMonthlyPayment ?? 0) * 12,
@@ -308,6 +311,8 @@ function createProjectionSimulation({
     base.income.grossSalary,
     base.income.employee401k,
     base.income.hsaContribution,
+    base.income.currentMortgageInterest,
+    base.income.propertyTax,
     base.income.rsuGrossNextYear,
     base.taxConfig,
   );
@@ -427,6 +432,7 @@ function buildProjectionRow({
 
 function buildProjectionYearContext(base: ProjectionBase, year: number): ProjectionYearContext {
   const growthFactor = Math.pow(1 + base.projectionInputs.takeHomeGrowthRate, year);
+  const mortgageInterest = getMortgageYearInterest(base.mortgageSummary, year);
   const rsuGross = computeRsuGrossForItems(
     base.income.rsuItems,
     year - 1,
@@ -439,6 +445,8 @@ function buildProjectionYearContext(base: ProjectionBase, year: number): Project
         grossSalary: base.income.grossSalary,
         employee401k: base.income.employee401k,
         hsaContribution: base.income.hsaContribution,
+        mortgageInterest,
+        propertyTax: base.income.propertyTax,
       },
       base.taxConfig,
       rsuGross,
@@ -452,6 +460,8 @@ function buildProjectionYearContext(base: ProjectionBase, year: number): Project
     ordinaryIncome,
     base.income.employee401k,
     base.income.hsaContribution,
+    mortgageInterest,
+    base.income.propertyTax,
     rsuGross,
     base.taxConfig,
   );

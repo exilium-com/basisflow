@@ -77,6 +77,60 @@ describe("calculateIncome", () => {
     expect(baseline.fica.total).toBe(without.fica.total);
   });
 
+  it("uses itemized deductions when selected", () => {
+    const standard = runIncomeScenario({
+      salary: 250000,
+      taxConfig: {
+        deductionMode: "standard",
+        federalStandardDeduction: 1000,
+        stateStandardDeduction: 1000,
+      },
+    }).taxes;
+    const itemized = runIncomeScenario({
+      salary: 250000,
+      taxConfig: {
+        deductionMode: "itemized",
+        federalStandardDeduction: 1000,
+        stateStandardDeduction: 1000,
+        federalSaltCap: 40400,
+      },
+      inputs: {
+        mortgageInterest: 30000,
+        propertyTax: 12000,
+      },
+    }).taxes;
+
+    expect(itemized.federalTax).toBeLessThan(standard.federalTax);
+    expect(itemized.californiaTax).toBeLessThan(standard.californiaTax);
+  });
+
+  it("caps federal SALT deductions at ten thousand dollars", () => {
+    const lowSalt = runIncomeScenario({
+      salary: 250000,
+      taxConfig: {
+        deductionMode: "itemized",
+        federalSaltCap: 10000,
+      },
+      inputs: {
+        mortgageInterest: 0,
+        propertyTax: 10000,
+      },
+    }).taxes.federalTax;
+    const highSalt = runIncomeScenario({
+      salary: 250000,
+      taxConfig: {
+        deductionMode: "itemized",
+        federalSaltCap: 10000,
+      },
+      inputs: {
+        mortgageInterest: 0,
+        propertyTax: 25000,
+      },
+    }).taxes.federalTax;
+
+    expect(highSalt).toBe(lowSalt);
+  });
+
   it.each(incomeGoldens)("$name", (testCase) => {
     const actual = runIncomeScenario(testCase.scenario).taxes;
     expect(actual).toMatchObject(testCase.expected);

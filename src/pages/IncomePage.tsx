@@ -21,9 +21,10 @@ import {
   type SalaryFrequency,
   type SalaryInputItem,
 } from "../lib/incomeModel";
-import { saveJson } from "../lib/storage";
+import { getMortgageYearInterest, getMortgageYearPropertyTax, type MortgageSummary } from "../lib/mortgagePage";
+import { loadStoredJson, saveJson } from "../lib/storage";
 import { loadTaxConfig } from "../lib/taxConfig";
-import { INCOME_STATE_KEY, INCOME_SUMMARY_KEY } from "../lib/storageKeys";
+import { INCOME_STATE_KEY, INCOME_SUMMARY_KEY, MORTGAGE_SUMMARY_KEY } from "../lib/storageKeys";
 import { surfaceClass } from "../lib/ui";
 
 type SalaryStateItem = {
@@ -171,6 +172,7 @@ export function IncomePage() {
       refresherAmount: item.refresherAmount ?? 0,
       vestingYears: item.vestingYears ?? 4,
     }));
+  const mortgageSummary = (loadStoredJson(MORTGAGE_SUMMARY_KEY) ?? {}) as Partial<MortgageSummary>;
   const inputs = {
     grossSalary: getAnnualSalaryTotal(salaryItems),
     rsuGrossNextYear: computeRsuGrossForItems(rsuItems, 0),
@@ -179,6 +181,8 @@ export function IncomePage() {
     iraContribution: state.iraContribution,
     megaBackdoorInput: state.megaBackdoorInput,
     hsaContribution: state.hsaContribution,
+    mortgageInterest: getMortgageYearInterest(mortgageSummary, 1),
+    propertyTax: getMortgageYearPropertyTax(mortgageSummary),
     rsuItems,
   };
   const taxConfig = loadTaxConfig();

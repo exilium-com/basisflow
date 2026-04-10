@@ -37,6 +37,16 @@ export function serializeMortgageSummary(scenario: MortgageScenario) {
   };
 }
 
+export type MortgageSummary = ReturnType<typeof serializeMortgageSummary>;
+
+export function getMortgageYearInterest(summary: Partial<MortgageSummary>, year = 1) {
+  return summary.yearlyLoan?.find((row) => row.year === year)?.interest ?? 0;
+}
+
+export function getMortgageYearPropertyTax(summary: Partial<MortgageSummary>) {
+  return (summary.monthlyTax ?? 0) * 12;
+}
+
 export function buildMortgageComparisonRows(
   scenario: MortgageScenario,
   compareScenario: MortgageScenario,

@@ -1,5 +1,5 @@
 import { clamp, roundTo } from "./format";
-import { computeProgressiveTax, type TaxConfig } from "./taxConfig";
+import { computeProgressiveTax, getTaxDeductions, type TaxConfig } from "./taxConfig";
 
 export type SalaryFrequency = "annual" | "monthly";
 
@@ -26,6 +26,8 @@ export type IncomeInputs = {
   iraContribution: number;
   megaBackdoorInput: number;
   hsaContribution: number;
+  mortgageInterest?: number;
+  propertyTax?: number;
   rsuItems?: RsuInputItem[];
 };
 
@@ -105,15 +107,28 @@ export function computeSavings(inputs: IncomeInputs, taxConfig: TaxConfig) {
   };
 }
 
-export function computeAnnualTaxes(inputs: Pick<IncomeInputs, "grossSalary" | "employee401k" | "hsaContribution">, taxConfig: TaxConfig, extraOrdinaryIncome = 0) {
+export function computeAnnualTaxes(
+  inputs: Pick<IncomeInputs, "grossSalary" | "employee401k" | "hsaContribution" | "mortgageInterest" | "propertyTax">,
+  taxConfig: TaxConfig,
+  extraOrdinaryIncome = 0,
+) {
   const grossIncome = Math.max(0, inputs.grossSalary + extraOrdinaryIncome);
-  const federalAdjustedGross = Math.max(0, grossIncome - inputs.employee401k - inputs.hsaContribution);
-  const federalTaxableIncome = Math.max(0, federalAdjustedGross - taxConfig.federalStandardDeduction);
-  const federalTax = computeProgressiveTax(federalTaxableIncome, taxConfig.federalBrackets);
-
   const californiaAdjustedGross = Math.max(0, grossIncome - inputs.employee401k);
-  const californiaTaxableIncome = Math.max(0, californiaAdjustedGross - taxConfig.stateStandardDeduction);
+  const stateDeductions = getTaxDeductions(taxConfig, {
+    mortgageInterest: inputs.mortgageInterest,
+    propertyTax: inputs.propertyTax,
+  });
+  const californiaTaxableIncome = Math.max(0, californiaAdjustedGross - stateDeductions.stateDeduction);
   const californiaTax = computeProgressiveTax(californiaTaxableIncome, taxConfig.stateBrackets);
+
+  const federalAdjustedGross = Math.max(0, grossIncome - inputs.employee401k - inputs.hsaContribution);
+  const federalDeductions = getTaxDeductions(taxConfig, {
+    mortgageInterest: inputs.mortgageInterest,
+    propertyTax: inputs.propertyTax,
+    stateIncomeTax: californiaTax,
+  });
+  const federalTaxableIncome = Math.max(0, federalAdjustedGross - federalDeductions.federalDeduction);
+  const federalTax = computeProgressiveTax(federalTaxableIncome, taxConfig.federalBrackets);
 
   const fica = computeFica(grossIncome);
   const caSdi = roundTo(grossIncome * (taxConfig.caSdiRate / 100), 2);
@@ -130,7 +145,7 @@ export function computeAnnualTaxes(inputs: Pick<IncomeInputs, "grossSalary" | "e
 }
 
 export function computeIncrementalTakeHome(
-  inputs: Pick<IncomeInputs, "grossSalary" | "employee401k" | "hsaContribution">,
+  inputs: Pick<IncomeInputs, "grossSalary" | "employee401k" | "hsaContribution" | "mortgageInterest" | "propertyTax">,
   taxConfig: TaxConfig,
   extraOrdinaryIncome: number,
 ) {
