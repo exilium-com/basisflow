@@ -21,7 +21,7 @@ const maxed: IncomeScenarioOptions = {
     employee401k: 24500,
     hsaContribution: 4400,
     iraContribution: 7000,
-    megaBackdoorInput: 35250,
+    megaBackdoor: 35250,
     matchRate: 50,
   },
 };
@@ -32,7 +32,7 @@ describe("calculateIncome", () => {
     const comparison = runIncomeScenario(
       withInputOverrides(maxed, {
         iraContribution: 0,
-        megaBackdoorInput: 0,
+        megaBackdoor: 0,
       }),
     ).taxes.totalTaxes;
 

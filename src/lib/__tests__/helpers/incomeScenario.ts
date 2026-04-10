@@ -1,4 +1,4 @@
-import { calculateIncome, computeAnnualTaxes, computeSavings, type IncomeInputs } from "../../incomeModel";
+import { buildIncomeInputs, calculateIncome, computeAnnualTaxes, computeSavings, type IncomeInputs } from "../../incomeModel";
 import { DEFAULT_CONFIG, normalizeConfig, type TaxConfig } from "../../taxConfig";
 
 export type IncomeScenarioOptions = {
@@ -14,16 +14,11 @@ export function money(value: number) {
 }
 
 export function createIncomeInputs({ salary = 0, rsuValue = 0, ...overrides }: IncomeScenarioOptions = {}): IncomeInputs {
-  return {
+  return buildIncomeInputs({
     grossSalary: salary,
     rsuGrossNextYear: rsuValue,
-    employee401k: 0,
-    matchRate: 0,
-    iraContribution: 0,
-    megaBackdoorInput: 0,
-    hsaContribution: 0,
     ...overrides,
-  };
+  });
 }
 
 export function createIncomeTaxConfig(overrides: Partial<TaxConfig> = {}) {

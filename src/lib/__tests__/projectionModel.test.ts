@@ -19,7 +19,7 @@ const realisticIncome = runIncomeScenario({
     employee401k: realisticRetirement.employee401k,
     hsaContribution: realisticRetirement.hsaContribution,
     iraContribution: realisticRetirement.iraContribution,
-    megaBackdoorInput: realisticRetirement.megaBackdoor,
+    megaBackdoor: realisticRetirement.megaBackdoor,
     matchRate: 50,
   },
 }).income;

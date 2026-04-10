@@ -13,6 +13,7 @@ import { WorkspaceLayout } from "../components/WorkspaceLayout";
 import { useStoredState } from "../hooks/useStoredState";
 import { readNumber, usd } from "../lib/format";
 import {
+  buildIncomeInputs,
   buildIncomeSummary,
   calculateIncome,
   computeRsuGrossForItems,
@@ -53,7 +54,7 @@ type IncomeState = {
   employee401k: number;
   matchRate: number;
   iraContribution: number;
-  megaBackdoorInput: number;
+  megaBackdoor: number;
   hsaContribution: number;
   incomeParametersOpen: boolean;
 };
@@ -88,7 +89,7 @@ const DEFAULTS: IncomeState = {
   employee401k: 0,
   matchRate: 0,
   iraContribution: 0,
-  megaBackdoorInput: 0,
+  megaBackdoor: 0,
   hsaContribution: 0,
   incomeParametersOpen: false,
 };
@@ -97,7 +98,7 @@ const INCOME_NUMBER_FIELDS = [
   "employee401k",
   "matchRate",
   "iraContribution",
-  "megaBackdoorInput",
+  "megaBackdoor",
   "hsaContribution",
 ] as const satisfies ReadonlyArray<keyof IncomeState>;
 
@@ -127,7 +128,11 @@ function normalizeIncomeItem(item: unknown): IncomeStateItem {
 function normalizeState(parsed: unknown, fallback: IncomeState): IncomeState {
   const state = typeof parsed === "object" && parsed ? (parsed as Record<string, unknown>) : {};
   const numericState = Object.fromEntries(
-    INCOME_NUMBER_FIELDS.map((field) => [field, readNumber(state[field], fallback[field])]),
+    INCOME_NUMBER_FIELDS.map((field) =>
+      field === "megaBackdoor"
+        ? [field, readNumber(state.megaBackdoor ?? state.megaBackdoorInput, fallback.megaBackdoor)]
+        : [field, readNumber(state[field], fallback[field])],
+    ),
   ) as Pick<IncomeState, (typeof INCOME_NUMBER_FIELDS)[number]>;
 
   return {
@@ -173,18 +178,18 @@ export function IncomePage() {
       vestingYears: item.vestingYears ?? 4,
     }));
   const mortgageSummary = (loadStoredJson(MORTGAGE_SUMMARY_KEY) ?? {}) as Partial<MortgageSummary>;
-  const inputs = {
+  const inputs = buildIncomeInputs({
     grossSalary: getAnnualSalaryTotal(salaryItems),
     rsuGrossNextYear: computeRsuGrossForItems(rsuItems, 0),
     employee401k: state.employee401k,
     matchRate: state.matchRate,
     iraContribution: state.iraContribution,
-    megaBackdoorInput: state.megaBackdoorInput,
+    megaBackdoor: state.megaBackdoor,
     hsaContribution: state.hsaContribution,
     mortgageInterest: getMortgageYearInterest(mortgageSummary, 1),
     propertyTax: getMortgageYearPropertyTax(mortgageSummary),
     rsuItems,
-  };
+  });
   const taxConfig = loadTaxConfig();
   const results = calculateIncome(inputs, taxConfig);
 
@@ -229,7 +234,7 @@ export function IncomePage() {
     ["Employee 401(k)", inputs.employee401k],
     ["Employer match", results.employerMatch],
     ["IRA", inputs.iraContribution],
-    ["Mega backdoor after-tax", results.mega],
+    ["Mega backdoor after-tax", results.megaBackdoor],
     ["HSA", inputs.hsaContribution],
   ];
   const hasRsuItems = rsuItems.length > 0;
@@ -244,7 +249,7 @@ export function IncomePage() {
       : []),
     {
       label: "Retirement saving",
-      value: usd(inputs.employee401k + results.employerMatch + inputs.iraContribution + results.mega, 2),
+      value: usd(inputs.employee401k + results.employerMatch + inputs.iraContribution + results.megaBackdoor, 2),
     },
     { label: "Total taxes", value: usd(results.totalTaxes, 2) },
     { label: "Federal tax", value: usd(results.federalTax, 2) },
@@ -466,14 +471,14 @@ export function IncomePage() {
               >
                 <div className="pt-1 text-sm text-(--ink-soft)">Roth 401(k)</div>
                 <SliderField
-                  id="megaBackdoorInput"
+                  id="megaBackdoor"
                   label="Mega backdoor"
-                  valueLabel={usd(results.mega)}
+                  valueLabel={usd(results.megaBackdoor)}
                   min="0"
                   max={Math.max(0, Math.round(results.availableMegaRoom))}
                   step="50"
-                  value={Math.min(state.megaBackdoorInput, Math.max(0, Math.round(results.availableMegaRoom)))}
-                  onChange={(event) => updateField("megaBackdoorInput", Number(event.target.value))}
+                  value={Math.min(state.megaBackdoor, Math.max(0, Math.round(results.availableMegaRoom)))}
+                  onChange={(event) => updateField("megaBackdoor", Number(event.target.value))}
                 />
               </div>
 

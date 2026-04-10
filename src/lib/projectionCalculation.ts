@@ -10,6 +10,7 @@ import {
 } from "./assetsModel";
 import { getAnnualNonHousingExpenses, type ExpenseInputs, type ExpenseSnapshot } from "./expensesModel";
 import {
+  buildIncomeInputs,
   computeAnnualTaxes,
   computeIncrementalTakeHome,
   computeRsuGrossForItems,
@@ -237,7 +238,7 @@ function createProjectionSimulation({
   projectionInputs,
   taxConfig,
 }: {
-  incomeSummary: Partial<IncomeSummary>;
+  incomeSummary: IncomeSummary;
   mortgageSummary: ProjectionMortgageSummary;
   assetInputs: AssetInputs;
   expenseInputs: ExpenseInputs;
@@ -246,18 +247,11 @@ function createProjectionSimulation({
 }): ProjectionSimulation {
   const incomeDirectedContributions = buildIncomeDirectedContributions(incomeSummary);
   const reserveCashBucketId = PINNED_BUCKETS.reserveCashBucketId.id;
-  const incomeInputs: IncomeInputs = {
-    grossSalary: incomeSummary.grossSalary ?? 0,
-    rsuGrossNextYear: incomeSummary.rsuGrossNextYear ?? 0,
-    employee401k: incomeSummary.employee401k ?? 0,
-    matchRate: incomeSummary.matchRate ?? 0,
-    iraContribution: incomeSummary.iraContribution ?? 0,
-    megaBackdoorInput: incomeSummary.megaBackdoor ?? 0,
-    hsaContribution: incomeSummary.hsaContribution ?? 0,
+  const incomeInputs = buildIncomeInputs({
+    ...incomeSummary,
     mortgageInterest: getMortgageYearInterest(mortgageSummary, 1),
     propertyTax: getMortgageYearPropertyTax(mortgageSummary),
-    rsuItems: incomeSummary.rsuItems ?? [],
-  };
+  });
   const base: ProjectionBase = {
     assetInputs,
     expenseInputs,
@@ -567,7 +561,7 @@ export function calculateProjection({
   projectionInputs,
   taxConfig,
 }: {
-  incomeSummary: Partial<IncomeSummary>;
+  incomeSummary: IncomeSummary;
   mortgageSummary: ProjectionMortgageSummary;
   assetInputs: AssetInputs;
   expenseInputs: ExpenseInputs;

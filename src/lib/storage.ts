@@ -1,5 +1,11 @@
 import { readNumber } from "./format";
-import { buildIncomeSummary, calculateIncome, computeRsuGrossForItems, getAnnualSalaryTotal } from "./incomeModel";
+import {
+  buildIncomeInputs,
+  buildIncomeSummary,
+  calculateIncome,
+  computeRsuGrossForItems,
+  getAnnualSalaryTotal,
+} from "./incomeModel";
 import { buildMortgageInputs, DEFAULT_MORTGAGE_STATE, normalizeMortgageState } from "./mortgageConfig";
 import { getMortgageYearInterest, getMortgageYearPropertyTax, serializeMortgageSummary, type MortgageSummary } from "./mortgagePage";
 import { buildMortgageScenario } from "./mortgageSchedule";
@@ -25,6 +31,7 @@ type StoredIncomeState = {
   employee401k?: string | number;
   matchRate?: string | number;
   iraContribution?: string | number;
+  megaBackdoor?: string | number;
   megaBackdoorInput?: string | number;
   hsaContribution?: string | number;
 };
@@ -95,18 +102,18 @@ function rebuildStoredSummaries(documentValue: StorageDocument) {
         refresherAmount: readNumber(item?.refresherAmount, 0),
         vestingYears: readNumber(item?.vestingYears, 4),
       }));
-    const inputs = {
+    const inputs = buildIncomeInputs({
       grossSalary: getAnnualSalaryTotal(salaryItems),
       rsuGrossNextYear: computeRsuGrossForItems(rsuItems, 0),
       employee401k: readNumber(state.employee401k, 0),
       matchRate: readNumber(state.matchRate, 0),
       iraContribution: readNumber(state.iraContribution, 0),
-      megaBackdoorInput: readNumber(state.megaBackdoorInput, 0),
+      megaBackdoor: readNumber(state.megaBackdoor ?? state.megaBackdoorInput, 0),
       hsaContribution: readNumber(state.hsaContribution, 0),
       mortgageInterest: getMortgageYearInterest(mortgageSummary, 1),
       propertyTax: getMortgageYearPropertyTax(mortgageSummary),
       rsuItems,
-    };
+    });
     documentValue[INCOME_SUMMARY_KEY] = buildIncomeSummary(
       inputs,
       calculateIncome(inputs, normalizeConfig(documentValue[TAX_CONFIG_KEY])),

@@ -1,5 +1,5 @@
 import { clamp, readNumber, roundTo } from "./format";
-import { type IncomeSummary } from "./incomeModel";
+import { DEFAULT_INCOME_SUMMARY, type IncomeSummary } from "./incomeModel";
 import { computeAdditionalTax, type TaxConfig } from "./taxConfig";
 
 export type AssetTaxTreatment = "none" | "taxDeductible" | "taxDeferred";
@@ -173,7 +173,7 @@ export function normalizeAssetsState(parsed: unknown, fallback: AssetsState): As
   };
 }
 
-export function buildIncomeDirectedContributions(summary: Partial<IncomeSummary> = {}) {
+export function buildIncomeDirectedContributions(summary: IncomeSummary = DEFAULT_INCOME_SUMMARY) {
   const contributions: Record<string, number> = {};
 
   function add(bucketId: string, amount = 0) {

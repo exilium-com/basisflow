@@ -42,14 +42,14 @@ import {
 } from "../lib/storageKeys";
 import { loadTaxConfig } from "../lib/taxConfig";
 import { surfaceClass } from "../lib/ui";
-import { type IncomeSummary } from "../lib/incomeModel";
+import { createIncomeSummary, type IncomeSummary } from "../lib/incomeModel";
 
 export function ProjectionPage() {
   const [state, setState] = useStoredState(PROJECTION_STATE_KEY, DEFAULT_PROJECTION_STATE, {
     normalize: normalizeProjectionState,
   });
   const taxConfig = loadTaxConfig();
-  const incomeSummary = (loadStoredJson(INCOME_SUMMARY_KEY) ?? {}) as Partial<IncomeSummary>;
+  const incomeSummary = createIncomeSummary((loadStoredJson(INCOME_SUMMARY_KEY) ?? {}) as Partial<IncomeSummary>);
   const mortgageSummary = loadStoredJson(MORTGAGE_SUMMARY_KEY) ?? {};
   const assetState = normalizeAssetsState(
     loadStoredJson(ASSETS_STATE_KEY, true) ?? DEFAULT_ASSETS_STATE,

@@ -33,7 +33,7 @@ export function buildMonthlyCashFlow({
   projectionInputs,
   currentRow,
 }: {
-  incomeSummary: Partial<IncomeSummary>;
+  incomeSummary: IncomeSummary;
   projectionInputs: ProjectionInputs;
   currentRow: ProjectionRow;
 }) {

@@ -17,7 +17,7 @@ import { calculateProjection, type ProjectionResults } from "../../projectionCal
 import { roundTo } from "../../format";
 import { DEFAULT_CONFIG, normalizeConfig, type TaxConfig } from "../../taxConfig";
 import { type ProjectionRow } from "../../projectionUtils";
-import { type RsuInputItem } from "../../incomeModel";
+import { createIncomeSummary as buildIncomeSummary, type RsuInputItem } from "../../incomeModel";
 
 type RetirementInputs = {
   employee401k?: number;
@@ -227,7 +227,7 @@ function createIncomeSummary({
     hsaContribution = 0,
   } = retirement;
 
-  return {
+  return buildIncomeSummary({
     grossSalary: salary,
     annualTakeHome: roundTo(annualTakeHome, 2),
     monthlyTakeHome: roundTo(annualTakeHome / 12, 2),
@@ -241,7 +241,7 @@ function createIncomeSummary({
     rsuItems: createProjectionRsuItems(rsuValue),
     rsuGrossNextYear: roundTo(rsuValue, 2),
     rsuNetNextYear: 0,
-  };
+  });
 }
 
 function createMortgageSummary({
