@@ -1,7 +1,7 @@
 import React from "react";
 import { buildLinePath, getChartFrame } from "../lib/chart";
 import { clamp, usd } from "../lib/format";
-import { toDisplayValue, type ProjectionInputs } from "../lib/projectionState";
+import { toDisplayValue, type Projection } from "../lib/projectionState";
 import { type ProjectionResults } from "../lib/projectionCalculation";
 import { type ProjectionRow } from "../lib/projectionUtils";
 
@@ -19,14 +19,14 @@ type EmptyChartProps = {
 type ProjectionLineChartProps = {
   ariaLabel: string;
   currentYear: number;
-  inputs: ProjectionInputs;
-  projection: ProjectionRow[];
+  projection: Projection;
+  rows: ProjectionRow[];
   series: ProjectionSeriesItem[];
   valueDomain?: "span" | "zeroToMax";
 };
 
 type ProjectionChartProps = {
-  inputs: ProjectionInputs;
+  projection: Projection;
   results: ProjectionResults;
   currentYear: number;
 };
@@ -42,19 +42,19 @@ function EmptyChart({ ariaLabel }: EmptyChartProps) {
 function ProjectionLineChart({
   ariaLabel,
   currentYear,
-  inputs,
   projection,
+  rows,
   series,
   valueDomain = "span",
 }: ProjectionLineChartProps) {
-  if (!projection.length) {
+  if (!rows.length) {
     return <EmptyChart ariaLabel={ariaLabel} />;
   }
 
   const { height, innerWidth, innerHeight, plotLeft, plotTop, plotRight, plotBottom } = getChartFrame();
-  const displayProjection = projection.map((row) => ({
+  const displayProjection = rows.map((row) => ({
     year: row.year,
-    values: Object.fromEntries(series.map((item) => [item.key, toDisplayValue(row[item.key], row.year, inputs)])),
+    values: Object.fromEntries(series.map((item) => [item.key, toDisplayValue(row[item.key], row.year, projection)])),
   }));
   const totalYears = displayProjection.length;
   const allValues = displayProjection.flatMap((row) => series.map((item) => row.values[item.key]));
@@ -69,7 +69,7 @@ function ProjectionLineChart({
     };
   }
 
-  const markerX = plotLeft + (currentYear / Math.max(inputs.horizonYears, 1)) * innerWidth;
+  const markerX = plotLeft + (currentYear / Math.max(projection.horizonYears, 1)) * innerWidth;
   const zeroY = clamp(plotTop + ((maxValue - 0) / span) * innerHeight, plotTop, plotBottom);
 
   return (
@@ -131,13 +131,13 @@ function ProjectionLineChart({
   );
 }
 
-export function NetWorthChart({ inputs, results, currentYear }: ProjectionChartProps) {
+export function NetWorthChart({ projection, results, currentYear }: ProjectionChartProps) {
   return (
     <ProjectionLineChart
       ariaLabel="Net worth over time chart"
       currentYear={currentYear}
-      inputs={inputs}
-      projection={results.projection}
+      projection={projection}
+      rows={results.projection}
       series={[
         { key: "assetsGross", stroke: "var(--teal)" },
         { key: "homeEquity", stroke: "var(--clay)" },
@@ -152,13 +152,13 @@ export function NetWorthChart({ inputs, results, currentYear }: ProjectionChartP
   );
 }
 
-export function AssetTaxChart({ inputs, results, currentYear }: ProjectionChartProps) {
+export function AssetTaxChart({ projection, results, currentYear }: ProjectionChartProps) {
   return (
     <ProjectionLineChart
       ariaLabel="Projected asset gross value and capital gains tax chart"
       currentYear={currentYear}
-      inputs={inputs}
-      projection={results.projection}
+      projection={projection}
+      rows={results.projection}
       series={[
         {
           key: "capitalGainsTax",

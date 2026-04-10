@@ -13,7 +13,7 @@ import { WorkspaceLayout } from "../components/WorkspaceLayout";
 import { useStoredState } from "../hooks/useStoredState";
 import { readNumber, usd } from "../lib/format";
 import {
-  buildIncomeInputs,
+  createIncome,
   buildIncomeSummary,
   calculateIncome,
   computeRsuGrossForItems,
@@ -178,7 +178,7 @@ export function IncomePage() {
       vestingYears: item.vestingYears ?? 4,
     }));
   const mortgageSummary = (loadStoredJson(MORTGAGE_SUMMARY_KEY) ?? {}) as Partial<MortgageSummary>;
-  const inputs = buildIncomeInputs({
+  const inputs = createIncome({
     grossSalary: getAnnualSalaryTotal(salaryItems),
     rsuGrossNextYear: computeRsuGrossForItems(rsuItems, 0),
     employee401k: state.employee401k,

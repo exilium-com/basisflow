@@ -1,12 +1,12 @@
 import { readNumber } from "./format";
 import {
-  buildIncomeInputs,
+  createIncome,
   buildIncomeSummary,
   calculateIncome,
   computeRsuGrossForItems,
   getAnnualSalaryTotal,
 } from "./incomeModel";
-import { buildMortgageInputs, DEFAULT_MORTGAGE_STATE, normalizeMortgageState } from "./mortgageConfig";
+import { createMortgage, DEFAULT_MORTGAGE_STATE, normalizeMortgageState } from "./mortgageConfig";
 import { getMortgageYearInterest, getMortgageYearPropertyTax, serializeMortgageSummary, type MortgageSummary } from "./mortgagePage";
 import { buildMortgageScenario } from "./mortgageSchedule";
 import { INCOME_STATE_KEY, INCOME_SUMMARY_KEY, MORTGAGE_STATE_KEY, MORTGAGE_SUMMARY_KEY } from "./storageKeys";
@@ -77,11 +77,11 @@ function getProfileStorageKey(name: string) {
 
 function rebuildStoredSummaries(documentValue: StorageDocument) {
   if (documentValue[MORTGAGE_STATE_KEY]) {
-    const inputs = buildMortgageInputs(
+    const mortgage = createMortgage(
       normalizeMortgageState(documentValue[MORTGAGE_STATE_KEY], DEFAULT_MORTGAGE_STATE),
     );
     documentValue[MORTGAGE_SUMMARY_KEY] = serializeMortgageSummary(
-      buildMortgageScenario(inputs, inputs.activeLoanType),
+      buildMortgageScenario(mortgage, mortgage.activeLoanType),
     );
   }
 
@@ -102,7 +102,7 @@ function rebuildStoredSummaries(documentValue: StorageDocument) {
         refresherAmount: readNumber(item?.refresherAmount, 0),
         vestingYears: readNumber(item?.vestingYears, 4),
       }));
-    const inputs = buildIncomeInputs({
+    const inputs = createIncome({
       grossSalary: getAnnualSalaryTotal(salaryItems),
       rsuGrossNextYear: computeRsuGrossForItems(rsuItems, 0),
       employee401k: readNumber(state.employee401k, 0),

@@ -1,5 +1,5 @@
 import { clamp, readNumber } from "./format";
-import { PINNED_BUCKETS, type AssetInputs } from "./assetsModel";
+import { PINNED_BUCKETS, type Assets } from "./assetsModel";
 
 export type ProjectionDisplayMode = "nominal" | "real";
 export type AllocationMode = "percent" | "amount";
@@ -40,7 +40,7 @@ export type ProjectionState = ProjectionSettings & {
   expenseOverrides: Record<string, ProjectionExpenseOverride>;
 };
 
-export type ProjectionInputs = ProjectionSettings & {
+export type Projection = ProjectionSettings & {
   allocationPercentTotal: number;
   allocationAmountTotal: number;
 };
@@ -153,17 +153,17 @@ export function normalizeProjectionState(parsed: unknown, fallback: ProjectionSt
   };
 }
 
-export function normalizeProjectionInputs(
+export function createProjection(
   state: ProjectionState,
-  assetInputs: AssetInputs,
+  assets: Assets,
   incomeDirectedContributions: Record<string, number> = {},
-): ProjectionInputs {
-  const allocations: ProjectionInputs["allocations"] = {};
+): Projection {
+  const allocations: Projection["allocations"] = {};
   let allocationPercentTotal = 0;
   let allocationAmountTotal = 0;
   const reserveCashBucketId = PINNED_BUCKETS.reserveCashBucketId.id;
 
-  assetInputs.buckets.forEach((bucket) => {
+  assets.buckets.forEach((bucket) => {
     if (bucket.id === reserveCashBucketId || (incomeDirectedContributions[bucket.id] ?? 0) > 0) {
       allocations[bucket.id] = { mode: "amount", value: 0 };
       return;
@@ -201,9 +201,9 @@ export function normalizeProjectionInputs(
   };
 }
 
-export function toDisplayValue(value: number, year: number, inputs: ProjectionInputs) {
-  if (inputs.displayMode !== "real") {
+export function toDisplayValue(value: number, year: number, projection: Projection) {
+  if (projection.displayMode !== "real") {
     return value;
   }
-  return value / Math.pow(1 + inputs.inflationRate, year);
+  return value / Math.pow(1 + projection.inflationRate, year);
 }

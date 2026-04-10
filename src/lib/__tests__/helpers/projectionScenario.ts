@@ -2,17 +2,17 @@ import {
   DEFAULT_ASSETS_STATE,
   PINNED_BUCKETS,
   buildIncomeDirectedContributions,
-  normalizeAssetInputs,
+  createAssets,
   normalizeAssetsState,
   type AssetBucketState,
   type AssetTaxTreatment,
 } from "../../assetsModel";
 import {
   DEFAULT_EXPENSES_STATE,
-  normalizeExpenseInputs,
+  createExpenses,
   normalizeExpensesState,
 } from "../../expensesModel";
-import { DEFAULT_PROJECTION_STATE, normalizeProjectionInputs, normalizeProjectionState } from "../../projectionState";
+import { DEFAULT_PROJECTION_STATE, createProjection, normalizeProjectionState } from "../../projectionState";
 import { calculateProjection, type ProjectionResults } from "../../projectionCalculation";
 import { roundTo } from "../../format";
 import { DEFAULT_CONFIG, normalizeConfig, type TaxConfig } from "../../taxConfig";
@@ -72,9 +72,9 @@ type ProjectionScenarioRun = {
     taxConfig: TaxConfig;
   };
   taxConfig: TaxConfig;
-  assetInputs: ReturnType<typeof normalizeAssetInputs>;
-  expenseInputs: ReturnType<typeof normalizeExpenseInputs>;
-  projectionInputs: ReturnType<typeof normalizeProjectionInputs>;
+  assets: ReturnType<typeof createAssets>;
+  expenses: ReturnType<typeof createExpenses>;
+  projection: ReturnType<typeof createProjection>;
   results: ProjectionResults;
   getYear: (year: number) => ProjectionRow;
 };
@@ -432,25 +432,25 @@ export function runProjectionScenario({
   const expensesState = normalizeExpensesState(clone(scenario.expensesState), fallbackExpensesState);
   const projectionState = normalizeProjectionState(clone(scenario.projectionState), fallbackProjectionState);
 
-  const assetInputs = normalizeAssetInputs(assetsState, projectionState.assetGrowthRate);
-  const expenseInputs = normalizeExpenseInputs(expensesState, projectionState.expenseGrowthRate);
+  const assets = createAssets(assetsState, projectionState.assetGrowthRate);
+  const expenses = createExpenses(expensesState, projectionState.expenseGrowthRate);
   const incomeDirectedContributions = buildIncomeDirectedContributions(scenario.incomeSummary);
-  const projectionInputs = normalizeProjectionInputs(projectionState, assetInputs, incomeDirectedContributions);
+  const projection = createProjection(projectionState, assets, incomeDirectedContributions);
   const results = calculateProjection({
     incomeSummary: scenario.incomeSummary,
     mortgageSummary: scenario.mortgageSummary,
-    assetInputs,
-    expenseInputs,
-    projectionInputs,
+    assets,
+    expenses,
+    projection,
     taxConfig: scenario.taxConfig,
   });
 
   return {
     scenario,
     taxConfig: scenario.taxConfig,
-    assetInputs,
-    expenseInputs,
-    projectionInputs,
+    assets,
+    expenses,
+    projection,
     results,
     getYear(year) {
       const snapshot = results.projection.find((row) => row.year === year);

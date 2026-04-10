@@ -1,5 +1,5 @@
 import { readNumber, roundTo } from "./format";
-import type { IncomeInputs } from "./incomeModel";
+import type { Income } from "./incomeModel";
 import { loadStoredJson, saveJson } from "./storage";
 
 export const STORAGE_KEY = "basisflow_tax_config";
@@ -154,7 +154,7 @@ export function resetTaxConfig(): TaxConfig {
 
 export function getTaxDeductions(
   config: TaxConfig,
-  inputs?: IncomeInputs,
+  inputs?: Income,
   stateIncomeTax = 0,
 ) {
   if (config.deductionMode === "itemized") {

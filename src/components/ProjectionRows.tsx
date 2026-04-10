@@ -3,9 +3,9 @@ import { RowItem } from "./RowItem";
 import { NumberField, fieldLabelClass } from "./Field";
 import { SegmentedToggle } from "./SegmentedToggle";
 import { usd } from "../lib/format";
-import { toDisplayValue, type AllocationMode, type ProjectionInputs, type ProjectionState } from "../lib/projectionState";
-import { PINNED_BUCKETS, type AssetInputs } from "../lib/assetsModel";
-import { type ExpenseInputs } from "../lib/expensesModel";
+import { toDisplayValue, type AllocationMode, type Projection, type ProjectionState } from "../lib/projectionState";
+import { PINNED_BUCKETS, type Assets } from "../lib/assetsModel";
+import { type Expenses } from "../lib/expensesModel";
 import { type ProjectionResults } from "../lib/projectionCalculation";
 import { type ProjectionRow } from "../lib/projectionUtils";
 
@@ -38,9 +38,9 @@ function SelectedYearSnapshot({
 }
 
 type ProjectionAssetRowsProps = {
-  assetInputs: AssetInputs;
+  assets: Assets;
   pinnedProjectionBucketIds: Set<string>;
-  projectionInputs: ProjectionInputs;
+  projection: Projection;
   results: ProjectionResults;
   currentRow: ProjectionRow;
   selectedYearLabel: string;
@@ -52,8 +52,8 @@ type ProjectionAssetRowsProps = {
 };
 
 type ProjectionExpenseRowsProps = {
-  expenseInputs: ExpenseInputs;
-  projectionInputs: ProjectionInputs;
+  expenses: Expenses;
+  projection: Projection;
   currentRow: ProjectionRow;
   selectedYearLabel: string;
   state: ProjectionState;
@@ -62,9 +62,9 @@ type ProjectionExpenseRowsProps = {
 };
 
 export function ProjectionAssetRows({
-  assetInputs,
+  assets,
   pinnedProjectionBucketIds,
-  projectionInputs,
+  projection,
   results,
   currentRow,
   selectedYearLabel,
@@ -78,7 +78,7 @@ export function ProjectionAssetRows({
 
   return (
     <div className="grid gap-2.5">
-      {assetInputs.buckets.map((bucket) => {
+      {assets.buckets.map((bucket) => {
         const allocationMode = state.allocations?.[bucket.id]?.mode ?? "percent";
         const override = state.assetOverrides?.[bucket.id];
 
@@ -99,13 +99,13 @@ export function ProjectionAssetRows({
                 </div>
                 <ProjectionSnapshot label="Current value" value={usd(bucket.current)} />
                 <SelectedYearSnapshot
-                  currentYear={projectionInputs.currentYear}
+                  currentYear={projection.currentYear}
                   label={selectedYearLabel}
                   value={usd(
                     toDisplayValue(
                       currentRow.bucketSnapshotsById[bucket.id]?.balance ?? bucket.current,
-                      projectionInputs.currentYear,
-                      projectionInputs,
+                      projection.currentYear,
+                      projection,
                     ),
                   )}
                 />
@@ -119,7 +119,7 @@ export function ProjectionAssetRows({
                       min="0"
                       max="100"
                       step="1"
-                      value={String(Math.max(0, 100 - Math.min(projectionInputs.allocationPercentTotal, 100)))}
+                      value={String(Math.max(0, 100 - Math.min(projection.allocationPercentTotal, 100)))}
                       disabled
                     />
                   ) : (results.incomeDirectedContributions?.[bucket.id] ?? 0) > 0 ? (
@@ -180,8 +180,8 @@ export function ProjectionAssetRows({
 }
 
 export function ProjectionExpenseRows({
-  expenseInputs,
-  projectionInputs,
+  expenses,
+  projection,
   currentRow,
   selectedYearLabel,
   state,
@@ -190,7 +190,7 @@ export function ProjectionExpenseRows({
 }: ProjectionExpenseRowsProps) {
   return (
     <div className="grid gap-2.5">
-      {expenseInputs.expenses.map((expense) => {
+      {expenses.expenses.map((expense) => {
         const override = state.expenseOverrides?.[expense.id];
 
         return (
@@ -209,13 +209,13 @@ export function ProjectionExpenseRows({
                 </div>
                 <ProjectionSnapshot label="Current amount" value={usd(expense.amount)} />
                 <SelectedYearSnapshot
-                  currentYear={projectionInputs.currentYear}
+                  currentYear={projection.currentYear}
                   label={selectedYearLabel}
                   value={usd(
                     toDisplayValue(
                       currentRow.expenseSnapshotsById[expense.id]?.amount ?? expense.amount,
-                      projectionInputs.currentYear,
-                      projectionInputs,
+                      projection.currentYear,
+                      projection,
                     ),
                   )}
                 />

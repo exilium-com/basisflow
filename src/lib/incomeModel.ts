@@ -18,7 +18,7 @@ export type RsuInputItem = {
   vestingYears: number;
 };
 
-export type IncomeInputs = {
+export type Income = {
   grossSalary: number;
   rsuGrossNextYear: number;
   employee401k: number;
@@ -31,7 +31,7 @@ export type IncomeInputs = {
   rsuItems: RsuInputItem[];
 };
 
-export type IncomeSummary = IncomeInputs & {
+export type IncomeSummary = Income & {
   annualTakeHome: number;
   monthlyTakeHome: number;
   federalTax: number;
@@ -45,7 +45,7 @@ export type IncomeSummary = IncomeInputs & {
   rsuNetNextYear: number;
 };
 
-export const DEFAULT_INCOME_INPUTS: IncomeInputs = {
+export const DEFAULT_INCOME: Income = {
   grossSalary: 0,
   rsuGrossNextYear: 0,
   employee401k: 0,
@@ -59,7 +59,7 @@ export const DEFAULT_INCOME_INPUTS: IncomeInputs = {
 };
 
 export const DEFAULT_INCOME_SUMMARY: IncomeSummary = {
-  ...DEFAULT_INCOME_INPUTS,
+  ...DEFAULT_INCOME,
   annualTakeHome: 0,
   monthlyTakeHome: 0,
   federalTax: 0,
@@ -76,11 +76,11 @@ export const DEFAULT_INCOME_SUMMARY: IncomeSummary = {
 export type IncomeTaxes = ReturnType<typeof computeAnnualTaxes>;
 export type IncomeResults = ReturnType<typeof calculateIncome>;
 
-export function buildIncomeInputs(overrides: Partial<IncomeInputs> = {}): IncomeInputs {
+export function createIncome(overrides: Partial<Income> = {}): Income {
   return {
-    ...DEFAULT_INCOME_INPUTS,
+    ...DEFAULT_INCOME,
     ...overrides,
-    rsuItems: overrides.rsuItems ?? DEFAULT_INCOME_INPUTS.rsuItems,
+    rsuItems: overrides.rsuItems ?? DEFAULT_INCOME.rsuItems,
   };
 }
 
@@ -126,7 +126,7 @@ export function getAnnualSalaryTotal(salaryItems: SalaryInputItem[] = []) {
   return salaryItems.reduce((sum, item) => sum + annualizeSalary(item.amount, item.frequency), 0);
 }
 
-export function computeSavings(inputs: IncomeInputs, taxConfig: TaxConfig) {
+export function computeSavings(inputs: Income, taxConfig: TaxConfig) {
   const matchRate = clamp(inputs.matchRate / 100, 0, 5);
   const employee401k = Math.max(0, inputs.employee401k);
   const iraContribution = Math.max(0, inputs.iraContribution);
@@ -143,7 +143,7 @@ export function computeSavings(inputs: IncomeInputs, taxConfig: TaxConfig) {
   };
 }
 
-export function computeAnnualTaxes(inputs: IncomeInputs, taxConfig: TaxConfig, extraOrdinaryIncome = 0) {
+export function computeAnnualTaxes(inputs: Income, taxConfig: TaxConfig, extraOrdinaryIncome = 0) {
   const grossIncome = Math.max(0, inputs.grossSalary + extraOrdinaryIncome);
   const californiaAdjustedGross = Math.max(0, grossIncome - inputs.employee401k);
   const stateDeductions = getTaxDeductions(taxConfig, inputs);
@@ -170,7 +170,7 @@ export function computeAnnualTaxes(inputs: IncomeInputs, taxConfig: TaxConfig, e
 }
 
 export function computeIncrementalTakeHome(
-  inputs: IncomeInputs,
+  inputs: Income,
   taxConfig: TaxConfig,
   extraOrdinaryIncome: number,
 ) {
@@ -222,10 +222,10 @@ export function computeRsuGrossForItems(
   );
 }
 
-export function calculateIncome(inputs: IncomeInputs, taxConfig: TaxConfig) {
+export function calculateIncome(inputs: Income, taxConfig: TaxConfig) {
   const grossSalary = Math.max(0, inputs.grossSalary);
   const savings = computeSavings(inputs, taxConfig);
-  const taxInputs = buildIncomeInputs({ ...inputs, grossSalary });
+  const taxInputs = createIncome({ ...inputs, grossSalary });
   const taxes = computeAnnualTaxes(taxInputs, taxConfig, 0);
   const annualTakeHome = roundTo(
     grossSalary -
@@ -254,7 +254,7 @@ export function calculateIncome(inputs: IncomeInputs, taxConfig: TaxConfig) {
   };
 }
 
-export function buildIncomeSummary(inputs: IncomeInputs, results: IncomeResults): IncomeSummary {
+export function buildIncomeSummary(inputs: Income, results: IncomeResults): IncomeSummary {
   return createIncomeSummary({
     ...inputs,
     grossSalary: results.grossSalary,

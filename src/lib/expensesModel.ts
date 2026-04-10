@@ -17,7 +17,7 @@ export type ExpensesState = {
   advancedOpen: boolean;
 };
 
-export type ExpenseInput = Omit<ExpenseStateItem, "amount" | "oneOffYear" | "growthRate"> & {
+export type Expense = Omit<ExpenseStateItem, "amount" | "oneOffYear" | "growthRate"> & {
   label: string;
   amount: number;
   oneOffYear: number;
@@ -26,9 +26,9 @@ export type ExpenseInput = Omit<ExpenseStateItem, "amount" | "oneOffYear" | "gro
   growthRate: number;
 };
 
-export type ExpenseInputs = {
+export type Expenses = {
   baselineGrowthRate: number;
-  expenses: ExpenseInput[];
+  expenses: Expense[];
 };
 
 export type ExpenseSnapshot = {
@@ -76,10 +76,10 @@ export function normalizeExpensesState(parsed: unknown, fallback: ExpensesState)
   };
 }
 
-export function normalizeExpenseInputs(
+export function createExpenses(
   state: ExpensesState,
   baselineGrowthRate = 2.5,
-): ExpenseInputs {
+): Expenses {
   return {
     baselineGrowthRate: baselineGrowthRate / 100,
     expenses: state.expenses.map((expense) => {
@@ -101,7 +101,7 @@ export function normalizeExpenseInputs(
   };
 }
 
-export function getAnnualNonHousingExpenses(expenses: ExpenseInput[], year: number) {
+export function getAnnualNonHousingExpenses(expenses: Expense[], year: number) {
   return expenses.reduce(
     (sum, expense) =>
       sum +
@@ -114,11 +114,11 @@ export function getAnnualNonHousingExpenses(expenses: ExpenseInput[], year: numb
   );
 }
 
-export function calculateExpenseSnapshot(inputs: ExpenseInputs) {
-  const monthlyExpenseTotal = inputs.expenses.reduce((sum, expense) => sum + expense.monthlyEquivalent, 0);
+export function calculateExpenseSnapshot(expenses: Expenses) {
+  const monthlyExpenseTotal = expenses.expenses.reduce((sum, expense) => sum + expense.monthlyEquivalent, 0);
   return {
     monthlyExpenseTotal,
     annualExpenseTotal: monthlyExpenseTotal * 12,
-    expenseCount: inputs.expenses.length,
+    expenseCount: expenses.expenses.length,
   };
 }

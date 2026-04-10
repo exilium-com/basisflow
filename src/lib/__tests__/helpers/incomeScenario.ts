@@ -1,10 +1,10 @@
-import { buildIncomeInputs, calculateIncome, computeAnnualTaxes, computeSavings, type IncomeInputs } from "../../incomeModel";
+import { createIncome, calculateIncome, computeAnnualTaxes, computeSavings, type Income } from "../../incomeModel";
 import { DEFAULT_CONFIG, normalizeConfig, type TaxConfig } from "../../taxConfig";
 
 export type IncomeScenarioOptions = {
   salary?: number;
   rsuValue?: number;
-  inputs?: Partial<IncomeInputs>;
+  inputs?: Partial<Income>;
   taxConfig?: Partial<TaxConfig>;
   extraOrdinaryIncome?: number;
 };
@@ -13,8 +13,8 @@ export function money(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-export function createIncomeInputs({ salary = 0, rsuValue = 0, ...overrides }: IncomeScenarioOptions = {}): IncomeInputs {
-  return buildIncomeInputs({
+export function createIncomeInputs({ salary = 0, rsuValue = 0, ...overrides }: IncomeScenarioOptions = {}): Income {
+  return createIncome({
     grossSalary: salary,
     rsuGrossNextYear: rsuValue,
     ...overrides,

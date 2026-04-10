@@ -12,7 +12,7 @@ import { SummaryStrip } from "../components/SummaryStrip";
 import { WorkspaceLayout } from "../components/WorkspaceLayout";
 import { roundTo, usd } from "../lib/format";
 import {
-  buildMortgageInputs,
+  createMortgage,
   DEFAULT_MORTGAGE_STATE,
   LOAN_OPTIONS,
   type LoanType,
@@ -33,12 +33,12 @@ export function MortgagePage() {
   const [state, setState] = useStoredState(MORTGAGE_STATE_KEY, DEFAULT_MORTGAGE_STATE, {
     normalize: normalizeMortgageState,
   });
-  const inputs = buildMortgageInputs(state);
+  const mortgage = createMortgage(state);
   const scenariosByType = Object.fromEntries(
-    LOAN_OPTIONS.map((option) => [option.type, buildMortgageScenario(inputs, option.type)]),
+    LOAN_OPTIONS.map((option) => [option.type, buildMortgageScenario(mortgage, option.type)]),
   ) as Record<LoanType, MortgageScenario>;
-  const scenario = scenariosByType[inputs.activeLoanType];
-  const compareScenario = scenariosByType[inputs.compareLoanType];
+  const scenario = scenariosByType[mortgage.activeLoanType];
+  const compareScenario = scenariosByType[mortgage.compareLoanType];
 
   useEffect(() => {
     saveJson(MORTGAGE_SUMMARY_KEY, serializeMortgageSummary(scenario));
@@ -65,11 +65,11 @@ export function MortgagePage() {
         return;
       }
 
-      const inputs = buildMortgageInputs(draft);
+      const mortgage = createMortgage(draft);
       const currentAmount =
-        draft.downPaymentMode === "percent" ? (inputs.homePrice * inputs.downPaymentInput) / 100 : inputs.downPaymentInput;
+        draft.downPaymentMode === "percent" ? (mortgage.homePrice * mortgage.downPaymentInput) / 100 : mortgage.downPaymentInput;
       const convertedValue =
-        mode === "percent" ? (inputs.homePrice > 0 ? (currentAmount / inputs.homePrice) * 100 : 0) : currentAmount;
+        mode === "percent" ? (mortgage.homePrice > 0 ? (currentAmount / mortgage.homePrice) * 100 : 0) : currentAmount;
 
       draft.downPaymentMode = mode;
       draft.downPayment = mode === "percent" ? roundTo(convertedValue, 3) : Math.round(convertedValue);
@@ -172,7 +172,7 @@ export function MortgagePage() {
           <Section title="Loan Options">
             <MortgageLoanOptionList
               expandedLoanType={expandedLoanType}
-              inputs={inputs}
+              mortgage={mortgage}
               scenariosByType={scenariosByType}
               state={state}
               onSelectLoan={selectLoan}

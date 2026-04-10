@@ -1,4 +1,4 @@
-import { DEFAULT_ACTIVE_LOAN, type LoanType, type MortgageInputs } from "./mortgageConfig";
+import { DEFAULT_ACTIVE_LOAN, type LoanType, type Mortgage } from "./mortgageConfig";
 
 type MortgageScheduleRow = {
   month: number;
@@ -52,7 +52,7 @@ export type MortgageArmDetails = {
 } | null;
 
 export type MortgageScenario = {
-  inputs: MortgageInputs;
+  inputs: Mortgage;
   type: LoanType;
   typeLabel: string;
   isArm: boolean;
@@ -225,7 +225,7 @@ function yearlyComposition(schedule: MortgageScheduleRow[]) {
   return yearsList;
 }
 
-export function buildMortgageScenario(inputs: MortgageInputs, selectedType: LoanType = inputs.activeLoanType): MortgageScenario {
+export function buildMortgageScenario(inputs: Mortgage, selectedType: LoanType = inputs.activeLoanType): MortgageScenario {
   const loanOption = inputs.loanOptions[selectedType] || inputs.loanOptions[DEFAULT_ACTIVE_LOAN];
   const loanAmount = Math.max(0, inputs.homePrice - inputs.downPaymentAmount);
   const monthlyTax = (inputs.homePrice * (inputs.propertyTaxRate / 100)) / 12;

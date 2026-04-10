@@ -8,7 +8,7 @@ import {
   LOAN_OPTIONS,
   type LoanOption,
   type LoanType,
-  type MortgageInputs,
+  type Mortgage,
   type MortgageLoanField,
   type MortgageState,
 } from "../lib/mortgageConfig";
@@ -16,7 +16,7 @@ import { type MortgageScenario } from "../lib/mortgageSchedule";
 
 type MortgageLoanOptionCardProps = {
   expandedLoanType: LoanType | null;
-  inputs: MortgageInputs;
+  mortgage: Mortgage;
   loanType: LoanType;
   onSelectLoan: (loanType: LoanType) => void;
   onSetCompareLoanType: (loanType: LoanType) => void;
@@ -45,7 +45,7 @@ type MortgageComparisonTableProps = {
 
 function MortgageLoanOptionCard({
   expandedLoanType,
-  inputs,
+  mortgage,
   loanType,
   onSelectLoan,
   onSetCompareLoanType,
@@ -55,7 +55,7 @@ function MortgageLoanOptionCard({
   scenario,
   state,
 }: MortgageLoanOptionCardProps) {
-  const loanInputs = inputs.loanOptions[loanType];
+  const loan = mortgage.loanOptions[loanType];
   const loanState = state.loanOptions[loanType];
 
   return (
@@ -87,7 +87,7 @@ function MortgageLoanOptionCard({
         </button>
       }
       detailsTitle="Rate details"
-      detailsSummary={getMortgageLoanMeta(loanInputs)}
+      detailsSummary={getMortgageLoanMeta(loan)}
       detailsOpen={expandedLoanType === loanType}
       onToggleDetails={(open) => onSetExpandedLoanType(open ? loanType : null)}
       detailsContentClassName="grid gap-3 sm:grid-cols-3"
@@ -122,7 +122,7 @@ function MortgageLoanOptionCard({
             label="Reset rate"
             suffix="%"
             value={loanState.adjustedRate}
-            placeholder={loanInputs.kind === "arm" ? String(loanInputs.initialRate) : undefined}
+            placeholder={loan.kind === "arm" ? String(loan.initialRate) : undefined}
             step="0.001"
             onValueChange={(value) => onUpdateLoanField(loanType, "adjustedRate", value)}
           />
