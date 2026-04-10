@@ -154,12 +154,12 @@ export function resetTaxConfig(): TaxConfig {
 
 export function getTaxDeductions(
   config: TaxConfig,
-  inputs?: Income,
+  income?: Income,
   stateIncomeTax = 0,
 ) {
   if (config.deductionMode === "itemized") {
-    const mortgageInterest = inputs?.mortgageInterest ?? 0;
-    const propertyTax = inputs?.propertyTax ?? 0;
+    const mortgageInterest = income?.mortgageInterest ?? 0;
+    const propertyTax = income?.propertyTax ?? 0;
 
     return {
       federalDeduction: mortgageInterest + Math.min(propertyTax + stateIncomeTax, config.federalSaltCap),

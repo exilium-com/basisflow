@@ -88,11 +88,11 @@ export type ProjectionResults = {
 };
 
 function getTaxBases(
-  inputs: Income,
+  income: Income,
   rsuGross: number,
   taxConfig: TaxConfig,
 ) {
-  const taxes = computeAnnualTaxes(inputs, taxConfig, rsuGross);
+  const taxes = computeAnnualTaxes(income, taxConfig, rsuGross);
 
   return {
     federalTaxableIncome: taxes.federalTaxableIncome,

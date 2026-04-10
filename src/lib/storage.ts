@@ -102,7 +102,7 @@ function rebuildStoredSummaries(documentValue: StorageDocument) {
         refresherAmount: readNumber(item?.refresherAmount, 0),
         vestingYears: readNumber(item?.vestingYears, 4),
       }));
-    const inputs = createIncome({
+    const income = createIncome({
       grossSalary: getAnnualSalaryTotal(salaryItems),
       rsuGrossNextYear: computeRsuGrossForItems(rsuItems, 0),
       employee401k: readNumber(state.employee401k, 0),
@@ -115,8 +115,8 @@ function rebuildStoredSummaries(documentValue: StorageDocument) {
       rsuItems,
     });
     documentValue[INCOME_SUMMARY_KEY] = buildIncomeSummary(
-      inputs,
-      calculateIncome(inputs, normalizeConfig(documentValue[TAX_CONFIG_KEY])),
+      income,
+      calculateIncome(income, normalizeConfig(documentValue[TAX_CONFIG_KEY])),
     );
   }
 

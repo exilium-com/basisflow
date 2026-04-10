@@ -15,14 +15,14 @@ const realisticRetirement = {
 
 const realisticIncome = runIncomeScenario({
   salary: 250000,
-  inputs: {
+  income: {
     employee401k: realisticRetirement.employee401k,
     hsaContribution: realisticRetirement.hsaContribution,
     iraContribution: realisticRetirement.iraContribution,
     megaBackdoor: realisticRetirement.megaBackdoor,
     matchRate: 50,
   },
-}).income;
+}).results;
 
 const deductibleTaxSavings =
   computeAdditionalTax(170000, 10000, normalizeConfig(DEFAULT_CONFIG).federalBrackets) +

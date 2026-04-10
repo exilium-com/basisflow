@@ -126,14 +126,14 @@ export function getAnnualSalaryTotal(salaryItems: SalaryInputItem[] = []) {
   return salaryItems.reduce((sum, item) => sum + annualizeSalary(item.amount, item.frequency), 0);
 }
 
-export function computeSavings(inputs: Income, taxConfig: TaxConfig) {
-  const matchRate = clamp(inputs.matchRate / 100, 0, 5);
-  const employee401k = Math.max(0, inputs.employee401k);
-  const iraContribution = Math.max(0, inputs.iraContribution);
+export function computeSavings(income: Income, taxConfig: TaxConfig) {
+  const matchRate = clamp(income.matchRate / 100, 0, 5);
+  const employee401k = Math.max(0, income.employee401k);
+  const iraContribution = Math.max(0, income.iraContribution);
   const annualAdditions = Math.max(0, taxConfig.annualAdditionsLimit);
   const employerMatch = employee401k * matchRate;
   const availableMegaRoom = Math.max(0, annualAdditions - employee401k - employerMatch);
-  const megaBackdoor = clamp(Math.max(0, inputs.megaBackdoor), 0, availableMegaRoom);
+  const megaBackdoor = clamp(Math.max(0, income.megaBackdoor), 0, availableMegaRoom);
 
   return {
     employerMatch,
@@ -143,15 +143,15 @@ export function computeSavings(inputs: Income, taxConfig: TaxConfig) {
   };
 }
 
-export function computeAnnualTaxes(inputs: Income, taxConfig: TaxConfig, extraOrdinaryIncome = 0) {
-  const grossIncome = Math.max(0, inputs.grossSalary + extraOrdinaryIncome);
-  const californiaAdjustedGross = Math.max(0, grossIncome - inputs.employee401k);
-  const stateDeductions = getTaxDeductions(taxConfig, inputs);
+export function computeAnnualTaxes(income: Income, taxConfig: TaxConfig, extraOrdinaryIncome = 0) {
+  const grossIncome = Math.max(0, income.grossSalary + extraOrdinaryIncome);
+  const californiaAdjustedGross = Math.max(0, grossIncome - income.employee401k);
+  const stateDeductions = getTaxDeductions(taxConfig, income);
   const californiaTaxableIncome = Math.max(0, californiaAdjustedGross - stateDeductions.stateDeduction);
   const californiaTax = computeProgressiveTax(californiaTaxableIncome, taxConfig.stateBrackets);
 
-  const federalAdjustedGross = Math.max(0, grossIncome - inputs.employee401k - inputs.hsaContribution);
-  const federalDeductions = getTaxDeductions(taxConfig, inputs, californiaTax);
+  const federalAdjustedGross = Math.max(0, grossIncome - income.employee401k - income.hsaContribution);
+  const federalDeductions = getTaxDeductions(taxConfig, income, californiaTax);
   const federalTaxableIncome = Math.max(0, federalAdjustedGross - federalDeductions.federalDeduction);
   const federalTax = computeProgressiveTax(federalTaxableIncome, taxConfig.federalBrackets);
 
@@ -170,7 +170,7 @@ export function computeAnnualTaxes(inputs: Income, taxConfig: TaxConfig, extraOr
 }
 
 export function computeIncrementalTakeHome(
-  inputs: Income,
+  income: Income,
   taxConfig: TaxConfig,
   extraOrdinaryIncome: number,
 ) {
@@ -179,8 +179,8 @@ export function computeIncrementalTakeHome(
     return 0;
   }
 
-  const baseTaxes = computeAnnualTaxes(inputs, taxConfig, 0).totalTaxes;
-  const extraTaxes = computeAnnualTaxes(inputs, taxConfig, safeExtra).totalTaxes;
+  const baseTaxes = computeAnnualTaxes(income, taxConfig, 0).totalTaxes;
+  const extraTaxes = computeAnnualTaxes(income, taxConfig, safeExtra).totalTaxes;
   return roundTo(safeExtra - (extraTaxes - baseTaxes), 2);
 }
 
@@ -222,22 +222,22 @@ export function computeRsuGrossForItems(
   );
 }
 
-export function calculateIncome(inputs: Income, taxConfig: TaxConfig) {
-  const grossSalary = Math.max(0, inputs.grossSalary);
-  const savings = computeSavings(inputs, taxConfig);
-  const taxInputs = createIncome({ ...inputs, grossSalary });
-  const taxes = computeAnnualTaxes(taxInputs, taxConfig, 0);
+export function calculateIncome(income: Income, taxConfig: TaxConfig) {
+  const grossSalary = Math.max(0, income.grossSalary);
+  const savings = computeSavings(income, taxConfig);
+  const taxableIncome = createIncome({ ...income, grossSalary });
+  const taxes = computeAnnualTaxes(taxableIncome, taxConfig, 0);
   const annualTakeHome = roundTo(
     grossSalary -
-      taxInputs.employee401k -
-      taxInputs.hsaContribution -
+      taxableIncome.employee401k -
+      taxableIncome.hsaContribution -
       savings.iraContribution -
       savings.megaBackdoor -
       taxes.totalTaxes,
     2,
   );
-  const rsuGrossNextYear = Math.max(0, inputs.rsuGrossNextYear);
-  const rsuNetNextYear = computeIncrementalTakeHome(taxInputs, taxConfig, rsuGrossNextYear);
+  const rsuGrossNextYear = Math.max(0, income.rsuGrossNextYear);
+  const rsuNetNextYear = computeIncrementalTakeHome(taxableIncome, taxConfig, rsuGrossNextYear);
 
   return {
     ...savings,
@@ -254,9 +254,9 @@ export function calculateIncome(inputs: Income, taxConfig: TaxConfig) {
   };
 }
 
-export function buildIncomeSummary(inputs: Income, results: IncomeResults): IncomeSummary {
+export function buildIncomeSummary(income: Income, results: IncomeResults): IncomeSummary {
   return createIncomeSummary({
-    ...inputs,
+    ...income,
     grossSalary: results.grossSalary,
     annualTakeHome: results.annualTakeHome,
     monthlyTakeHome: results.monthlyTakeHome,

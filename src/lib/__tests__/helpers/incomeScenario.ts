@@ -4,7 +4,7 @@ import { DEFAULT_CONFIG, normalizeConfig, type TaxConfig } from "../../taxConfig
 export type IncomeScenarioOptions = {
   salary?: number;
   rsuValue?: number;
-  inputs?: Partial<Income>;
+  income?: Partial<Income>;
   taxConfig?: Partial<TaxConfig>;
   extraOrdinaryIncome?: number;
 };
@@ -13,7 +13,7 @@ export function money(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-export function createIncomeInputs({ salary = 0, rsuValue = 0, ...overrides }: IncomeScenarioOptions = {}): Income {
+export function createScenarioIncome({ salary = 0, rsuValue = 0, ...overrides }: IncomeScenarioOptions = {}): Income {
   return createIncome({
     grossSalary: salary,
     rsuGrossNextYear: rsuValue,
@@ -31,23 +31,23 @@ export function createIncomeTaxConfig(overrides: Partial<TaxConfig> = {}) {
 export function runIncomeScenario({
   salary = 0,
   rsuValue = 0,
-  inputs = {},
+  income = {},
   taxConfig = {},
   extraOrdinaryIncome = 0,
 }: IncomeScenarioOptions = {}) {
-  const resolvedInputs = createIncomeInputs({
+  const resolvedIncome = createScenarioIncome({
     salary,
     rsuValue,
-    ...inputs,
+    ...income,
   });
   const resolvedTaxConfig = createIncomeTaxConfig(taxConfig);
 
   return {
-    inputs: resolvedInputs,
+    income: resolvedIncome,
     taxConfig: resolvedTaxConfig,
-    grossSalary: resolvedInputs.grossSalary,
-    savings: computeSavings(resolvedInputs, resolvedTaxConfig),
-    taxes: computeAnnualTaxes(resolvedInputs, resolvedTaxConfig, extraOrdinaryIncome),
-    income: calculateIncome(resolvedInputs, resolvedTaxConfig),
+    grossSalary: resolvedIncome.grossSalary,
+    savings: computeSavings(resolvedIncome, resolvedTaxConfig),
+    taxes: computeAnnualTaxes(resolvedIncome, resolvedTaxConfig, extraOrdinaryIncome),
+    results: calculateIncome(resolvedIncome, resolvedTaxConfig),
   };
 }

@@ -52,7 +52,7 @@ export type MortgageArmDetails = {
 } | null;
 
 export type MortgageScenario = {
-  inputs: Mortgage;
+  mortgage: Mortgage;
   type: LoanType;
   typeLabel: string;
   isArm: boolean;
@@ -225,12 +225,12 @@ function yearlyComposition(schedule: MortgageScheduleRow[]) {
   return yearsList;
 }
 
-export function buildMortgageScenario(inputs: Mortgage, selectedType: LoanType = inputs.activeLoanType): MortgageScenario {
-  const loanOption = inputs.loanOptions[selectedType] || inputs.loanOptions[DEFAULT_ACTIVE_LOAN];
-  const loanAmount = Math.max(0, inputs.homePrice - inputs.downPaymentAmount);
-  const monthlyTax = (inputs.homePrice * (inputs.propertyTaxRate / 100)) / 12;
-  const monthlyInsurance = inputs.insurancePerYear / 12;
-  const monthlyHoa = inputs.hoaPerMonth;
+export function buildMortgageScenario(mortgage: Mortgage, selectedType: LoanType = mortgage.activeLoanType): MortgageScenario {
+  const loanOption = mortgage.loanOptions[selectedType] || mortgage.loanOptions[DEFAULT_ACTIVE_LOAN];
+  const loanAmount = Math.max(0, mortgage.homePrice - mortgage.downPaymentAmount);
+  const monthlyTax = (mortgage.homePrice * (mortgage.propertyTaxRate / 100)) / 12;
+  const monthlyInsurance = mortgage.insurancePerYear / 12;
+  const monthlyHoa = mortgage.hoaPerMonth;
   const totalMonths = Math.max(1, Math.round(loanOption.term * 12));
   const isArm = loanOption.kind === "arm";
 
@@ -270,7 +270,7 @@ export function buildMortgageScenario(inputs: Mortgage, selectedType: LoanType =
   const totalMonthlyPayment = firstRow ? firstRow.payment : 0;
 
   return {
-    inputs,
+    mortgage,
     type: selectedType,
     typeLabel: loanOption.label,
     isArm,

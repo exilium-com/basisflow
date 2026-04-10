@@ -178,7 +178,7 @@ export function IncomePage() {
       vestingYears: item.vestingYears ?? 4,
     }));
   const mortgageSummary = (loadStoredJson(MORTGAGE_SUMMARY_KEY) ?? {}) as Partial<MortgageSummary>;
-  const inputs = createIncome({
+  const income = createIncome({
     grossSalary: getAnnualSalaryTotal(salaryItems),
     rsuGrossNextYear: computeRsuGrossForItems(rsuItems, 0),
     employee401k: state.employee401k,
@@ -191,11 +191,11 @@ export function IncomePage() {
     rsuItems,
   });
   const taxConfig = loadTaxConfig();
-  const results = calculateIncome(inputs, taxConfig);
+  const results = calculateIncome(income, taxConfig);
 
   useEffect(() => {
-    saveJson(INCOME_SUMMARY_KEY, buildIncomeSummary(inputs, results));
-  }, [inputs, results]);
+    saveJson(INCOME_SUMMARY_KEY, buildIncomeSummary(income, results));
+  }, [income, results]);
 
   function updateField(field: keyof Omit<IncomeState, "incomeItems">, value: IncomeState[keyof Omit<IncomeState, "incomeItems">]) {
     setState((draft) => {
@@ -231,11 +231,11 @@ export function IncomePage() {
   }
 
   const contributionRows: Array<[string, number]> = [
-    ["Employee 401(k)", inputs.employee401k],
+    ["Employee 401(k)", income.employee401k],
     ["Employer match", results.employerMatch],
-    ["IRA", inputs.iraContribution],
+    ["IRA", income.iraContribution],
     ["Mega backdoor after-tax", results.megaBackdoor],
-    ["HSA", inputs.hsaContribution],
+    ["HSA", income.hsaContribution],
   ];
   const hasRsuItems = rsuItems.length > 0;
   const summaryItems = [
@@ -249,7 +249,7 @@ export function IncomePage() {
       : []),
     {
       label: "Retirement saving",
-      value: usd(inputs.employee401k + results.employerMatch + inputs.iraContribution + results.megaBackdoor, 2),
+      value: usd(income.employee401k + results.employerMatch + income.iraContribution + results.megaBackdoor, 2),
     },
     { label: "Total taxes", value: usd(results.totalTaxes, 2) },
     { label: "Federal tax", value: usd(results.federalTax, 2) },
@@ -456,7 +456,7 @@ export function IncomePage() {
                 <SliderField
                   id="employee401k"
                   label="Employee contribution"
-                  valueLabel={usd(inputs.employee401k)}
+                  valueLabel={usd(income.employee401k)}
                   min="0"
                   max="24500"
                   step="50"
@@ -490,7 +490,7 @@ export function IncomePage() {
                 <SliderField
                   id="iraContribution"
                   label="Annual contribution"
-                  valueLabel={usd(inputs.iraContribution)}
+                  valueLabel={usd(income.iraContribution)}
                   min="0"
                   max="7000"
                   step="50"
@@ -504,7 +504,7 @@ export function IncomePage() {
                 <SliderField
                   id="hsaContribution"
                   label="Annual contribution"
-                  valueLabel={usd(inputs.hsaContribution)}
+                  valueLabel={usd(income.hsaContribution)}
                   min="0"
                   max="4400"
                   step="50"
