@@ -21,7 +21,6 @@ import {
   type AssetBucketState,
 } from "../lib/assetsModel";
 import {
-  calculateExpenseSnapshot,
   createExpenses,
   DEFAULT_EXPENSES_STATE,
   normalizeExpensesState,
@@ -49,7 +48,6 @@ import {
 } from "../lib/mortgageConfig";
 import {
   buildMortgageSummaryItems,
-  getMortgageMonthlyPaymentForYear,
   getMortgageYearInterest,
   getMortgageYearPropertyTax,
   serializeMortgageSummary,
@@ -60,6 +58,7 @@ import {
   DEFAULT_PROJECTION_STATE,
   createProjection,
   normalizeProjectionState,
+  toDisplayValue,
   type ProjectionState,
   type ProjectionAssetOverride,
   type ProjectionExpenseOverride,
@@ -131,8 +130,6 @@ export function WorkspacePage() {
   const incomeDirectedContributions = buildIncomeDirectedContributions(incomeSummary);
 
   const assetsView = deriveAssetsState(assetState, undefined, incomeDirectedContributions);
-  const expensesView = createExpenses(expenseState);
-  const expenseSnapshot = calculateExpenseSnapshot(expensesView);
 
   const pinnedAssets = resolvePinnedBuckets(assetState, incomeDirectedContributions);
   const reserveCashBucketId = PINNED_BUCKETS.reserveCashBucketId.id;
@@ -178,7 +175,15 @@ export function WorkspacePage() {
     resolvedIncome.iraContribution +
     incomeResults.megaBackdoor +
     resolvedIncome.hsaContribution;
-  const annualGrossIncome = incomeResults.grossSalary + incomeResults.rsuGrossNextYear;
+  const annualRetirementContributions =
+    resolvedIncome.employee401k +
+    resolvedIncome.iraContribution +
+    incomeResults.megaBackdoor +
+    resolvedIncome.hsaContribution;
+  const projectedAnnualGrossIncome =
+    incomeResults.grossSalary * Math.pow(1 + projection.incomeGrowthRate, projection.currentYear) + currentRow.rsuGross;
+  const projectedAnnualTax =
+    projectedAnnualGrossIncome - annualRetirementContributions - currentRow.takeHome - currentRow.rsuNet;
   const assetOptions = projectionAssets.buckets.map((bucket) => ({
     id: bucket.id,
     name: bucket.name,
@@ -469,22 +474,22 @@ export function WorkspacePage() {
     {
       href: "#income",
       label: "Gross income",
-      annualValue: annualGrossIncome,
+      annualValue: toDisplayValue(projectedAnnualGrossIncome, projection.currentYear, projection),
     },
     {
       href: "#mortgage",
       label: "Housing cost",
-      annualValue: getMortgageMonthlyPaymentForYear(mortgageScenario, projection.currentYear) * 12,
+      annualValue: toDisplayValue(currentRow.mortgageLineItem, projection.currentYear, projection),
     },
     {
       href: "#taxes",
       label: "Tax",
-      annualValue: incomeResults.totalTaxes,
+      annualValue: toDisplayValue(projectedAnnualTax, projection.currentYear, projection),
     },
     {
       href: "#expenses",
       label: "Spending",
-      annualValue: expenseSnapshot.annualExpenseTotal,
+      annualValue: toDisplayValue(currentRow.nonHousingExpenses, projection.currentYear, projection),
     },
   ];
 
