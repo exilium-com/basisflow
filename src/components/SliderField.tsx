@@ -1,6 +1,6 @@
 import React from "react";
 import clsx from "clsx";
-import { Field, fieldLabelClass } from "./Field";
+import { Field } from "./Field";
 
 type SliderFieldProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "className" | "type"> & {
   id?: string;
@@ -22,13 +22,17 @@ export function SliderField({
   const inputId = id ?? resolvedId;
 
   return (
-    <Field label={null} className={clsx("gap-1", className)}>
-      <div className="flex min-h-5 items-center justify-between gap-3">
-        <label className={clsx(fieldLabelClass, labelClassName)} htmlFor={inputId}>
-          {label}
-        </label>
-        <span className="text-sm leading-5 whitespace-nowrap text-(--ink)">{valueLabel}</span>
-      </div>
+    <Field
+      label={
+        <>
+          <span>{label}</span>
+          <span className="leading-5 whitespace-nowrap text-(--ink)">{valueLabel}</span>
+        </>
+      }
+      htmlFor={inputId}
+      className={clsx("gap-1", className)}
+      labelClassName={clsx("flex min-h-5 items-center justify-between gap-3", labelClassName)}
+    >
       <div
         className="flex min-h-10 items-center border border-l-4 border-(--line) border-l-(--teal-soft) bg-(--white)
           px-3"

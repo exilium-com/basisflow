@@ -20,7 +20,7 @@ import { type ProjectionRow } from "../../projectionUtils";
 import {
   buildIncomeSummary,
   calculateIncome,
-  createIncome,
+  createResolvedIncome,
   type RsuInputItem,
 } from "../../incomeModel";
 
@@ -232,7 +232,7 @@ function createIncomeSummary({
     hsaContribution = 0,
   } = retirement;
 
-  const income = createIncome({
+  const income = createResolvedIncome({
     grossSalary: salary,
     employee401k,
     matchRate: employee401k > 0 ? (employerMatch / employee401k) * 100 : 0,

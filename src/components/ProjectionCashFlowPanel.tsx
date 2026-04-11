@@ -51,7 +51,7 @@ export function MonthlyCashFlowPanel({ items, total, netFlow }: MonthlyCashFlowP
   let currentAngle = -Math.PI / 2;
 
   return (
-    <div className="grid gap-6 px-4 pt-2 pb-4 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-center">
+    <div className="cashflow-chart-grid px-4 pt-2 pb-4">
       <div className="flex justify-center">
         <svg viewBox="0 0 224 224" role="img" aria-label="Monthly cash flow breakdown">
           <circle cx={cx} cy={cy} r={outerRadius} fill="var(--white)" stroke="var(--line-soft)" />

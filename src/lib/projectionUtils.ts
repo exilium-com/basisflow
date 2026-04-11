@@ -97,3 +97,5 @@ export function buildMonthlyCashFlow({
     total: grossIncome,
   };
 }
+
+export type MonthlyCashFlow = ReturnType<typeof buildMonthlyCashFlow>;
