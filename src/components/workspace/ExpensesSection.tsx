@@ -54,7 +54,9 @@ export function ExpensesSection({
               removeLabel="Remove expense"
               onRemove={() => onRemoveExpense(expense.id)}
               detailsTitle="Expense details"
-              detailsSummary={showsGrowthOverride && override?.growthRate != null ? `Growth ${override.growthRate}%` : null}
+              detailsSummary={
+                showsGrowthOverride && override?.growthRate != null ? `Growth ${override.growthRate}%` : null
+              }
               detailsOpen={expense.detailsOpen}
               onToggleDetails={(detailsOpen) => onUpdateExpense(expense.id, { detailsOpen })}
               headerClassName="grid items-center gap-3 lg:grid-cols-3"
@@ -83,7 +85,7 @@ export function ExpensesSection({
                     label={selectedYearLabel}
                     value={usd(
                       toDisplayValue(
-                        currentRow.expenseSnapshotsById[expense.id]?.amount ?? (expense.amount ?? 0),
+                        currentRow.expenseSnapshotsById[expense.id]?.amount ?? expense.amount ?? 0,
                         projection.currentYear,
                         projection,
                       ),

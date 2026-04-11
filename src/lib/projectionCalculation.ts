@@ -28,13 +28,11 @@ import { type Projection } from "./projectionState";
 import { type ProjectionRow } from "./projectionUtils";
 import { computeAdditionalTax, type TaxConfig } from "./taxConfig";
 
-type ProjectionMortgageSummary = Partial<MortgageSummary>;
-
 type ProjectionBase = {
   assets: Assets;
   expenses: Expenses;
   projection: Projection;
-  mortgageSummary: ProjectionMortgageSummary;
+  mortgageSummary: MortgageSummary;
   taxConfig: TaxConfig;
   income: ResolvedIncome;
   mortgage: {
@@ -91,11 +89,7 @@ export type ProjectionResults = {
   projection: ProjectionRow[];
 };
 
-function getTaxBases(
-  income: ResolvedIncome,
-  rsuGross: number,
-  taxConfig: TaxConfig,
-) {
+function getTaxBases(income: ResolvedIncome, rsuGross: number, taxConfig: TaxConfig) {
   const taxes = computeAnnualTaxes(income, taxConfig, rsuGross);
 
   return {
@@ -147,11 +141,7 @@ function computeDeductionTaxSavings(baseIncome: number, deduction: number, taxCo
   return roundTo(federal + state, 2);
 }
 
-function fundHomeEquityFromBuckets(
-  bucketStates: ProjectedBucketState[],
-  fundingBucketId: string,
-  amount: number,
-) {
+function fundHomeEquityFromBuckets(bucketStates: ProjectedBucketState[], fundingBucketId: string, amount: number) {
   if (!fundingBucketId || amount <= 0) {
     return bucketStates;
   }
@@ -241,7 +231,7 @@ function createProjectionSimulation({
   taxConfig,
 }: {
   incomeSummary: IncomeSummary;
-  mortgageSummary: ProjectionMortgageSummary;
+  mortgageSummary: MortgageSummary;
   assets: Assets;
   expenses: Expenses;
   projection: Projection;
@@ -251,20 +241,20 @@ function createProjectionSimulation({
   const reserveCashBucketId = PINNED_BUCKETS.reserveCashBucketId.id;
   const income = createResolvedIncome({
     ...incomeSummary,
-    mortgageInterest: getMortgageYearInterest(mortgageSummary, 1),
+    mortgageInterest: getMortgageYearInterest(mortgageSummary, 0),
     propertyTax: getMortgageYearPropertyTax(mortgageSummary),
   });
   const base: ProjectionBase = {
     assets,
     expenses,
     projection,
-      mortgageSummary,
-      taxConfig,
-      income,
-      mortgage: {
-        homePrice: mortgageSummary.homePrice ?? 0,
-        currentEquity: mortgageSummary.currentEquity ?? 0,
-      },
+    mortgageSummary,
+    taxConfig,
+    income,
+    mortgage: {
+      homePrice: mortgageSummary.homePrice ?? 0,
+      currentEquity: mortgageSummary.currentEquity ?? 0,
+    },
     assetPlan: {
       totalContributions: assets.buckets.reduce((sum, bucket) => sum + bucket.contribution, 0),
       deductibleContributions: assets.buckets.reduce(
@@ -291,12 +281,12 @@ function createProjectionSimulation({
     base.projection.mortgageFundingBucketId,
     base.mortgage.currentEquity,
   );
-  const currentTaxBases = getTaxBases(base.income, base.income.rsuGrossNextYear, base.taxConfig);
+  const yearZeroContext = buildProjectionYearContext(base, 0);
   const currentSnapshot = buildProjectionSnapshot({
     base,
     year: 0,
     bucketStates,
-    taxBases: currentTaxBases,
+    taxBases: yearZeroContext.taxBases,
   });
 
   return {
@@ -307,12 +297,12 @@ function createProjectionSimulation({
       buildProjectionRow({
         base,
         year: 0,
-        takeHome: calculateIncome(base.income, base.taxConfig).annualTakeHome,
-        rsuGross: 0,
-        rsuNet: 0,
-        housingCost: getMortgageAnnualHousingCost(base.mortgageSummary, 0),
-        nonHousingExpenses: roundTo(getAnnualNonHousingExpenses(base.expenses.expenses, 0), 2),
-        freeCashBeforeAllocation: currentSnapshot.reserveCash,
+        takeHome: yearZeroContext.takeHome,
+        rsuGross: yearZeroContext.rsuGross,
+        rsuNet: yearZeroContext.rsuNet,
+        housingCost: yearZeroContext.housingCost,
+        nonHousingExpenses: yearZeroContext.nonHousingExpenses,
+        freeCashBeforeAllocation: yearZeroContext.freeCashBeforeAllocation,
         snapshot: currentSnapshot,
         vestedRsuBalance: 0,
         homeEquity: base.mortgage.currentEquity,
@@ -331,10 +321,7 @@ function summarizeAssetSnapshots(
       (sum, bucket) => sum + (bucket.taxTreatment === "none" ? bucket.taxDue : 0),
       0,
     ),
-    totalCapitalGains: assetSnapshots.reduce(
-      (sum, bucket) => sum + Math.max(0, bucket.balance - bucket.basis),
-      0,
-    ),
+    totalCapitalGains: assetSnapshots.reduce((sum, bucket) => sum + Math.max(0, bucket.balance - bucket.basis), 0),
     reserveCash: assetSnapshots.find((bucket) => bucket.id === reserveCashBucketId)?.balance ?? 0,
   };
 }
@@ -402,10 +389,7 @@ function buildProjectionRow({
     totalCapitalGains: snapshot.totalCapitalGains,
     homeEquity,
     residualCash: snapshot.reserveCash,
-    netWorth:
-      snapshot.assetsGross +
-      homeEquity +
-      (base.projection.includeVestedRsusInNetWorth ? vestedRsuBalance : 0),
+    netWorth: snapshot.assetsGross + homeEquity + (base.projection.includeVestedRsusInNetWorth ? vestedRsuBalance : 0),
   };
 }
 
@@ -419,7 +403,7 @@ function buildProjectionYearContext(base: ProjectionBase, year: number): Project
   };
   const rsuGross = computeRsuGrossForItems(
     income.rsuItems,
-    year - 1,
+    year,
     base.projection.rsuStockGrowthRate,
     base.projection.incomeGrowthRate,
   );
@@ -443,20 +427,13 @@ function buildProjectionYearContext(base: ProjectionBase, year: number): Project
     ordinaryIncome,
     taxBases,
     freeCashBeforeAllocation: roundTo(
-      takeHome -
-        housingCost -
-        nonHousingExpenses -
-        base.assetPlan.totalContributions +
-        deductionTaxSavings,
+      takeHome - housingCost - nonHousingExpenses - base.assetPlan.totalContributions + deductionTaxSavings,
       2,
     ),
   };
 }
 
-function allocateFreeCash(
-  base: ProjectionBase,
-  yearContext: ProjectionYearContext,
-): FreeCashAllocation {
+function allocateFreeCash(base: ProjectionBase, yearContext: ProjectionYearContext): FreeCashAllocation {
   const extraContributionByBucket: Record<string, number> = {};
   const allocatedCash = Math.max(0, yearContext.freeCashBeforeAllocation);
   let deductibleContribution = 0;
@@ -484,7 +461,7 @@ function allocateFreeCash(
   };
 }
 
-function getMortgageEndingBalance(mortgageSummary: ProjectionMortgageSummary, year: number) {
+function getMortgageEndingBalance(mortgageSummary: MortgageSummary, year: number) {
   const loanYear = mortgageSummary.yearlyLoan?.find((row) => row.year === year);
   if (loanYear) {
     return loanYear.endingBalance;
@@ -494,8 +471,8 @@ function getMortgageEndingBalance(mortgageSummary: ProjectionMortgageSummary, ye
 
 function advanceProjectionYear(simulation: ProjectionSimulation, year: number) {
   const { base } = simulation;
-  const yearContext = buildProjectionYearContext(base, year);
-  const allocation = allocateFreeCash(base, yearContext);
+  const appliedContext = buildProjectionYearContext(base, year - 1);
+  const allocation = allocateFreeCash(base, appliedContext);
   const nextBucketStates = advanceProjectionBuckets({
     bucketStates: simulation.bucketStates,
     extraContributionByBucket: allocation.extraContributionByBucket,
@@ -503,7 +480,7 @@ function advanceProjectionYear(simulation: ProjectionSimulation, year: number) {
     reserveCashFlow: allocation.reserveCashFlow,
   });
   const vestedRsuBalance = roundTo(
-    simulation.vestedRsuBalance * (1 + base.projection.rsuStockGrowthRate) + yearContext.rsuNet,
+    simulation.vestedRsuBalance * (1 + base.projection.rsuStockGrowthRate) + appliedContext.rsuNet,
     2,
   );
   const homeEquity =
@@ -511,6 +488,7 @@ function advanceProjectionYear(simulation: ProjectionSimulation, year: number) {
       ? 0
       : base.mortgage.homePrice * Math.pow(1 + base.projection.homeAppreciationRate, year) -
         getMortgageEndingBalance(base.mortgageSummary, year);
+  const yearContext = buildProjectionYearContext(base, year);
   const snapshot = buildProjectionSnapshot({
     base,
     year,
@@ -546,7 +524,7 @@ export function calculateProjection({
   taxConfig,
 }: {
   incomeSummary: IncomeSummary;
-  mortgageSummary: ProjectionMortgageSummary;
+  mortgageSummary: MortgageSummary;
   assets: Assets;
   expenses: Expenses;
   projection: Projection;

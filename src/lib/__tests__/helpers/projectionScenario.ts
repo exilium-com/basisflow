@@ -7,22 +7,14 @@ import {
   type AssetBucketState,
   type AssetTaxTreatment,
 } from "../../assetsModel";
-import {
-  DEFAULT_EXPENSES_STATE,
-  createExpenses,
-  normalizeExpensesState,
-} from "../../expensesModel";
+import { DEFAULT_EXPENSES_STATE, createExpenses, normalizeExpensesState } from "../../expensesModel";
 import { DEFAULT_PROJECTION_STATE, createProjection, normalizeProjectionState } from "../../projectionState";
 import { calculateProjection, type ProjectionResults } from "../../projectionCalculation";
 import { roundTo } from "../../format";
 import { DEFAULT_CONFIG, normalizeConfig, type TaxConfig } from "../../taxConfig";
 import { type ProjectionRow } from "../../projectionUtils";
-import {
-  buildIncomeSummary,
-  calculateIncome,
-  createResolvedIncome,
-  type RsuInputItem,
-} from "../../incomeModel";
+import { buildIncomeSummary, calculateIncome, createResolvedIncome, type RsuInputItem } from "../../incomeModel";
+import { MortgageSummary } from "../../mortgagePage";
 
 type RetirementInputs = {
   employee401k?: number;
@@ -241,19 +233,43 @@ function createMortgageSummary({
   currentEquity?: number;
   yearlyLoan?: Array<{ year: number; payment?: number; principal?: number; interest: number; endingBalance?: number }>;
 }) {
+  const defaultYearlyLoan: Array<{
+    year: number;
+    payment?: number;
+    principal?: number;
+    interest: number;
+    endingBalance?: number;
+  }> = Array.from({ length: 60 }, (_, index) => ({
+    year: index + 1,
+    interest: 0,
+  }));
+  const normalizedYearlyLoan =
+    housingKind === "rent"
+      ? []
+      : (yearlyLoan.length ? yearlyLoan : defaultYearlyLoan).map((row) => ({
+          year: row.year,
+          payment: row.payment ?? roundTo(annualMortgage / 12, 2),
+          principal: row.principal ?? 0,
+          interest: row.interest,
+          endingBalance: row.endingBalance ?? 0,
+        }));
+
   return {
+    type: housingKind === "rent" ? "rent" : "loan",
     kind: housingKind,
+    typeLabel: housingKind === "rent" ? "Rent" : "Conventional",
+    isArm: false,
     rentGrowthRate,
+    loanAmount: roundTo(Math.max(0, homePrice - currentEquity), 2),
     totalMonthlyPayment: roundTo(annualMortgage / 12, 2),
+    principalInterest: roundTo(annualMortgage / 12, 2),
+    monthlyTax: 0,
+    monthlyInsurance: 0,
+    monthlyHoa: 0,
+    totalInterest: normalizedYearlyLoan.reduce((sum, row) => sum + row.interest, 0),
     currentEquity: housingKind === "rent" ? 0 : roundTo(currentEquity, 2),
     homePrice: roundTo(homePrice, 2),
-    yearlyLoan: yearlyLoan.map((row) => ({
-      year: row.year,
-      payment: row.payment ?? roundTo(annualMortgage / 12, 2),
-      principal: row.principal ?? 0,
-      interest: row.interest,
-      endingBalance: row.endingBalance ?? 0,
-    })),
+    yearlyLoan: normalizedYearlyLoan,
   };
 }
 
@@ -403,11 +419,10 @@ export function runProjectionScenario({
 
   const assets = createAssets(assetsState, projectionState.assetGrowthRate);
   const expenses = createExpenses(expensesState, projectionState.expenseGrowthRate);
-  const incomeDirectedContributions = buildIncomeDirectedContributions(scenario.incomeSummary);
   const projection = createProjection(projectionState);
   const results = calculateProjection({
     incomeSummary: scenario.incomeSummary,
-    mortgageSummary: scenario.mortgageSummary,
+    mortgageSummary: scenario.mortgageSummary as MortgageSummary,
     assets,
     expenses,
     projection,

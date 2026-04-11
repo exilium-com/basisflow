@@ -123,7 +123,7 @@ export function WorkspacePage() {
   const mortgageSummaryItems = buildMortgageSummaryItems(mortgageScenario, projectionState.currentYear);
 
   const resolvedIncome = resolveIncome(income, {
-    mortgageInterest: getMortgageYearInterest(mortgageSummary, 1),
+    mortgageInterest: getMortgageYearInterest(mortgageSummary, 0),
     propertyTax: getMortgageYearPropertyTax(mortgageSummary),
   });
   const incomeResults = calculateIncome(resolvedIncome, taxConfig);
