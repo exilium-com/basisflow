@@ -48,12 +48,11 @@ export function getMortgageYearPropertyTax(summary: Partial<MortgageSummary>) {
 }
 
 export function getMortgageMonthlyPaymentForYear(scenario: MortgageScenario, year = 0) {
-  const monthIndex = year <= 0 ? 0 : Math.min(year * 12, scenario.schedule.length) - 1;
-  return scenario.schedule[monthIndex]?.payment ?? 0;
+  return getMortgageScheduleRowForYear(scenario, year)?.payment ?? 0;
 }
 
 function getMortgageScheduleRowForYear(scenario: MortgageScenario, year = 0) {
-  const monthIndex = year <= 0 ? 0 : Math.min(year * 12, scenario.schedule.length) - 1;
+  const monthIndex = year <= 0 ? 0 : year * 12 - 1;
   return scenario.schedule[monthIndex];
 }
 
@@ -108,10 +107,12 @@ export function buildMortgageComparisonRows(
 }
 
 export function buildMortgageSummaryItems(scenario: MortgageScenario, year = 0) {
+  const monthlyLabelSuffix = year > 0 ? `in year ${year}` : "today";
+
   return [
     { label: "Loan amount", value: usd(scenario.loanAmount) },
-    { label: "Monthly principal", value: usd(getMortgagePrincipalForYear(scenario, year)) },
-    { label: "Monthly interest", value: usd(getMortgageInterestForYear(scenario, year)) },
+    { label: `Monthly principal ${monthlyLabelSuffix}`, value: usd(getMortgagePrincipalForYear(scenario, year)) },
+    { label: `Monthly interest ${monthlyLabelSuffix}`, value: usd(getMortgageInterestForYear(scenario, year)) },
     { label: "Monthly property tax", value: usd(scenario.monthlyTax) },
     { label: "Total interest", value: usd(scenario.totalInterest) },
   ];

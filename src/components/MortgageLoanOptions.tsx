@@ -157,6 +157,11 @@ function MortgageLoanOptionCard({
         </div>
       }
       detailsTitle="Option details"
+      detailsSummary={
+        loan.kind === "arm"
+          ? `Fixed ${loanState.fixedYears ?? 0} years, resets to ${(loanState.adjustedRate ?? 0).toFixed(3)}%`
+          : null
+      }
       detailsOpen={expandedLoanId === optionId}
       onToggleDetails={(open) => onSetExpandedLoanId(open ? optionId : null)}
       detailsContentClassName="grid gap-3 sm:grid-cols-2"

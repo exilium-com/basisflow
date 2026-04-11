@@ -1390,7 +1390,13 @@ export function WorkspacePage() {
 
           <WorkspaceSection id="projection" index="06" title="Projection" summary="Long View">
             <div className="grid gap-8">
-              <ChartPanel title={`Monthly Cash Flow For ${selectedYearLabel}`}>
+              <ChartPanel
+                title={
+                  projection.currentYear === 0
+                    ? "Monthly Cash Flow Today"
+                    : `Monthly Cash Flow in Year ${projection.currentYear}`
+                }
+              >
                 <MonthlyCashFlowPanel
                   items={monthlyCashFlow.items}
                   netFlow={monthlyCashFlow.netFlow}
