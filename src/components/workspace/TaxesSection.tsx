@@ -53,8 +53,8 @@ export function TaxesSection({
 }: TaxesSectionProps) {
   return (
     <WorkspaceSection id="taxes" index="03" title="Taxes" summary="Deduction Logic">
-      <div className="split-main-sidebar-roomy">
-        <div className="grid gap-4">
+      <div className="split-main-sidebar-wide">
+        <div className="grid content-start gap-4">
           <SegmentedToggle
             label="Deduction mode"
             ariaLabel="Deduction mode"
@@ -66,6 +66,84 @@ export function TaxesSection({
               { value: "itemized", label: "Itemized" },
             ]}
           />
+          <AdvancedPanel id="taxLimits" title="Tax parameters" open={taxLimitsOpen} onToggle={onSetTaxLimitsOpen}>
+            <div className="grid gap-4 md:grid-cols-2">
+              <NumberField
+                label="CA SDI rate"
+                suffix="%"
+                min="0"
+                step="0.1"
+                value={taxConfig.caSdiRate}
+                onValueChange={(value) => onUpdateTaxConfig({ caSdiRate: value ?? 0 })}
+              />
+              <NumberField
+                label="Property tax rate"
+                suffix="%"
+                value={mortgageState.propertyTaxRate}
+                step="0.001"
+                onValueChange={(value) => onUpdateMortgageState({ propertyTaxRate: value ?? 0 })}
+              />
+              <NumberField
+                label="401(k) total contribution cap"
+                prefix="$"
+                min="0"
+                step="100"
+                value={taxConfig.annualAdditionsLimit}
+                onValueChange={(value) => onUpdateTaxConfig({ annualAdditionsLimit: value ?? 0 })}
+              />
+              <NumberField
+                label="Federal standard deduction"
+                prefix="$"
+                min="0"
+                step="50"
+                value={taxConfig.federalStandardDeduction}
+                onValueChange={(value) => onUpdateTaxConfig({ federalStandardDeduction: value ?? 0 })}
+              />
+              <NumberField
+                label="California standard deduction"
+                prefix="$"
+                min="0"
+                step="50"
+                value={taxConfig.stateStandardDeduction}
+                onValueChange={(value) => onUpdateTaxConfig({ stateStandardDeduction: value ?? 0 })}
+              />
+              <NumberField
+                label="Federal SALT deduction cap"
+                prefix="$"
+                min="0"
+                step="50"
+                value={taxConfig.federalSaltCap}
+                onValueChange={(value) => onUpdateTaxConfig({ federalSaltCap: value ?? 0 })}
+              />
+            </div>
+          </AdvancedPanel>
+
+          <AdvancedPanel id="taxTables" title="Bracket tables" open={taxTablesOpen} onToggle={onSetTaxTablesOpen}>
+            <div className="grid gap-4">
+              <TextAreaField
+                label="Federal brackets"
+                inputClassName="resize-none"
+                value={federalBrackets}
+                onChange={(event) => onSetFederalBrackets(event.target.value)}
+              />
+              <TextAreaField
+                label="State brackets"
+                inputClassName="resize-none"
+                value={stateBrackets}
+                onChange={(event) => onSetStateBrackets(event.target.value)}
+              />
+              <TextAreaField
+                label="Long-term capital gains"
+                inputClassName="resize-none"
+                value={longTermCapitalGains}
+                onChange={(event) => onSetLongTermCapitalGains(event.target.value)}
+              />
+            </div>
+            <div className="mt-4 flex items-center gap-3">
+              <ActionButton onClick={onApplyTaxTables}>Apply tax tables</ActionButton>
+              <div className="min-h-6 text-sm text-(--ink-soft)">{taxEditorStatus}</div>
+            </div>
+          </AdvancedPanel>
         </div>
 
         <div>
@@ -80,84 +158,6 @@ export function TaxesSection({
           />
         </div>
       </div>
-
-      <div className="mt-6">
-        <AdvancedPanel id="taxLimits" title="Tax parameters" open={taxLimitsOpen} onToggle={onSetTaxLimitsOpen}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <NumberField
-              label="CA SDI rate"
-              suffix="%"
-              min="0"
-              step="0.1"
-              value={taxConfig.caSdiRate}
-              onValueChange={(value) => onUpdateTaxConfig({ caSdiRate: value ?? 0 })}
-            />
-            <NumberField
-              label="Property tax rate"
-              suffix="%"
-              value={mortgageState.propertyTaxRate}
-              step="0.001"
-              onValueChange={(value) => onUpdateMortgageState({ propertyTaxRate: value ?? 0 })}
-            />
-            <NumberField
-              label="401(k) total contribution cap"
-              prefix="$"
-              min="0"
-              step="100"
-              value={taxConfig.annualAdditionsLimit}
-              onValueChange={(value) => onUpdateTaxConfig({ annualAdditionsLimit: value ?? 0 })}
-            />
-            <NumberField
-              label="Federal standard deduction"
-              prefix="$"
-              min="0"
-              step="50"
-              value={taxConfig.federalStandardDeduction}
-              onValueChange={(value) => onUpdateTaxConfig({ federalStandardDeduction: value ?? 0 })}
-            />
-            <NumberField
-              label="California standard deduction"
-              prefix="$"
-              min="0"
-              step="50"
-              value={taxConfig.stateStandardDeduction}
-              onValueChange={(value) => onUpdateTaxConfig({ stateStandardDeduction: value ?? 0 })}
-            />
-            <NumberField
-              label="Federal SALT deduction cap"
-              prefix="$"
-              min="0"
-              step="50"
-              value={taxConfig.federalSaltCap}
-              onValueChange={(value) => onUpdateTaxConfig({ federalSaltCap: value ?? 0 })}
-            />
-          </div>
-        </AdvancedPanel>
-      </div>
-
-      <AdvancedPanel id="taxTables" title="Bracket tables" open={taxTablesOpen} onToggle={onSetTaxTablesOpen}>
-        <div className="grid gap-4 xl:grid-cols-3">
-          <TextAreaField
-            label="Federal brackets"
-            value={federalBrackets}
-            onChange={(event) => onSetFederalBrackets(event.target.value)}
-          />
-          <TextAreaField
-            label="State brackets"
-            value={stateBrackets}
-            onChange={(event) => onSetStateBrackets(event.target.value)}
-          />
-          <TextAreaField
-            label="Long-term capital gains"
-            value={longTermCapitalGains}
-            onChange={(event) => onSetLongTermCapitalGains(event.target.value)}
-          />
-        </div>
-        <div className="mt-4 flex items-center gap-3">
-          <ActionButton onClick={onApplyTaxTables}>Apply tax tables</ActionButton>
-          <div className="min-h-6 text-sm text-(--ink-soft)">{taxEditorStatus}</div>
-        </div>
-      </AdvancedPanel>
     </WorkspaceSection>
   );
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { computeAnnualTaxes } from "../incomeModel";
 import { incomeGoldens } from "./goldens/income";
 import { runIncomeScenario, type IncomeScenarioOptions } from "./helpers/incomeScenario";
 
@@ -129,6 +130,22 @@ describe("calculateIncome", () => {
     }).taxes.federalTax;
 
     expect(highSalt).toBe(lowSalt);
+  });
+
+  it("reports total tax across salary and RSU income", () => {
+    const scenario = runIncomeScenario({
+      salary: 250000,
+      rsuValue: 430000,
+    });
+    const expectedTotalTaxes = computeAnnualTaxes(scenario.income, scenario.taxConfig, 430000).totalTaxes;
+
+    expect(scenario.results.totalTaxes).toBe(expectedTotalTaxes);
+    expect(scenario.results.totalTaxes).toBeGreaterThan(
+      runIncomeScenario({
+        salary: 250000,
+        rsuValue: 0,
+      }).results.totalTaxes,
+    );
   });
 
   it.each(incomeGoldens)("$name", (testCase) => {

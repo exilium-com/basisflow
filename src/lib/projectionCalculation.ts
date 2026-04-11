@@ -1,4 +1,4 @@
-import { clamp, roundTo } from "./format";
+import { roundTo } from "./format";
 import {
   advanceProjectedBucket,
   buildIncomeDirectedContributions,
@@ -44,11 +44,10 @@ type ProjectionBase = {
   assetPlan: {
     totalContributions: number;
     deductibleContributions: number;
-    allocatableBuckets: Assets["buckets"];
     incomeDirectedContributions: Record<string, number>;
+    freeCashFlowBucket: Assets["buckets"][number] | null;
   };
   reserveCashBucketId: string;
-  allocationPercentScale: number;
 };
 
 type ProjectionSimulation = {
@@ -272,16 +271,16 @@ function createProjectionSimulation({
         (sum, bucket) => sum + (bucket.taxTreatment === "taxDeductible" ? bucket.contribution : 0),
         0,
       ),
-      allocatableBuckets: assets.buckets.filter(
-        (bucket) =>
-          bucket.id !== reserveCashBucketId &&
-          (incomeDirectedContributions[bucket.id] ?? 0) === 0,
-      ),
       incomeDirectedContributions,
+      freeCashFlowBucket:
+        assets.buckets.find(
+          (bucket) =>
+            bucket.id === projection.freeCashFlowBucketId &&
+            bucket.id !== reserveCashBucketId &&
+            (incomeDirectedContributions[bucket.id] ?? 0) === 0,
+        ) ?? null,
     },
     reserveCashBucketId,
-    allocationPercentScale:
-      projection.allocationPercentTotal > 100 ? 100 / projection.allocationPercentTotal : 1,
   };
   const bucketStates = fundHomeEquityFromBuckets(
     base.assets.buckets.map((bucket) => ({
@@ -459,37 +458,13 @@ function allocateFreeCash(
   yearContext: ProjectionYearContext,
 ): FreeCashAllocation {
   const extraContributionByBucket: Record<string, number> = {};
-  let remainingCash = Math.max(0, yearContext.freeCashBeforeAllocation);
-  let allocatedCash = 0;
+  const allocatedCash = Math.max(0, yearContext.freeCashBeforeAllocation);
   let deductibleContribution = 0;
-
-  function addContribution(bucket: Assets["buckets"][number], amount: number) {
-    extraContributionByBucket[bucket.id] = roundTo((extraContributionByBucket[bucket.id] ?? 0) + amount, 2);
-    allocatedCash = roundTo(allocatedCash + amount, 2);
-    if (bucket.taxTreatment === "taxDeductible") {
-      deductibleContribution = roundTo(deductibleContribution + amount, 2);
+  if (base.assetPlan.freeCashFlowBucket && allocatedCash > 0) {
+    extraContributionByBucket[base.assetPlan.freeCashFlowBucket.id] = allocatedCash;
+    if (base.assetPlan.freeCashFlowBucket.taxTreatment === "taxDeductible") {
+      deductibleContribution = allocatedCash;
     }
-  }
-
-  for (const bucket of base.assetPlan.allocatableBuckets) {
-    const allocation = base.projection.allocations[bucket.id] ?? { mode: "percent", value: 0 };
-    if (allocation.mode !== "amount") {
-      continue;
-    }
-
-    const contribution = roundTo(Math.min(remainingCash, allocation.value), 2);
-    remainingCash = roundTo(remainingCash - contribution, 2);
-    addContribution(bucket, contribution);
-  }
-
-  for (const bucket of base.assetPlan.allocatableBuckets) {
-    const allocation = base.projection.allocations[bucket.id] ?? { mode: "percent", value: 0 };
-    if (allocation.mode !== "percent") {
-      continue;
-    }
-
-    const share = (clamp(allocation.value, 0, 100) / 100) * base.allocationPercentScale;
-    addContribution(bucket, roundTo(remainingCash * share, 2));
   }
 
   const extraDeductionTaxSavings = computeDeductionTaxSavings(
@@ -502,7 +477,9 @@ function allocateFreeCash(
     extraContributionByBucket,
     reserveCashFlow:
       yearContext.freeCashBeforeAllocation >= 0
-        ? yearContext.freeCashBeforeAllocation - allocatedCash + extraDeductionTaxSavings
+        ? yearContext.freeCashBeforeAllocation -
+          (base.assetPlan.freeCashFlowBucket ? allocatedCash : 0) +
+          extraDeductionTaxSavings
         : yearContext.freeCashBeforeAllocation,
   };
 }

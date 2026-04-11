@@ -31,13 +31,8 @@ export const projectionGoldens: ProjectionGolden[] = [
         megaBackdoor: 35250,
         hsaContribution: 4400,
       },
-      accounts: [],
-      allocations: {
-        "stock-bucket": {
-          amount: 100,
-          growth: 7,
-        },
-      },
+      accounts: [{ id: "stock-bucket", name: "Stock bucket", growth: 7 }],
+      freeCashFlowBucketId: "stock-bucket",
       horizonYears: 5,
     },
     expected: {
@@ -74,13 +69,8 @@ export const projectionGoldens: ProjectionGolden[] = [
         megaBackdoor: 0,
         hsaContribution: 0,
       },
-      accounts: [],
-      allocations: {
-        "stock-bucket": {
-          amount: 100,
-          growth: 7,
-        },
-      },
+      accounts: [{ id: "stock-bucket", name: "Stock bucket", growth: 7 }],
+      freeCashFlowBucketId: "stock-bucket",
       horizonYears: 5,
     },
     expected: {

@@ -1,18 +1,41 @@
 import React from "react";
 import { ActionButton } from "../ActionButton";
 import { NumberField, SelectField, TextField } from "../Field";
+import { ProjectedValueDisplay } from "../ProjectedValueDisplay";
 import { RowItem } from "../RowItem";
 import { WorkspaceSection } from "./WorkspaceSection";
-import { type AssetBucketState, type DerivedAssetsState, type AssetTaxTreatment } from "../../lib/assetsModel";
+import { PINNED_BUCKETS, type AssetBucketState, type DerivedAssetsState, type AssetTaxTreatment } from "../../lib/assetsModel";
+import { usd } from "../../lib/format";
+import { toDisplayValue, type Projection, type ProjectionAssetOverride } from "../../lib/projectionState";
+import { type ProjectionRow } from "../../lib/projectionUtils";
 
 type AssetsSectionProps = {
   assetsView: DerivedAssetsState;
+  assetGrowthRate: number;
+  assetOverrides: Record<string, ProjectionAssetOverride>;
+  currentRow: ProjectionRow;
+  projection: Projection;
+  selectedYearLabel: string;
   onAddAssetBucket: () => void;
   onRemoveAssetBucket: (bucketId: string) => void;
   onUpdateAssetBucket: (bucketId: string, patch: Partial<AssetBucketState>) => void;
+  onUpdateAssetOverride: (bucketId: string, patch: ProjectionAssetOverride) => void;
 };
 
-export function AssetsSection({ assetsView, onAddAssetBucket, onRemoveAssetBucket, onUpdateAssetBucket }: AssetsSectionProps) {
+export function AssetsSection({
+  assetsView,
+  assetGrowthRate,
+  assetOverrides,
+  currentRow,
+  projection,
+  selectedYearLabel,
+  onAddAssetBucket,
+  onRemoveAssetBucket,
+  onUpdateAssetBucket,
+  onUpdateAssetOverride,
+}: AssetsSectionProps) {
+  const reserveCashBucketId = PINNED_BUCKETS.reserveCashBucketId.id;
+
   return (
     <WorkspaceSection
       id="assets"
@@ -24,6 +47,8 @@ export function AssetsSection({ assetsView, onAddAssetBucket, onRemoveAssetBucke
       <div className="grid gap-2.5">
         {assetsView.orderedBuckets.map((bucket) => {
           const isPinnedBucket = assetsView.pinnedBucketIds.has(bucket.id);
+          const override = assetOverrides[bucket.id];
+          const showsGrowthOverride = bucket.id !== reserveCashBucketId;
 
           return (
             <RowItem
@@ -32,9 +57,10 @@ export function AssetsSection({ assetsView, onAddAssetBucket, onRemoveAssetBucke
               removeLabel={isPinnedBucket ? undefined : "Remove asset"}
               onRemove={isPinnedBucket ? undefined : () => onRemoveAssetBucket(bucket.id)}
               detailsTitle="Asset details"
+              detailsSummary={override?.growth != null ? `Growth ${override.growth}%` : null}
               detailsOpen={bucket.detailsOpen}
               onToggleDetails={(detailsOpen) => onUpdateAssetBucket(bucket.id, { detailsOpen })}
-              headerClassName="grid items-center gap-3 lg:grid-cols-2"
+              headerClassName="grid items-center gap-3 lg:grid-cols-3"
               detailsContentClassName="grid gap-3 sm:grid-cols-2"
               header={
                 <>
@@ -56,9 +82,30 @@ export function AssetsSection({ assetsView, onAddAssetBucket, onRemoveAssetBucke
                     inputClassName={isPinnedBucket ? "text-(--ink-soft)" : ""}
                     onValueChange={(value) => onUpdateAssetBucket(bucket.id, { current: value })}
                   />
+                  <ProjectedValueDisplay
+                    label={selectedYearLabel}
+                    value={usd(
+                      toDisplayValue(
+                        currentRow.bucketSnapshotsById[bucket.id]?.balance ?? (bucket.current ?? 0),
+                        projection.currentYear,
+                        projection,
+                      ),
+                    )}
+                  />
                 </>
               }
             >
+              {showsGrowthOverride ? (
+                <NumberField
+                  label="Growth override"
+                  suffix="%"
+                  min="0"
+                  step="0.1"
+                  value={override?.growth ?? null}
+                  placeholder={String(assetGrowthRate)}
+                  onValueChange={(value) => onUpdateAssetOverride(bucket.id, { growth: value })}
+                />
+              ) : null}
               <SelectField
                 label="Tax treatment"
                 value={bucket.taxTreatment}

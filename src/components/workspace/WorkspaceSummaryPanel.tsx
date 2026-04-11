@@ -3,7 +3,6 @@ import { AdvancedPanel } from "../AdvancedPanel";
 import { CheckboxField, NumberField, SelectField } from "../Field";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { SliderField } from "../SliderField";
-import { type Assets } from "../../lib/assetsModel";
 import { usd } from "../../lib/format";
 import { toDisplayValue, type Projection, type ProjectionState } from "../../lib/projectionState";
 import { type ProjectionRow } from "../../lib/projectionUtils";
@@ -17,11 +16,12 @@ type SummaryRow = {
 type WorkspaceSummaryPanelProps = {
   currentRow: ProjectionRow;
   projection: Projection;
-  projectionAssets: Assets;
   projectionState: ProjectionState;
   selectedYearLabel: string;
   topLevelSummaryRows: SummaryRow[];
   matchRate: number;
+  assetOptions: Array<{ id: string; name: string }>;
+  freeCashFlowOptions: Array<{ id: string; name: string }>;
   onUpdateIncomeField: (field: "matchRate", value: number) => void;
   onUpdateProjectionState: (patch: Partial<ProjectionState>) => void;
 };
@@ -54,11 +54,12 @@ function SummaryLinkRow({ href, label, annualValue }: SummaryRow) {
 export function WorkspaceSummaryPanel({
   currentRow,
   projection,
-  projectionAssets,
   projectionState,
   selectedYearLabel,
   topLevelSummaryRows,
   matchRate,
+  assetOptions,
+  freeCashFlowOptions,
   onUpdateIncomeField,
   onUpdateProjectionState,
 }: WorkspaceSummaryPanelProps) {
@@ -121,7 +122,7 @@ export function WorkspaceSummaryPanel({
         open={projectionState.advancedOpen}
         onToggle={(advancedOpen) => onUpdateProjectionState({ advancedOpen })}
       >
-        <div className="grid gap-3">
+        <div className="grid gap-3 md:grid-cols-2">
           <NumberField
             label="Match rate"
             suffix="%"
@@ -180,6 +181,7 @@ export function WorkspaceSummaryPanel({
             onValueChange={(value) => onUpdateProjectionState({ homeAppreciationRate: value ?? 0 })}
           />
           <CheckboxField
+            className="md:col-span-2"
             label="Include vested RSUs"
             checked={projectionState.includeVestedRsusInNetWorth}
             onChange={(event) =>
@@ -192,7 +194,19 @@ export function WorkspaceSummaryPanel({
             onChange={(event) => onUpdateProjectionState({ mortgageFundingBucketId: event.target.value })}
           >
             <option value="">None</option>
-            {projectionAssets.buckets.map((bucket) => (
+            {assetOptions.map((bucket) => (
+              <option key={bucket.id} value={bucket.id}>
+                {bucket.name}
+              </option>
+            ))}
+          </SelectField>
+          <SelectField
+            label="Free cash goes to"
+            value={projectionState.freeCashFlowBucketId}
+            onChange={(event) => onUpdateProjectionState({ freeCashFlowBucketId: event.target.value })}
+          >
+            <option value="">Reserve cash</option>
+            {freeCashFlowOptions.map((bucket) => (
               <option key={bucket.id} value={bucket.id}>
                 {bucket.name}
               </option>

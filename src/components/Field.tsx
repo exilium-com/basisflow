@@ -269,13 +269,20 @@ export function CheckboxField({
   );
 }
 
-export function TextAreaField({ label, htmlFor, className = "", labelClassName = "", ...props }: TextAreaFieldProps) {
+export function TextAreaField({
+  label,
+  htmlFor,
+  className = "",
+  labelClassName = "",
+  inputClassName = "",
+  ...props
+}: TextAreaFieldProps) {
   const resolvedId = React.useId();
   const inputId = htmlFor ?? resolvedId;
 
   return (
     <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
-      <textarea id={inputId} className={textAreaClassName} {...props} />
+      <textarea id={inputId} className={clsx(textAreaClassName, inputClassName)} {...props} />
     </Field>
   );
 }
