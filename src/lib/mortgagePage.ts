@@ -1,7 +1,7 @@
 import { usd } from "./format";
 import { type MortgageScenario } from "./mortgageSchedule";
 
-type MortgageComparisonRow = {
+export type MortgageComparisonRow = {
   label: string;
   left: string;
   right: string;

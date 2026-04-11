@@ -1,4 +1,4 @@
-import { percent, readNumber } from "./format";
+import { readNumber } from "./format";
 
 export type MortgageDownPaymentMode = "percent" | "dollar";
 export type MortgageOptionKind = "conventional" | "arm";
@@ -78,10 +78,6 @@ const ARM_DEFAULTS = {
   fixedYears: 7,
 };
 
-const LEGACY_LOAN_ORDER = ["fixed30", "arm76", "arm106"] as const;
-
-type LegacyLoanType = (typeof LEGACY_LOAN_ORDER)[number];
-
 export const MORTGAGE_DEFAULTS = {
   homePrice: 800000,
   downPaymentPercent: 20,
@@ -100,31 +96,6 @@ const MORTGAGE_NUMBER_FIELDS = [
 
 function defaultOptionValues(kind: MortgageOptionKind) {
   return kind === "arm" ? ARM_DEFAULTS : CONVENTIONAL_DEFAULTS;
-}
-
-function createLegacyMortgageOption(type: LegacyLoanType, rawState: Record<string, unknown>): MortgageOptionState {
-  if (type === "fixed30") {
-    return createMortgageOption({
-      id: type,
-      name: "Conventional",
-      kind: "conventional",
-      rate: readNumber(rawState.rate, CONVENTIONAL_DEFAULTS.rate),
-      term: readNumber(rawState.term, CONVENTIONAL_DEFAULTS.term),
-    });
-  }
-
-  const fixedYears = type === "arm106" ? 10 : 7;
-  const initialRate = readNumber(rawState.initialRate, ARM_DEFAULTS.initialRate);
-
-  return createMortgageOption({
-    id: type,
-    name: type === "arm106" ? "ARM 10/1" : "ARM 7/1",
-    kind: "arm",
-    term: readNumber(rawState.term, ARM_DEFAULTS.term),
-    initialRate,
-    adjustedRate: readNumber(rawState.adjustedRate, initialRate),
-    fixedYears,
-  });
 }
 
 export function createMortgageOption(overrides: Partial<MortgageOptionState> = {}): MortgageOptionState {
@@ -193,27 +164,15 @@ export function normalizeMortgageState(parsed: unknown, fallback: MortgageState)
 
   const normalizedOptions = Array.isArray(state.options)
     ? state.options.map((option, index) => normalizeMortgageOption(option, fallback.options[index]))
-    : typeof state.loanOptions === "object" && state.loanOptions
-      ? LEGACY_LOAN_ORDER.map((type) => {
-          const rawLoanState = (state.loanOptions as Record<string, unknown>)[type];
-          return createLegacyMortgageOption(
-            type,
-            typeof rawLoanState === "object" && rawLoanState ? (rawLoanState as Record<string, unknown>) : {},
-          );
-        })
-      : fallback.options;
-
+    : fallback.options;
   const options = normalizedOptions.length > 0 ? normalizedOptions : fallback.options;
   const optionIds = new Set(options.map((option) => option.id));
   const fallbackActiveLoanId = options[0]?.id ?? fallback.activeLoanId;
   const fallbackCompareLoanId = options.find((option) => option.id !== fallbackActiveLoanId)?.id ?? fallbackActiveLoanId;
-  const legacyActiveLoanId = typeof state.activeLoanType === "string" ? state.activeLoanType : null;
-  const legacyCompareLoanId = typeof state.compareLoanType === "string" ? state.compareLoanType : null;
-  const activeLoanIdCandidate =
-    typeof state.activeLoanId === "string" && state.activeLoanId ? state.activeLoanId : legacyActiveLoanId;
+  const activeLoanIdCandidate = typeof state.activeLoanId === "string" && state.activeLoanId ? state.activeLoanId : null;
   const activeLoanId = activeLoanIdCandidate && optionIds.has(activeLoanIdCandidate) ? activeLoanIdCandidate : fallbackActiveLoanId;
   const compareLoanIdCandidate =
-    typeof state.compareLoanId === "string" && state.compareLoanId ? state.compareLoanId : legacyCompareLoanId;
+    typeof state.compareLoanId === "string" && state.compareLoanId ? state.compareLoanId : null;
   const compareLoanId =
     compareLoanIdCandidate && optionIds.has(compareLoanIdCandidate)
       ? compareLoanIdCandidate
@@ -277,12 +236,4 @@ export function createMortgage(state: MortgageState = DEFAULT_MORTGAGE_STATE): M
     compareLoanId,
     options,
   };
-}
-
-export function getMortgageLoanMeta(loanOption: MortgageLoan) {
-  if (loanOption.kind === "arm") {
-    return `${loanOption.fixedYears}y fixed at ${percent(loanOption.initialRate, 3)}, then ${percent(loanOption.adjustedRate, 3)} / ${Math.round(loanOption.term)}y`;
-  }
-
-  return `${percent(loanOption.rate, 3)} / ${Math.round(loanOption.term)}y`;
 }

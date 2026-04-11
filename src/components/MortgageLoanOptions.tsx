@@ -50,6 +50,133 @@ type MortgageComparisonTableProps = {
   scenario: MortgageScenario;
 };
 
+function MortgageCompareButton({
+  disabled,
+  selected,
+  onClick,
+}: {
+  disabled: boolean;
+  selected: boolean;
+  onClick: React.MouseEventHandler<HTMLButtonElement>;
+}) {
+  return (
+    <button
+      className={
+        disabled
+          ? "h-10 min-w-24 shrink-0 border border-(--line-soft) bg-(--white) px-4 text-sm text-(--ink-soft) opacity-50"
+          : selected
+            ? "h-10 min-w-24 shrink-0 border border-(--teal) bg-(--teal-tint) px-4 text-sm text-(--teal)"
+            : "h-10 min-w-24 shrink-0 border border-(--line-soft) bg-transparent px-4 text-sm text-(--ink-soft)"
+      }
+      type="button"
+      aria-pressed={selected}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      Compare
+    </button>
+  );
+}
+
+function ConventionalLoanHeaderFields({
+  optionId,
+  loanState,
+  onUpdateLoanField,
+}: {
+  optionId: string;
+  loanState: MortgageState["options"][number];
+  onUpdateLoanField: (optionId: string, field: MortgageLoanField, value: number | null) => void;
+}) {
+  return (
+    <>
+      <NumberField
+        compact
+        label="Interest rate"
+        suffix="%"
+        value={loanState.rate}
+        step="0.001"
+        onValueChange={(value) => onUpdateLoanField(optionId, "rate", value)}
+      />
+      <NumberField
+        compact
+        label="Loan term"
+        suffix="years"
+        value={loanState.term}
+        step="1"
+        onValueChange={(value) => onUpdateLoanField(optionId, "term", value)}
+      />
+    </>
+  );
+}
+
+function ArmLoanHeaderFields({
+  optionId,
+  loanState,
+  onUpdateLoanField,
+}: {
+  optionId: string;
+  loanState: MortgageState["options"][number];
+  onUpdateLoanField: (optionId: string, field: MortgageLoanField, value: number | null) => void;
+}) {
+  return (
+    <>
+      <NumberField
+        compact
+        label="Initial rate"
+        suffix="%"
+        value={loanState.initialRate}
+        step="0.001"
+        onValueChange={(value) => onUpdateLoanField(optionId, "initialRate", value)}
+      />
+      <NumberField
+        compact
+        label="Loan term"
+        suffix="years"
+        value={loanState.term}
+        step="1"
+        onValueChange={(value) => onUpdateLoanField(optionId, "term", value)}
+      />
+    </>
+  );
+}
+
+function ArmLoanDetails({
+  optionId,
+  loanState,
+  onUpdateLoanField,
+}: {
+  optionId: string;
+  loanState: MortgageState["options"][number];
+  onUpdateLoanField: (optionId: string, field: MortgageLoanField, value: number | null) => void;
+}) {
+  return (
+    <>
+      <NumberField
+        label="Reset rate"
+        suffix="%"
+        value={loanState.adjustedRate}
+        step="0.001"
+        onValueChange={(value) => onUpdateLoanField(optionId, "adjustedRate", value)}
+      />
+      <NumberField
+        label="Fixed years"
+        suffix="years"
+        value={loanState.fixedYears}
+        step="1"
+        onValueChange={(value) => onUpdateLoanField(optionId, "fixedYears", value)}
+      />
+    </>
+  );
+}
+
+function LoanOptionDetailsSummary({ loanState }: { loanState: MortgageState["options"][number] }) {
+  if (loanState.kind !== "arm") {
+    return null;
+  }
+
+  return `Fixed ${loanState.fixedYears ?? 0} years, resets to ${(loanState.adjustedRate ?? 0).toFixed(3)}%`;
+}
+
 function MortgageLoanOptionCard({
   expandedLoanId,
   mortgage,
@@ -96,72 +223,32 @@ function MortgageLoanOptionCard({
           <div className="flex items-end justify-between gap-3">
             <div className="grid flex-1 gap-3 sm:grid-cols-2">
               {loan.kind === "arm" ? (
-                <>
-                  <NumberField
-                    compact
-                    label="Initial rate"
-                    suffix="%"
-                    value={loanState.initialRate}
-                    step="0.001"
-                    onValueChange={(value) => onUpdateLoanField(optionId, "initialRate", value)}
-                  />
-                  <NumberField
-                    compact
-                    label="Loan term"
-                    suffix="years"
-                    value={loanState.term}
-                    step="1"
-                    onValueChange={(value) => onUpdateLoanField(optionId, "term", value)}
-                  />
-                </>
+                <ArmLoanHeaderFields
+                  optionId={optionId}
+                  loanState={loanState}
+                  onUpdateLoanField={onUpdateLoanField}
+                />
               ) : (
-                <>
-                  <NumberField
-                    compact
-                    label="Interest rate"
-                    suffix="%"
-                    value={loanState.rate}
-                    step="0.001"
-                    onValueChange={(value) => onUpdateLoanField(optionId, "rate", value)}
-                  />
-                  <NumberField
-                    compact
-                    label="Loan term"
-                    suffix="years"
-                    value={loanState.term}
-                    step="1"
-                    onValueChange={(value) => onUpdateLoanField(optionId, "term", value)}
-                  />
-                </>
+                <ConventionalLoanHeaderFields
+                  optionId={optionId}
+                  loanState={loanState}
+                  onUpdateLoanField={onUpdateLoanField}
+                />
               )}
             </div>
-            <button
-              className={
-                state.activeLoanId === optionId
-                  ? "h-10 min-w-24 shrink-0 border border-(--line-soft) bg-(--white) px-4 text-sm text-(--ink-soft) opacity-50"
-                  : state.compareLoanId === optionId
-                    ? "h-10 min-w-24 shrink-0 border border-(--teal) bg-(--teal-tint) px-4 text-sm text-(--teal)"
-                    : "h-10 min-w-24 shrink-0 border border-(--line-soft) bg-transparent px-4 text-sm text-(--ink-soft)"
-              }
-              type="button"
-              aria-pressed={state.activeLoanId !== optionId && state.compareLoanId === optionId}
+            <MortgageCompareButton
               disabled={state.activeLoanId === optionId}
+              selected={state.activeLoanId !== optionId && state.compareLoanId === optionId}
               onClick={(event) => {
                 event.stopPropagation();
                 onSetCompareLoanId(optionId);
               }}
-              >
-                Compare
-              </button>
+            />
           </div>
         </div>
       }
       detailsTitle="Option details"
-      detailsSummary={
-        loan.kind === "arm"
-          ? `Fixed ${loanState.fixedYears ?? 0} years, resets to ${(loanState.adjustedRate ?? 0).toFixed(3)}%`
-          : null
-      }
+      detailsSummary={<LoanOptionDetailsSummary loanState={loanState} />}
       detailsOpen={expandedLoanId === optionId}
       onToggleDetails={(open) => onSetExpandedLoanId(open ? optionId : null)}
       detailsContentClassName="grid gap-3 sm:grid-cols-2"
@@ -180,22 +267,7 @@ function MortgageLoanOptionCard({
         />
       </div>
       {loan.kind === "arm" ? (
-        <>
-          <NumberField
-            label="Reset rate"
-            suffix="%"
-            value={loanState.adjustedRate}
-            step="0.001"
-            onValueChange={(value) => onUpdateLoanField(optionId, "adjustedRate", value)}
-          />
-          <NumberField
-            label="Fixed years"
-            suffix="years"
-            value={loanState.fixedYears}
-            step="1"
-            onValueChange={(value) => onUpdateLoanField(optionId, "fixedYears", value)}
-          />
-        </>
+        <ArmLoanDetails optionId={optionId} loanState={loanState} onUpdateLoanField={onUpdateLoanField} />
       ) : null}
     </RowItem>
   );
