@@ -78,11 +78,11 @@ export function MortgageSection({
               onValueChange={(value) => onUpdateMortgageState({ homePrice: value ?? 0 })}
             />
 
-            <div className="flex items-end gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
               <SegmentedToggle
                 label="Down payment"
                 ariaLabel="Down payment mode"
-                className="shrink-0"
+                className="w-fit shrink-0"
                 value={mortgageState.downPaymentMode}
                 onChange={onHandleDownPaymentMode}
                 options={[
@@ -120,7 +120,6 @@ export function MortgageSection({
             expandedLoanId={expandedLoanId}
             currentYear={currentYear}
             mortgage={mortgage}
-            optionIds={mortgageState.options.map((option) => option.id)}
             scenariosById={scenariosById}
             state={mortgageState}
             onSelectLoan={onSelectLoan}
