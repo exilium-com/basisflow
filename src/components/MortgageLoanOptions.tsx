@@ -1,5 +1,6 @@
 import React from "react";
 import { NumberField, TextField } from "./Field";
+import { ProjectedValueDisplay } from "./ProjectedValueDisplay";
 import { RowItem } from "./RowItem";
 import { SegmentedToggle } from "./SegmentedToggle";
 import { usd } from "../lib/format";
@@ -69,8 +70,8 @@ function MortgageLoanOptionCard({
       removeLabel={optionCount > 1 ? `Remove ${loanState.name || "mortgage option"}` : undefined}
       onRemove={optionCount > 1 ? () => onRemoveLoan(loan.id) : undefined}
       header={
-        <div className="grid gap-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="grid gap-4">
+          <div className="flex items-end gap-4">
             <TextField
               className="flex-1"
               label="Option name"
@@ -79,7 +80,7 @@ function MortgageLoanOptionCard({
             />
             {loan.kind === "rent" ? (
               <NumberField
-                className="min-w-0 sm:w-min sm:min-w-40"
+                className="w-48"
                 label="Rent"
                 prefix="$"
                 suffix="/ month"
@@ -88,13 +89,16 @@ function MortgageLoanOptionCard({
                 onValueChange={(value) => onUpdateLoanField(loan.id, "rentPerMonth", value)}
               />
             ) : (
-              <div className="text-base font-semibold text-(--ink-soft) sm:pb-2 sm:text-lg">
-                {usd(getMortgageMonthlyPaymentForYear(scenario, currentYear))} / month
+              <div className="w-40">
+                <ProjectedValueDisplay
+                  label={currentYear === 0 ? "Today" : `Year ${currentYear}`}
+                  value={`${usd(getMortgageMonthlyPaymentForYear(scenario, currentYear))} / month`}
+                />
               </div>
             )}
           </div>
           {loan.kind !== "rent" ? (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-4">
               <NumberField
                 label={loan.kind === "arm" ? "Initial rate" : "Interest rate"}
                 suffix="%"
@@ -166,7 +170,7 @@ export function MortgageLoanOptionList(props: MortgageLoanOptionListProps) {
   const optionCount = props.state.options.length;
 
   return (
-    <div className="grid gap-2.5" role="list">
+    <div className="grid gap-2" role="list">
       {props.state.options.map((loanState) => {
         const loan = props.mortgage.options.find((entry) => entry.id === loanState.id);
         const scenario = props.scenariosById[loanState.id];

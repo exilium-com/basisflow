@@ -68,8 +68,8 @@ export function MortgageSection({
       actions={<ActionButton onClick={onAddMortgageOption}>Add housing option</ActionButton>}
     >
       <div className="split-main-sidebar-wide">
-        <div className="grid gap-5">
-          <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <NumberField
               label="Home price"
               prefix="$"
@@ -79,7 +79,7 @@ export function MortgageSection({
               onValueChange={(value) => onUpdateMortgageState({ homePrice: value ?? 0 })}
             />
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div className="flex items-end gap-4">
               <SegmentedToggle
                 label="Down payment"
                 ariaLabel="Down payment mode"

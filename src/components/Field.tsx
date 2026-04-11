@@ -7,13 +7,13 @@ const inputBaseClassName =
   "w-full min-w-0 border-0 bg-transparent p-0 text-base font-semibold text-(--ink) outline-none";
 
 const selectClassName =
-  "w-full min-w-0 appearance-none border-0 bg-transparent p-0 pr-6 text-base font-semibold text-(--ink) outline-none";
+  "w-full min-w-0 appearance-none border-0 bg-transparent p-0 pr-4 text-base font-semibold text-(--ink) outline-none";
 
 const textAreaClassName =
-  "min-h-60 w-full resize-y border border-(--line) bg-(--white) px-3 py-3 font-mono text-sm font-semibold leading-6 text-(--ink) outline-none";
+  "min-h-48 w-full resize-y border border-(--line) bg-(--white) px-4 py-4 font-mono text-sm font-semibold leading-6 text-(--ink) outline-none";
 
 const inputFrameClassName =
-  "relative flex min-h-10 items-center border border-(--line) border-l-4 border-l-(--teal-soft) bg-(--white) px-3 transition-colors focus-within:border-(--teal) focus-within:border-l-(--teal)";
+  "relative flex min-h-10 items-center border border-(--line) border-l-4 border-l-(--teal-soft) bg-(--white) px-4 transition-colors focus-within:border-(--teal) focus-within:border-l-(--teal)";
 const invalidInputFrameClassName = "border-(--danger) border-l-(--danger)";
 const affixClassName = "flex-none text-sm font-extrabold text-(--ink-soft)";
 const checkboxLabelClassName = "flex min-h-8 w-full min-w-0 items-center gap-2 text-base font-semibold text-(--ink)";
@@ -94,9 +94,9 @@ export function Field({ label, htmlFor, className = "", labelClassName = "", chi
 export function InputFrame({ prefix = null, suffix = null, invalid = false, className = "", children }: InputFrameProps) {
   return (
     <div className={clsx(inputFrameClassName, invalid && invalidInputFrameClassName, className)}>
-      {prefix ? <span className={clsx(affixClassName, "mr-1.5 ml-0.5")}>{prefix}</span> : null}
+      {prefix ? <span className={clsx(affixClassName, "mr-2")}>{prefix}</span> : null}
       {children}
-      {suffix ? <span className={clsx(affixClassName, "ml-1.5")}>{suffix}</span> : null}
+      {suffix ? <span className={clsx(affixClassName, "ml-2")}>{suffix}</span> : null}
     </div>
   );
 }
@@ -193,7 +193,7 @@ export function NumberField({
         prefix={prefix}
         suffix={suffix}
         invalid={invalid}
-        className={clsx(compact && "min-h-9 px-2", frameClassName)}
+        className={clsx(compact && "px-2", frameClassName)}
       >
         <input
           id={inputId}
@@ -228,7 +228,7 @@ export function SelectField({
         <select id={inputId} className={selectClassName} {...inputProps}>
           {children}
         </select>
-        <span aria-hidden="true" className="pointer-events-none absolute right-3 text-sm font-bold text-(--ink-soft)">
+        <span aria-hidden="true" className="pointer-events-none absolute right-4 text-sm font-bold text-(--ink-soft)">
           ▾
         </span>
       </InputFrame>
@@ -254,7 +254,7 @@ export function CheckboxField({
       <div aria-hidden="true" className={clsx(fieldLabelClass, "invisible select-none", labelClassName)}>
         {label || "."}
       </div>
-      <InputFrame invalid={invalid} className={clsx("min-h-9 justify-start px-2", frameClassName)}>
+      <InputFrame invalid={invalid} className={clsx("min-h-8 justify-start px-2", frameClassName)}>
         <label className={clsx(checkboxLabelClassName, labelClassName)} htmlFor={inputId}>
           <input
             id={inputId}

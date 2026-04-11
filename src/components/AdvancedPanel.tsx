@@ -22,7 +22,7 @@ export function AdvancedPanel({ id, open, onToggle, title, children }: AdvancedP
           {open ? "−" : "+"}
         </span>
       </summary>
-      <div className="border-t border-(--line-soft) px-4 pt-3 pb-4">{children}</div>
+      <div className="border-t border-(--line-soft) p-4">{children}</div>
     </details>
   );
 }

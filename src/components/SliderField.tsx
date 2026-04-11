@@ -31,11 +31,11 @@ export function SliderField({
       }
       htmlFor={inputId}
       className={clsx("gap-1", className)}
-      labelClassName={clsx("flex min-h-5 items-center justify-between gap-3", labelClassName)}
+      labelClassName={clsx("flex min-h-4 items-center justify-between gap-4", labelClassName)}
     >
       <div
         className="flex min-h-10 items-center border border-l-4 border-(--line) border-l-(--teal-soft) bg-(--white)
-          px-3"
+          px-4"
       >
         <input id={inputId} className="slider-input w-full" type="range" {...inputProps} />
       </div>

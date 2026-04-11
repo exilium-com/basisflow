@@ -91,13 +91,13 @@ export function IncomeSection({
       title="Income"
       summary="Cash In"
       actions={
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-4">
           <ActionButton onClick={onAddSalaryItem}>Add salary</ActionButton>
           <ActionButton onClick={onAddRsuItem}>Add RSU</ActionButton>
         </div>
       }
     >
-      <div className="grid gap-3">
+      <div className="grid gap-4">
         {income.incomeItems.map((item) => {
           if (item.type === "salary") {
             const annualizedSalary = getAnnualSalaryTotal([{ amount: item.amount ?? 0, frequency: item.frequency }]);
@@ -105,7 +105,7 @@ export function IncomeSection({
             return (
               <RowItem
                 key={item.id}
-                headerClassName="grid gap-3 md:grid-cols-3"
+                headerClassName="grid grid-cols-3 gap-4"
                 removeLabel={`Remove ${item.name || "salary"}`}
                 onRemove={(event) => {
                   event.stopPropagation();
@@ -155,7 +155,7 @@ export function IncomeSection({
           return (
             <RowItem
               key={item.id}
-              headerClassName="grid gap-3 md:grid-cols-3"
+              headerClassName="grid grid-cols-3 gap-4"
               removeLabel={`Remove ${item.name || "RSU grant"}`}
               onRemove={(event) => {
                 event.stopPropagation();
@@ -186,7 +186,7 @@ export function IncomeSection({
                 </>
               }
             >
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-2 gap-4">
                 <NumberField
                   label="Annual refresher"
                   prefix="$"
@@ -258,7 +258,7 @@ export function IncomeSection({
           </div>
         </div>
 
-        <div className="grid gap-6">
+        <div className="grid gap-4">
           <MetricGrid
             primaryItem={{ label: "Monthly take-home", value: usd(incomeResults.monthlyTakeHome, 2) }}
             items={[

@@ -131,24 +131,23 @@
 }
 
 @layer utilities {
-  .summary-year-grid {
-    display: grid;
-    gap: 0.75rem;
-  }
-
   .split-main-sidebar {
     display: grid;
-    gap: 1.5rem;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.9fr);
   }
 
   .split-main-sidebar-wide {
     display: grid;
-    gap: 1.5rem;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
   }
 
   .cashflow-chart-grid {
     display: grid;
-    gap: 1.5rem;
+    gap: 1rem;
+    grid-template-columns: 240px minmax(0, 1fr);
+    align-items: center;
   }
 
   .trim-last-table-row tbody tr:last-child td {
@@ -160,35 +159,7 @@
     min-height: 0;
     flex: 1 1 0%;
     align-items: start;
-  }
-
-  @media (min-width: 1024px) {
-    .workspace-shell {
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-    }
-
-    .cashflow-chart-grid {
-      grid-template-columns: 240px minmax(0, 1fr);
-      align-items: center;
-    }
-
-    .split-main-sidebar-wide {
-      grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
-    }
-  }
-
-  @media (min-width: 1280px) {
-    .summary-year-grid {
-      grid-template-columns: minmax(0, 1fr) 7rem;
-    }
-
-    .split-main-sidebar {
-      grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.9fr);
-    }
-
-    .split-main-sidebar-roomy {
-      grid-template-columns: minmax(0, 1fr) minmax(20rem, 0.9fr);
-    }
+    grid-template-columns: minmax(0, 3fr) minmax(22rem, 2fr);
   }
 
   .slider-input {

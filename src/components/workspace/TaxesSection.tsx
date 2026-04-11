@@ -67,7 +67,7 @@ export function TaxesSection({
             ]}
           />
           <AdvancedPanel id="taxLimits" title="Tax parameters" open={taxLimitsOpen} onToggle={onSetTaxLimitsOpen}>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-2 gap-4">
               <NumberField
                 label="CA SDI rate"
                 suffix="%"
@@ -139,7 +139,7 @@ export function TaxesSection({
                 onChange={(event) => onSetLongTermCapitalGains(event.target.value)}
               />
             </div>
-            <div className="mt-4 flex items-center gap-3">
+            <div className="mt-4 flex items-center gap-4">
               <ActionButton onClick={onApplyTaxTables}>Apply tax tables</ActionButton>
               <div className="min-h-6 text-sm text-(--ink-soft)">{taxEditorStatus}</div>
             </div>

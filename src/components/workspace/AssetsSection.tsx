@@ -44,7 +44,7 @@ export function AssetsSection({
       summary="Balance Sheet"
       actions={<ActionButton onClick={onAddAssetBucket}>Add asset</ActionButton>}
     >
-      <div className="grid gap-2.5">
+      <div className="grid gap-2">
         {assetsView.orderedBuckets.map((bucket) => {
           const isPinnedBucket = assetsView.pinnedBucketIds.has(bucket.id);
           const override = assetOverrides[bucket.id];
@@ -60,8 +60,8 @@ export function AssetsSection({
               detailsSummary={override?.growth != null ? `Growth ${override.growth}%` : null}
               detailsOpen={bucket.detailsOpen}
               onToggleDetails={(detailsOpen) => onUpdateAssetBucket(bucket.id, { detailsOpen })}
-              headerClassName="grid items-center gap-3 lg:grid-cols-3"
-              detailsContentClassName="grid gap-3 sm:grid-cols-2"
+              headerClassName="grid grid-cols-3 items-center gap-4"
+              detailsContentClassName="grid grid-cols-2 gap-4"
               header={
                 <>
                   <TextField

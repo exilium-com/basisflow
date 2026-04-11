@@ -92,8 +92,8 @@ export function MonthlyCashFlowPanel({ items, total, netFlow }: MonthlyCashFlowP
       <div className="grid gap-2">
         {items.map((item: MonthlyCashFlowItem) => (
           <div key={item.label} className="flex items-center justify-between gap-4 border-b border-(--line) py-2">
-            <div className="inline-flex items-center gap-3">
-              <i className="inline-block h-3 w-3" style={{ background: item.color }} />
+            <div className="inline-flex items-center gap-4">
+              <i className="inline-block h-4 w-4" style={{ background: item.color }} />
               <span className="text-(--ink-soft)">{item.label}</span>
             </div>
             <strong>{usd(item.value)}</strong>

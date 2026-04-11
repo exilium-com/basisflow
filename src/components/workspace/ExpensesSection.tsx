@@ -43,7 +43,7 @@ export function ExpensesSection({
       summary="Cash Out"
       actions={<ActionButton onClick={onAddExpense}>Add expense</ActionButton>}
     >
-      <div className="grid gap-2.5">
+      <div className="grid gap-2">
         {expenseState.expenses.map((expense) => {
           const override = expenseOverrides[expense.id];
           const showsGrowthOverride = expense.frequency !== "one_off";
@@ -59,8 +59,8 @@ export function ExpensesSection({
               }
               detailsOpen={expense.detailsOpen}
               onToggleDetails={(detailsOpen) => onUpdateExpense(expense.id, { detailsOpen })}
-              headerClassName="grid items-center gap-3 lg:grid-cols-3"
-              detailsContentClassName="flex flex-wrap items-end gap-3"
+              headerClassName="grid grid-cols-3 items-center gap-4"
+              detailsContentClassName="flex flex-wrap items-end gap-4"
               header={
                 <>
                   <TextField
@@ -120,7 +120,7 @@ export function ExpensesSection({
               ) : null}
               {expense.frequency === "one_off" ? (
                 <NumberField
-                  className="w-28"
+                  className="w-24"
                   label="Relative year"
                   min="1"
                   step="1"

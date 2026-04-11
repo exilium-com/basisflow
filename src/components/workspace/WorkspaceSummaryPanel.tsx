@@ -31,22 +31,20 @@ function SummaryLinkRow({ href, label, annualValue }: SummaryRow) {
   const value = usd(period === "monthly" ? annualValue / 12 : annualValue);
 
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-(--line) py-3">
-      <a href={href} className="min-w-0 flex-1 text-sm text-(--ink-soft) no-underline transition hover:text-(--ink)">
+    <div className="flex border-t border-(--line) py-4">
+      <a href={href} className="flex-1 text-sm text-(--ink-soft) hover:text-(--ink)">
         {label}
       </a>
-      <div className="flex items-baseline gap-1.5">
-        <a href={href} className="text-right text-(--ink) no-underline">
-          <strong>{value}</strong>
-        </a>
-        <button
-          type="button"
-          className="text-xs font-extrabold tracking-wide text-(--ink-soft) transition hover:text-(--ink)"
-          onClick={() => setPeriod(period === "annual" ? "monthly" : "annual")}
-        >
-          {period === "monthly" ? "/ month" : "/ year"}
-        </button>
-      </div>
+      <a href={href} className="font-bold">
+        {value}
+      </a>
+      <button
+        type="button"
+        className="text-s ml-2 text-(--ink-soft) transition hover:text-(--ink)"
+        onClick={() => setPeriod(period === "annual" ? "monthly" : "annual")}
+      >
+        {period === "monthly" ? "/ month" : "/ year"}
+      </button>
     </div>
   );
 }
@@ -65,30 +63,28 @@ export function WorkspaceSummaryPanel({
 }: WorkspaceSummaryPanelProps) {
   return (
     <>
-      <div className="grid gap-4 border-b border-(--line) pb-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="grid gap-1">
+      <div className="grid gap-4 pb-4">
+        <div className="flex items-center justify-between">
+          <div>
             <div className="text-xs font-extrabold tracking-widest text-(--ink-soft) uppercase">
               {`Net Worth ${selectedYearLabel === "Today" ? "Today" : `In ${selectedYearLabel}`}`}
             </div>
-            <strong className="font-serif text-5xl leading-none tracking-tight text-(--teal)">
+            <strong className="font-serif text-4xl text-(--teal)">
               {usd(toDisplayValue(currentRow.netWorth, projection.currentYear, projection))}
             </strong>
           </div>
-          <div className="grid gap-1">
-            <SegmentedToggle
-              ariaLabel="Display mode"
-              value={projectionState.displayMode}
-              onChange={(displayMode) => onUpdateProjectionState({ displayMode })}
-              options={[
-                { value: "nominal", label: "Nominal" },
-                { value: "real", label: "Real" },
-              ]}
-            />
-          </div>
+          <SegmentedToggle
+            ariaLabel="Display mode"
+            value={projectionState.displayMode}
+            onChange={(displayMode) => onUpdateProjectionState({ displayMode })}
+            options={[
+              { value: "nominal", label: "Nominal" },
+              { value: "real", label: "Real" },
+            ]}
+          />
         </div>
 
-        <div className="summary-year-grid">
+        <div className="flex justify-between gap-4">
           <SliderField
             label="Selected year"
             valueLabel={selectedYearLabel}
@@ -97,6 +93,7 @@ export function WorkspaceSummaryPanel({
             step="1"
             value={projection.currentYear}
             onChange={(event) => onUpdateProjectionState({ currentYear: Number(event.target.value) })}
+            className="flex-1"
           />
           <NumberField
             label="Horizon"
@@ -110,11 +107,9 @@ export function WorkspaceSummaryPanel({
         </div>
       </div>
 
-      <div className="mt-4">
-        {topLevelSummaryRows.map((row) => (
-          <SummaryLinkRow key={row.href} {...row} />
-        ))}
-      </div>
+      {topLevelSummaryRows.map((row) => (
+        <SummaryLinkRow key={row.href} {...row} />
+      ))}
 
       <AdvancedPanel
         id="workspaceParameters"
@@ -122,7 +117,7 @@ export function WorkspaceSummaryPanel({
         open={projectionState.advancedOpen}
         onToggle={(advancedOpen) => onUpdateProjectionState({ advancedOpen })}
       >
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-2 gap-4">
           <NumberField
             label="Match rate"
             suffix="%"
@@ -136,7 +131,7 @@ export function WorkspaceSummaryPanel({
             label="Inflation"
             suffix="%"
             min="0"
-            step="0.1"
+            step="0.5"
             value={projectionState.inflationRate}
             onValueChange={(value) => onUpdateProjectionState({ inflationRate: value ?? 0 })}
           />
@@ -144,7 +139,7 @@ export function WorkspaceSummaryPanel({
             label="Baseline asset growth"
             suffix="%"
             min="0"
-            step="0.1"
+            step="0.5"
             value={projectionState.assetGrowthRate}
             onValueChange={(value) => onUpdateProjectionState({ assetGrowthRate: value ?? 0 })}
           />
@@ -152,7 +147,7 @@ export function WorkspaceSummaryPanel({
             label="Gross income growth"
             suffix="%"
             min="-10"
-            step="0.1"
+            step="0.5"
             value={projectionState.incomeGrowthRate}
             onValueChange={(value) => onUpdateProjectionState({ incomeGrowthRate: value ?? 0 })}
           />
@@ -160,7 +155,7 @@ export function WorkspaceSummaryPanel({
             label="Baseline expense growth"
             suffix="%"
             min="-20"
-            step="0.1"
+            step="0.5"
             value={projectionState.expenseGrowthRate}
             onValueChange={(value) => onUpdateProjectionState({ expenseGrowthRate: value ?? 0 })}
           />
@@ -168,7 +163,7 @@ export function WorkspaceSummaryPanel({
             label="RSU stock growth"
             suffix="%"
             min="-50"
-            step="0.1"
+            step="0.5"
             value={projectionState.rsuStockGrowthRate}
             onValueChange={(value) => onUpdateProjectionState({ rsuStockGrowthRate: value ?? 0 })}
           />
@@ -176,17 +171,15 @@ export function WorkspaceSummaryPanel({
             label="Home appreciation"
             suffix="%"
             min="-10"
-            step="0.1"
+            step="0.5"
             value={projectionState.homeAppreciationRate}
             onValueChange={(value) => onUpdateProjectionState({ homeAppreciationRate: value ?? 0 })}
           />
           <CheckboxField
-            className="md:col-span-2"
+            className="col-span-2"
             label="Include vested RSUs"
             checked={projectionState.includeVestedRsusInNetWorth}
-            onChange={(event) =>
-              onUpdateProjectionState({ includeVestedRsusInNetWorth: event.target.checked })
-            }
+            onChange={(event) => onUpdateProjectionState({ includeVestedRsusInNetWorth: event.target.checked })}
           />
           <SelectField
             label="Down payment funded by"
