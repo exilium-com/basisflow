@@ -75,6 +75,10 @@ function getProfileStorageKey(name: string) {
   return `${SAVED_PROFILE_PREFIX}${name}`;
 }
 
+function shouldRebuildSummaries(name: string) {
+  return name === INCOME_STATE_KEY || name === MORTGAGE_STATE_KEY || name === TAX_CONFIG_KEY;
+}
+
 function rebuildStoredSummaries(documentValue: StorageDocument) {
   if (documentValue[MORTGAGE_STATE_KEY]) {
     const mortgage = createMortgage(
@@ -131,6 +135,9 @@ export function loadStoredJson(name: string, _ignored?: unknown) {
 export function saveJson(name: string, value: unknown) {
   const documentValue = readStorageDocument();
   documentValue[name] = value;
+  if (shouldRebuildSummaries(name)) {
+    rebuildStoredSummaries(documentValue);
+  }
   writeStorageDocument(documentValue);
 }
 
