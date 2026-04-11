@@ -48,7 +48,7 @@ export function WorkspaceLayout({ summary, children }: WorkspaceLayoutProps) {
   }, []);
 
   return (
-    <section className="grid min-h-0 flex-1 items-start lg:grid-cols-5">
+    <section className="workspace-shell">
       <div ref={contentRef} className="min-h-0 self-stretch p-6 max-lg:p-4 lg:col-span-3">
         <div className="pb-6 max-lg:pb-5">{children}</div>
       </div>

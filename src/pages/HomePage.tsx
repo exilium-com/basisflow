@@ -35,7 +35,7 @@ const sectionBorder = { borderColor: "var(--line-soft)" };
 
 export function HomePage() {
   return (
-    <PageShell>
+    <PageShell showToolNav={false} title="Basisflow">
       <main className={`${surfaceClass} flex-1 overflow-hidden`}>
         <section className="relative isolate flex flex-1 overflow-hidden">
           <div className="pointer-events-none absolute inset-0 opacity-90" aria-hidden="true">
@@ -59,9 +59,6 @@ export function HomePage() {
           <div className={`${pageSectionClass} relative flex flex-1`}>
             <div className="home-reveal mx-auto grid max-w-5xl flex-1 content-center gap-8 py-6 md:py-8">
               <div className="grid gap-4">
-                <p className="text-xs font-extrabold uppercase" style={{ ...mutedText, letterSpacing: "0.22em" }}>
-                  Basisflow
-                </p>
                 <h1 className="max-w-4xl leading-none" style={{ fontSize: "clamp(3rem, 8vw, 6rem)" }}>
                   See how income turns to net worth.
                 </h1>
@@ -71,7 +68,7 @@ export function HomePage() {
                 </p>
                 <div className="home-reveal home-delay-2 pt-2">
                   <ActionButton
-                    to="/income"
+                    to="/workspace"
                     className="h-14 px-6 text-base font-extrabold uppercase"
                     style={{
                       backgroundColor: "var(--teal)",

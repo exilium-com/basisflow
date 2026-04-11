@@ -9,14 +9,15 @@ type ResultListItem = {
 type ResultListProps = {
   items: ResultListItem[];
   live?: boolean;
+  compact?: boolean;
 };
 
-export function ResultList({ items, live = false }: ResultListProps) {
+export function ResultList({ items, live = false, compact = false }: ResultListProps) {
   return (
-    <div className="mt-4 grid" aria-live={live ? "polite" : undefined}>
+    <div className={compact ? "mt-1 grid" : "mt-4 grid"} aria-live={live ? "polite" : undefined}>
       {items.map((item: ResultListItem) => (
-        <div key={item.label} className={rowClassName}>
-          <span className="text-(--ink-soft)">{item.label}</span>
+        <div key={item.label} className={compact ? "flex justify-between gap-3 border-b border-(--line) py-2" : rowClassName}>
+          <span className={compact ? "text-sm text-(--ink-soft)" : "text-(--ink-soft)"}>{item.label}</span>
           <strong>{item.value}</strong>
         </div>
       ))}

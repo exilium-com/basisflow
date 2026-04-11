@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import clsx from "clsx";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { NAV_ITEMS } from "../lib/nav";
 import { clearAppState, deleteProfile, listProfiles, loadProfile, saveProfile } from "../lib/storage";
 import { ActionButton } from "./ActionButton";
@@ -34,6 +34,8 @@ type ShellActionsProps = {
 
 type PageShellProps = {
   actions?: React.ReactNode;
+  showToolNav?: boolean;
+  title?: React.ReactNode;
   children: React.ReactNode;
 };
 
@@ -87,7 +89,7 @@ function ShellActions({
   );
 }
 
-export function PageShell({ actions = null, children }: PageShellProps) {
+export function PageShell({ actions = null, showToolNav = true, title = "BasisFlow", children }: PageShellProps) {
   const [statusMessage, setStatusMessage] = useState("");
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [loadDialogOpen, setLoadDialogOpen] = useState(false);
@@ -199,37 +201,53 @@ export function PageShell({ actions = null, children }: PageShellProps) {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-screen-2xl flex-col px-3 sm:px-4">
-      <nav className="mt-3 mb-3 border-b border-(--line) pb-3" aria-label="Tools">
-        <div className="hidden sm:flex sm:flex-wrap sm:items-center sm:gap-2">
-          <ToolNavLinks />
-          <div className="ml-auto">
-            <ShellActions
-              actions={actions}
-              onOpenLoadDialog={openLoadDialog}
-              onOpenSaveDialog={openSaveDialog}
-              onResetAll={handleResetAll}
-              profileAvailable={profileAvailable}
-              statusMessage={statusMessage}
-            />
-          </div>
-        </div>
-
-        <div className="sm:hidden">
-          <div className="flex gap-2 overflow-x-auto pb-2 whitespace-nowrap">
+      {showToolNav ? (
+        <nav className="mt-3 mb-3 border-b border-(--line) pb-3" aria-label="Tools">
+          <div className="hidden sm:flex sm:flex-wrap sm:items-center sm:gap-2">
             <ToolNavLinks />
+            <div className="ml-auto">
+              <ShellActions
+                actions={actions}
+                onOpenLoadDialog={openLoadDialog}
+                onOpenSaveDialog={openSaveDialog}
+                onResetAll={handleResetAll}
+                profileAvailable={profileAvailable}
+                statusMessage={statusMessage}
+              />
+            </div>
           </div>
-          <div className="mt-2 flex justify-end">
-            <ShellActions
-              actions={actions}
-              onOpenLoadDialog={openLoadDialog}
-              onOpenSaveDialog={openSaveDialog}
-              onResetAll={handleResetAll}
-              profileAvailable={profileAvailable}
-              statusMessage={statusMessage}
-            />
+
+          <div className="sm:hidden">
+            <div className="flex gap-2 overflow-x-auto pb-2 whitespace-nowrap">
+              <ToolNavLinks />
+            </div>
+            <div className="mt-2 flex justify-end">
+              <ShellActions
+                actions={actions}
+                onOpenLoadDialog={openLoadDialog}
+                onOpenSaveDialog={openSaveDialog}
+                onResetAll={handleResetAll}
+                profileAvailable={profileAvailable}
+                statusMessage={statusMessage}
+              />
+            </div>
           </div>
-        </div>
-      </nav>
+        </nav>
+      ) : (
+        <header className="mt-3 mb-3 flex items-end justify-between gap-4 border-b border-(--line) pb-3">
+          <Link to="/" className="no-underline">
+            <h1 className="font-serif text-4xl leading-none tracking-tight text-(--ink)">{title}</h1>
+          </Link>
+          <ShellActions
+            actions={actions}
+            onOpenLoadDialog={openLoadDialog}
+            onOpenSaveDialog={openSaveDialog}
+            onResetAll={handleResetAll}
+            profileAvailable={profileAvailable}
+            statusMessage={statusMessage}
+          />
+        </header>
+      )}
 
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
 

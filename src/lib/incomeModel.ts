@@ -49,7 +49,7 @@ export const DEFAULT_INCOME: Income = {
   grossSalary: 0,
   rsuGrossNextYear: 0,
   employee401k: 0,
-  matchRate: 0,
+  matchRate: 50,
   iraContribution: 0,
   megaBackdoor: 0,
   hsaContribution: 0,

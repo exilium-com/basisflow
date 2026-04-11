@@ -85,7 +85,7 @@ function rebuildStoredSummaries(documentValue: StorageDocument) {
       normalizeMortgageState(documentValue[MORTGAGE_STATE_KEY], DEFAULT_MORTGAGE_STATE),
     );
     documentValue[MORTGAGE_SUMMARY_KEY] = serializeMortgageSummary(
-      buildMortgageScenario(mortgage, mortgage.activeLoanType),
+      buildMortgageScenario(mortgage, mortgage.activeLoanId),
     );
   }
 
