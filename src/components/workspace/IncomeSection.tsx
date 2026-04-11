@@ -1,6 +1,7 @@
 import React from "react";
 import { ActionButton } from "../ActionButton";
 import { MetricGrid } from "../MetricGrid";
+import { ProjectedValueDisplay } from "../ProjectedValueDisplay";
 import { RowItem } from "../RowItem";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { SliderField } from "../SliderField";
@@ -8,15 +9,19 @@ import { NumberField, TextField } from "../Field";
 import { WorkspaceSection } from "./WorkspaceSection";
 import { usd } from "../../lib/format";
 import {
+  computeRsuGrossForProjectionYear,
   getAnnualSalaryTotal,
   type Income,
   type IncomeItem,
   type IncomeResults,
 } from "../../lib/incomeModel";
+import { toDisplayValue, type Projection } from "../../lib/projectionState";
 
 type IncomeSectionProps = {
   income: Income;
   incomeResults: IncomeResults;
+  projection: Projection;
+  selectedYearLabel: string;
   retirementSavingTotal: number;
   onAddSalaryItem: () => void;
   onAddRsuItem: () => void;
@@ -37,9 +42,41 @@ function renderIncomeSummary(item: IncomeItem, annualizedSalary: number) {
   return `${vestYears} year vest`;
 }
 
+function projectedIncomeValue(item: IncomeItem, projection: Projection) {
+  if (item.type === "salary") {
+    const annualizedSalary = getAnnualSalaryTotal([{ amount: item.amount ?? 0, frequency: item.frequency }]);
+    return toDisplayValue(
+      annualizedSalary * Math.pow(1 + projection.incomeGrowthRate, projection.currentYear),
+      projection.currentYear,
+      projection,
+    );
+  }
+
+  return toDisplayValue(
+    computeRsuGrossForProjectionYear(
+      [
+        {
+          id: item.id,
+          name: item.name,
+          grantAmount: item.grantAmount ?? 0,
+          refresherAmount: item.refresherAmount ?? 0,
+          vestingYears: item.vestingYears ?? 4,
+        },
+      ],
+      projection.currentYear,
+      projection.rsuStockGrowthRate,
+      projection.incomeGrowthRate,
+    ),
+    projection.currentYear,
+    projection,
+  );
+}
+
 export function IncomeSection({
   income,
   incomeResults,
+  projection,
+  selectedYearLabel,
   retirementSavingTotal,
   onAddSalaryItem,
   onAddRsuItem,
@@ -68,7 +105,7 @@ export function IncomeSection({
             return (
               <RowItem
                 key={item.id}
-                headerClassName="grid gap-3 md:grid-cols-2"
+                headerClassName="grid gap-3 md:grid-cols-3"
                 removeLabel={`Remove ${item.name || "salary"}`}
                 onRemove={(event) => {
                   event.stopPropagation();
@@ -93,6 +130,10 @@ export function IncomeSection({
                       value={item.amount}
                       onValueChange={(value) => onUpdateIncomeItem(item.id, { amount: value })}
                     />
+                    <ProjectedValueDisplay
+                      label={selectedYearLabel}
+                      value={usd(projectedIncomeValue(item, projection))}
+                    />
                   </>
                 }
               >
@@ -114,7 +155,7 @@ export function IncomeSection({
           return (
             <RowItem
               key={item.id}
-              headerClassName="grid gap-3 md:grid-cols-2"
+              headerClassName="grid gap-3 md:grid-cols-3"
               removeLabel={`Remove ${item.name || "RSU grant"}`}
               onRemove={(event) => {
                 event.stopPropagation();
@@ -137,6 +178,10 @@ export function IncomeSection({
                     step="1000"
                     value={item.grantAmount}
                     onValueChange={(value) => onUpdateIncomeItem(item.id, { grantAmount: value })}
+                  />
+                  <ProjectedValueDisplay
+                    label={selectedYearLabel}
+                    value={usd(projectedIncomeValue(item, projection))}
                   />
                 </>
               }

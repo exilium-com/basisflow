@@ -367,30 +367,40 @@ export function computeRsuGrossForItems(
   );
 }
 
+export function computeRsuGrossForProjectionYear(
+  rsuItems: RsuInputItem[] = [],
+  projectionYear: number,
+  stockGrowthRate = 0,
+  refresherGrowthRate = 0,
+) {
+  return computeRsuGrossForItems(rsuItems, Math.max(0, projectionYear), stockGrowthRate, refresherGrowthRate);
+}
+
 export function calculateIncome(income: ResolvedIncome, taxConfig: TaxConfig) {
   const grossSalary = Math.max(0, income.grossSalary);
+  const rsuGrossNextYear = Math.max(0, income.rsuGrossNextYear);
   const savings = computeSavings(income, taxConfig);
   const taxableIncome = createResolvedIncome({ ...income, grossSalary });
-  const taxes = computeAnnualTaxes(taxableIncome, taxConfig, 0);
+  const salaryTaxes = computeAnnualTaxes(taxableIncome, taxConfig, 0);
+  const totalTaxes = computeAnnualTaxes(taxableIncome, taxConfig, rsuGrossNextYear);
   const annualTakeHome = roundTo(
     grossSalary -
       taxableIncome.employee401k -
       taxableIncome.hsaContribution -
       savings.iraContribution -
       savings.megaBackdoor -
-      taxes.totalTaxes,
+      salaryTaxes.totalTaxes,
     2,
   );
-  const rsuGrossNextYear = Math.max(0, income.rsuGrossNextYear);
   const rsuNetNextYear = computeIncrementalTakeHome(taxableIncome, taxConfig, rsuGrossNextYear);
 
   return {
     ...savings,
-    federalTax: taxes.federalTax,
-    californiaTax: taxes.californiaTax,
-    fica: taxes.fica,
-    caSdi: taxes.caSdi,
-    totalTaxes: taxes.totalTaxes,
+    federalTax: totalTaxes.federalTax,
+    californiaTax: totalTaxes.californiaTax,
+    fica: totalTaxes.fica,
+    caSdi: totalTaxes.caSdi,
+    totalTaxes: totalTaxes.totalTaxes,
     grossSalary,
     annualTakeHome,
     monthlyTakeHome: roundTo(annualTakeHome / 12, 2),

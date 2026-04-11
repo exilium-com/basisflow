@@ -37,34 +37,38 @@ export function serializeMortgageSummary(scenario: MortgageScenario) {
 
 export type MortgageSummary = ReturnType<typeof serializeMortgageSummary>;
 
-export function getMortgageMonthlyPaymentForSummaryYear(summary: Partial<MortgageSummary>, year = 0) {
+function findMortgageLoanYear(
+  summary: Pick<MortgageSummary, "yearlyLoan">,
+  year: number,
+) {
+  return summary.yearlyLoan.find((row) => row.year === year + 1);
+}
+
+function getMortgageScheduleRowForYear(scenario: MortgageScenario, year = 0) {
+  const monthIndex = Math.max(0, year) * 12;
+  return scenario.schedule[monthIndex];
+}
+
+export function getMortgageAnnualHousingCost(summary: MortgageSummary, year = 0) {
+  if (year < 0) {
+    return 0;
+  }
+
   if (summary.kind === "rent") {
-    const monthlyRent = summary.totalMonthlyPayment ?? 0;
-    const growthRate = (summary.rentGrowthRate ?? 0) / 100;
-    return monthlyRent * Math.pow(1 + growthRate, Math.max(year, 0));
+    const monthlyRent = summary.totalMonthlyPayment;
+    const growthRate = summary.rentGrowthRate / 100;
+    return monthlyRent * Math.pow(1 + growthRate, Math.max(year, 0)) * 12;
   }
 
-  if (year <= 0) {
-    return summary.totalMonthlyPayment ?? 0;
-  }
-
-  const loanYear = summary.yearlyLoan?.find((row) => row.year === year);
-  if (typeof loanYear?.payment === "number") {
-    return loanYear.payment;
-  }
-
-  return summary.yearlyLoan?.length && year > summary.yearlyLoan.length ? 0 : (summary.totalMonthlyPayment ?? 0);
+  const loanYear = findMortgageLoanYear(summary, year);
+  return (loanYear ? loanYear.payment : summary.monthlyTax + summary.monthlyInsurance + summary.monthlyHoa) * 12;
 }
 
-export function getMortgageAnnualHousingCost(summary: Partial<MortgageSummary>, year = 0) {
-  return getMortgageMonthlyPaymentForSummaryYear(summary, year) * 12;
+export function getMortgageYearInterest(summary: MortgageSummary, year = 0) {
+  return findMortgageLoanYear(summary, year)?.interest ?? 0;
 }
 
-export function getMortgageYearInterest(summary: Partial<MortgageSummary>, year = 1) {
-  return summary.yearlyLoan?.find((row) => row.year === year)?.interest ?? 0;
-}
-
-export function getMortgageYearPropertyTax(summary: Partial<MortgageSummary>) {
+export function getMortgageYearPropertyTax(summary: MortgageSummary) {
   return (summary.monthlyTax ?? 0) * 12;
 }
 
@@ -74,12 +78,10 @@ export function getMortgageMonthlyPaymentForYear(scenario: MortgageScenario, yea
     return scenario.totalMonthlyPayment * Math.pow(1 + growthRate, Math.max(year, 0));
   }
 
-  return getMortgageScheduleRowForYear(scenario, year)?.payment ?? 0;
-}
-
-function getMortgageScheduleRowForYear(scenario: MortgageScenario, year = 0) {
-  const monthIndex = year <= 0 ? 0 : year * 12 - 1;
-  return scenario.schedule[monthIndex];
+  return (
+    getMortgageScheduleRowForYear(scenario, year)?.payment ??
+    scenario.monthlyTax + scenario.monthlyInsurance + scenario.monthlyHoa
+  );
 }
 
 export function getMortgagePrincipalInterestForYear(scenario: MortgageScenario, year = 0) {

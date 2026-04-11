@@ -19,6 +19,7 @@ type SegmentedToggleProps<T extends string> = {
   ariaLabel: string;
   label?: React.ReactNode;
   className?: string;
+  disabled?: boolean;
 };
 
 export function SegmentedToggle<T extends string>({
@@ -28,6 +29,7 @@ export function SegmentedToggle<T extends string>({
   ariaLabel,
   label = null,
   className = "",
+  disabled = false,
 }: SegmentedToggleProps<T>) {
   return (
     <div className="grid justify-items-start gap-1">
@@ -39,6 +41,7 @@ export function SegmentedToggle<T extends string>({
             className={clsx(segmentClassName, value === option.value && activeSegmentClassName)}
             type="button"
             aria-pressed={value === option.value}
+            disabled={disabled}
             onClick={() => onChange(option.value)}
           >
             {option.label}

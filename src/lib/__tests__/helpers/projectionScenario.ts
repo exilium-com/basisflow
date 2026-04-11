@@ -7,22 +7,14 @@ import {
   type AssetBucketState,
   type AssetTaxTreatment,
 } from "../../assetsModel";
-import {
-  DEFAULT_EXPENSES_STATE,
-  createExpenses,
-  normalizeExpensesState,
-} from "../../expensesModel";
+import { DEFAULT_EXPENSES_STATE, createExpenses, normalizeExpensesState } from "../../expensesModel";
 import { DEFAULT_PROJECTION_STATE, createProjection, normalizeProjectionState } from "../../projectionState";
 import { calculateProjection, type ProjectionResults } from "../../projectionCalculation";
 import { roundTo } from "../../format";
 import { DEFAULT_CONFIG, normalizeConfig, type TaxConfig } from "../../taxConfig";
 import { type ProjectionRow } from "../../projectionUtils";
-import {
-  buildIncomeSummary,
-  calculateIncome,
-  createResolvedIncome,
-  type RsuInputItem,
-} from "../../incomeModel";
+import { buildIncomeSummary, calculateIncome, createResolvedIncome, type RsuInputItem } from "../../incomeModel";
+import { MortgageSummary } from "../../mortgagePage";
 
 type RetirementInputs = {
   employee401k?: number;
@@ -31,8 +23,6 @@ type RetirementInputs = {
   megaBackdoor?: number;
   hsaContribution?: number;
 };
-
-type AllocationInput = number | { amount?: number; growth?: number; value?: number };
 
 type AccountInput = {
   id: string;
@@ -56,7 +46,7 @@ export type ProjectionScenarioOptions = {
   rsuValue?: number;
   retirement?: RetirementInputs;
   accounts?: AccountInput[];
-  allocations?: Record<string, AllocationInput>;
+  freeCashFlowBucketId?: string;
   horizonYears?: number;
   currentYear?: number;
   assetGrowthRate?: number;
@@ -112,27 +102,6 @@ const RETIREMENT_ACCOUNTS: Record<string, { id: string; name: string; taxTreatme
     taxTreatment: "taxDeferred",
   },
 };
-
-function labelFromId(id: string) {
-  return id
-    .split("-")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function normalizeAllocationEntry(allocation: AllocationInput) {
-  if (allocation && typeof allocation === "object" && "amount" in allocation) {
-    return {
-      amount: roundTo(Number(allocation.amount) || 0, 2),
-      growth: roundTo(Number(allocation.growth) || 0, 2),
-    };
-  }
-
-  return {
-    amount: roundTo(Number(typeof allocation === "number" ? allocation : allocation?.value) || 0, 2),
-    growth: 0,
-  };
-}
 
 function createProjectionRsuItems(rsuValue: number): RsuInputItem[] {
   if (!rsuValue) {
@@ -264,19 +233,43 @@ function createMortgageSummary({
   currentEquity?: number;
   yearlyLoan?: Array<{ year: number; payment?: number; principal?: number; interest: number; endingBalance?: number }>;
 }) {
+  const defaultYearlyLoan: Array<{
+    year: number;
+    payment?: number;
+    principal?: number;
+    interest: number;
+    endingBalance?: number;
+  }> = Array.from({ length: 60 }, (_, index) => ({
+    year: index + 1,
+    interest: 0,
+  }));
+  const normalizedYearlyLoan =
+    housingKind === "rent"
+      ? []
+      : (yearlyLoan.length ? yearlyLoan : defaultYearlyLoan).map((row) => ({
+          year: row.year,
+          payment: row.payment ?? roundTo(annualMortgage / 12, 2),
+          principal: row.principal ?? 0,
+          interest: row.interest,
+          endingBalance: row.endingBalance ?? 0,
+        }));
+
   return {
+    type: housingKind === "rent" ? "rent" : "loan",
     kind: housingKind,
+    typeLabel: housingKind === "rent" ? "Rent" : "Conventional",
+    isArm: false,
     rentGrowthRate,
+    loanAmount: roundTo(Math.max(0, homePrice - currentEquity), 2),
     totalMonthlyPayment: roundTo(annualMortgage / 12, 2),
+    principalInterest: roundTo(annualMortgage / 12, 2),
+    monthlyTax: 0,
+    monthlyInsurance: 0,
+    monthlyHoa: 0,
+    totalInterest: normalizedYearlyLoan.reduce((sum, row) => sum + row.interest, 0),
     currentEquity: housingKind === "rent" ? 0 : roundTo(currentEquity, 2),
     homePrice: roundTo(homePrice, 2),
-    yearlyLoan: yearlyLoan.map((row) => ({
-      year: row.year,
-      payment: row.payment ?? roundTo(annualMortgage / 12, 2),
-      principal: row.principal ?? 0,
-      interest: row.interest,
-      endingBalance: row.endingBalance ?? 0,
-    })),
+    yearlyLoan: normalizedYearlyLoan,
   };
 }
 
@@ -311,22 +304,9 @@ function createProjectionState({
   homeAppreciationRate = 0,
   rsuStockGrowthRate = 0,
   includeVestedRsusInNetWorth = false,
-  allocations = {},
+  freeCashFlowBucketId = "",
   mortgageFundingBucketId = "",
 }: ProjectionScenarioOptions) {
-  const normalizedAllocations = Object.fromEntries(
-    Object.entries(allocations).map(([bucketId, allocation]) => {
-      const { amount } = normalizeAllocationEntry(allocation);
-      return [
-        bucketId,
-        {
-          mode: "percent",
-          value: amount,
-        },
-      ];
-    }),
-  );
-
   return {
     ...DEFAULT_PROJECTION_STATE,
     horizonYears,
@@ -337,16 +317,12 @@ function createProjectionState({
     homeAppreciationRate,
     rsuStockGrowthRate,
     includeVestedRsusInNetWorth,
+    freeCashFlowBucketId,
     mortgageFundingBucketId,
-    allocations: normalizedAllocations,
   };
 }
 
-function createAssetsState(
-  accounts: AccountInput[],
-  retirement: Required<RetirementInputs>,
-  allocations: Record<string, AllocationInput>,
-) {
+function createAssetsState(accounts: AccountInput[], retirement: Required<RetirementInputs>) {
   const nextAccounts = ensureRetirementAccounts(
     accounts.map((account) => createAccount(account)),
     retirement,
@@ -362,21 +338,6 @@ function createAssetsState(
       }),
     );
   }
-
-  Object.entries(allocations).forEach(([bucketId, allocation]) => {
-    if (nextAccounts.some((account) => account.id === bucketId)) {
-      return;
-    }
-
-    const { growth } = normalizeAllocationEntry(allocation);
-    nextAccounts.push(
-      createAccount({
-        id: bucketId,
-        name: labelFromId(bucketId),
-        growth,
-      }),
-    );
-  });
 
   return {
     buckets: nextAccounts,
@@ -395,7 +356,7 @@ export function runProjectionScenario({
   rsuValue = 0,
   retirement = {},
   accounts = [{ id: "taxable-bucket", name: "Taxable" }],
-  allocations = {},
+  freeCashFlowBucketId = "",
   horizonYears = 5,
   currentYear = 1,
   assetGrowthRate = 0,
@@ -431,7 +392,7 @@ export function runProjectionScenario({
       currentEquity,
       yearlyLoan,
     }),
-    assetsState: createAssetsState(accounts, normalizedRetirement, allocations),
+    assetsState: createAssetsState(accounts, normalizedRetirement),
     expensesState: createExpensesState(annualExpenses),
     projectionState: createProjectionState({
       horizonYears,
@@ -442,7 +403,7 @@ export function runProjectionScenario({
       homeAppreciationRate,
       rsuStockGrowthRate,
       includeVestedRsusInNetWorth,
-      allocations,
+      freeCashFlowBucketId,
       mortgageFundingBucketId,
     }),
     taxConfig: normalizeConfig(clone(taxConfig)),
@@ -458,11 +419,10 @@ export function runProjectionScenario({
 
   const assets = createAssets(assetsState, projectionState.assetGrowthRate);
   const expenses = createExpenses(expensesState, projectionState.expenseGrowthRate);
-  const incomeDirectedContributions = buildIncomeDirectedContributions(scenario.incomeSummary);
-  const projection = createProjection(projectionState, assets, incomeDirectedContributions);
+  const projection = createProjection(projectionState);
   const results = calculateProjection({
     incomeSummary: scenario.incomeSummary,
-    mortgageSummary: scenario.mortgageSummary,
+    mortgageSummary: scenario.mortgageSummary as MortgageSummary,
     assets,
     expenses,
     projection,

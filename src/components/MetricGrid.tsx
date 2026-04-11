@@ -12,7 +12,7 @@ type MetricGridProps = {
 
 export function MetricGrid({ items, primaryItem }: MetricGridProps) {
   return (
-    <div className="mt-4 grid grid-cols-1 gap-2.5">
+    <div className="grid grid-cols-1 gap-2.5">
       {primaryItem ? (
         <div className="grid gap-1 border-b border-(--line) pb-3">
           <span className="text-xs font-extrabold tracking-widest text-(--ink-soft) uppercase">{primaryItem.label}</span>

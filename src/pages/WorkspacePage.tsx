@@ -60,7 +60,6 @@ import {
   DEFAULT_PROJECTION_STATE,
   createProjection,
   normalizeProjectionState,
-  type AllocationMode,
   type ProjectionState,
   type ProjectionAssetOverride,
   type ProjectionExpenseOverride,
@@ -124,7 +123,7 @@ export function WorkspacePage() {
   const mortgageSummaryItems = buildMortgageSummaryItems(mortgageScenario, projectionState.currentYear);
 
   const resolvedIncome = resolveIncome(income, {
-    mortgageInterest: getMortgageYearInterest(mortgageSummary, 1),
+    mortgageInterest: getMortgageYearInterest(mortgageSummary, 0),
     propertyTax: getMortgageYearPropertyTax(mortgageSummary),
   });
   const incomeResults = calculateIncome(resolvedIncome, taxConfig);
@@ -156,7 +155,7 @@ export function WorkspacePage() {
 
   const projectionAssets = createAssets(projectionAssetState, projectionState.assetGrowthRate);
   const projectionExpenses = createExpenses(projectionExpenseState, projectionState.expenseGrowthRate);
-  const projection = createProjection(projectionState, projectionAssets, incomeDirectedContributions);
+  const projection = createProjection(projectionState);
   const projectionResults = calculateProjection({
     incomeSummary,
     mortgageSummary,
@@ -168,7 +167,6 @@ export function WorkspacePage() {
   const currentRow =
     projectionResults.projection.find((row) => row.year === projection.currentYear) ?? projectionResults.ending;
   const selectedYearLabel = projection.currentYear === 0 ? "Today" : `Year ${projection.currentYear}`;
-  const pinnedProjectionBucketIds = pinnedAssets.pinnedBucketIds;
   const monthlyCashFlow = buildMonthlyCashFlow({
     incomeSummary,
     projection,
@@ -181,6 +179,18 @@ export function WorkspacePage() {
     incomeResults.megaBackdoor +
     resolvedIncome.hsaContribution;
   const annualGrossIncome = incomeResults.grossSalary + incomeResults.rsuGrossNextYear;
+  const assetOptions = projectionAssets.buckets.map((bucket) => ({
+    id: bucket.id,
+    name: bucket.name,
+  }));
+  const freeCashFlowOptions = projectionAssets.buckets
+    .filter(
+      (bucket) => bucket.id !== reserveCashBucketId && (incomeDirectedContributions[bucket.id] ?? 0) === 0,
+    )
+    .map((bucket) => ({
+      id: bucket.id,
+      name: bucket.name,
+    }));
 
   useEffect(() => {
     saveJson(MORTGAGE_SUMMARY_KEY, mortgageSummary);
@@ -378,11 +388,17 @@ export function WorkspacePage() {
   function updateAssetBucket(bucketId: string, patch: Partial<AssetBucketState>) {
     setAssetState((draft) => {
       const bucket = draft.buckets.find((entry) => entry.id === bucketId);
-      if (!bucket) {
+      if (bucket) {
+        Object.assign(bucket, patch);
         return;
       }
 
-      Object.assign(bucket, patch);
+      const derivedBucket = resolvePinnedBuckets(draft, incomeDirectedContributions).state.buckets.find(
+        (entry) => entry.id === bucketId,
+      );
+      if (derivedBucket) {
+        draft.buckets.push({ ...derivedBucket, ...patch });
+      }
     });
   }
 
@@ -437,24 +453,6 @@ export function WorkspacePage() {
     });
   }
 
-  function updateAllocation(bucketId: string, value: number | null) {
-    setProjectionState((draft) => {
-      draft.allocations[bucketId] = {
-        mode: draft.allocations?.[bucketId]?.mode === "amount" ? "amount" : "percent",
-        value: Math.max(0, value ?? 0),
-      };
-    });
-  }
-
-  function updateAllocationMode(bucketId: string, mode: AllocationMode) {
-    setProjectionState((draft) => {
-      draft.allocations[bucketId] = {
-        mode: mode === "amount" ? "amount" : "percent",
-        value: draft.allocations?.[bucketId]?.value ?? 0,
-      };
-    });
-  }
-
   function updateAssetOverride(bucketId: string, patch: ProjectionAssetOverride) {
     setProjectionState((draft) => {
       Object.assign((draft.assetOverrides[bucketId] ??= {}), patch);
@@ -498,11 +496,12 @@ export function WorkspacePage() {
             <WorkspaceSummaryPanel
               currentRow={currentRow}
               projection={projection}
-              projectionAssets={projectionAssets}
               projectionState={projectionState}
               selectedYearLabel={selectedYearLabel}
               topLevelSummaryRows={topLevelSummaryRows}
               matchRate={income.matchRate}
+              assetOptions={assetOptions}
+              freeCashFlowOptions={freeCashFlowOptions}
               onUpdateIncomeField={(field, value) => updateIncomeField(field, value)}
               onUpdateProjectionState={updateProjectionState}
             />
@@ -511,6 +510,8 @@ export function WorkspacePage() {
           <IncomeSection
             income={income}
             incomeResults={incomeResults}
+            projection={projection}
+            selectedYearLabel={selectedYearLabel}
             retirementSavingTotal={retirementSavingTotal}
             onAddSalaryItem={addSalaryItem}
             onAddRsuItem={addRsuItem}
@@ -561,32 +562,34 @@ export function WorkspacePage() {
 
           <ExpensesSection
             expenseState={expenseState}
+            expenseGrowthRate={projectionState.expenseGrowthRate}
+            expenseOverrides={projectionState.expenseOverrides}
+            currentRow={currentRow}
+            projection={projection}
+            selectedYearLabel={selectedYearLabel}
             onAddExpense={addExpense}
             onRemoveExpense={removeExpense}
             onUpdateExpense={updateExpense}
+            onUpdateExpenseOverride={updateExpenseOverride}
           />
 
           <AssetsSection
             assetsView={assetsView}
+            assetGrowthRate={projectionState.assetGrowthRate}
+            assetOverrides={projectionState.assetOverrides}
+            currentRow={currentRow}
+            projection={projection}
+            selectedYearLabel={selectedYearLabel}
             onAddAssetBucket={addAssetBucket}
             onRemoveAssetBucket={removeAssetBucket}
             onUpdateAssetBucket={updateAssetBucket}
+            onUpdateAssetOverride={updateAssetOverride}
           />
 
           <ProjectionSection
-            currentRow={currentRow}
             monthlyCashFlow={monthlyCashFlow}
-            pinnedProjectionBucketIds={pinnedProjectionBucketIds}
             projection={projection}
-            projectionAssets={projectionAssets}
-            projectionExpenses={projectionExpenses}
             projectionResults={projectionResults}
-            projectionState={projectionState}
-            selectedYearLabel={selectedYearLabel}
-            onUpdateAllocation={updateAllocation}
-            onUpdateAllocationMode={updateAllocationMode}
-            onUpdateAssetOverride={updateAssetOverride}
-            onUpdateExpenseOverride={updateExpenseOverride}
           />
         </WorkspaceLayout>
       </main>

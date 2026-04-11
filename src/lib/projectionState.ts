@@ -1,22 +1,13 @@
 import { clamp, readNumber } from "./format";
-import { PINNED_BUCKETS, type Assets } from "./assetsModel";
 
 export type ProjectionDisplayMode = "nominal" | "real";
-export type AllocationMode = "percent" | "amount";
-
-export type ProjectionAllocationState = {
-  mode: AllocationMode;
-  value: number;
-};
 
 export type ProjectionAssetOverride = {
   growth?: number | null;
-  detailsOpen?: boolean;
 };
 
 export type ProjectionExpenseOverride = {
   growthRate?: number | null;
-  detailsOpen?: boolean;
 };
 
 type ProjectionSettings = {
@@ -31,7 +22,7 @@ type ProjectionSettings = {
   displayMode: ProjectionDisplayMode;
   includeVestedRsusInNetWorth: boolean;
   mortgageFundingBucketId: string;
-  allocations: Record<string, ProjectionAllocationState>;
+  freeCashFlowBucketId: string;
 };
 
 export type ProjectionState = ProjectionSettings & {
@@ -40,10 +31,7 @@ export type ProjectionState = ProjectionSettings & {
   expenseOverrides: Record<string, ProjectionExpenseOverride>;
 };
 
-export type Projection = ProjectionSettings & {
-  allocationPercentTotal: number;
-  allocationAmountTotal: number;
-};
+export type Projection = ProjectionSettings;
 
 const PROJECTION_NUMBER_FIELDS = [
   "horizonYears",
@@ -69,15 +57,13 @@ export const DEFAULT_PROJECTION_STATE: ProjectionState = {
   includeVestedRsusInNetWorth: false,
   advancedOpen: false,
   mortgageFundingBucketId: "",
-  allocations: {},
+  freeCashFlowBucketId: "",
   assetOverrides: {},
   expenseOverrides: {},
 };
 
 export function normalizeProjectionState(parsed: unknown, fallback: ProjectionState): ProjectionState {
   const state = typeof parsed === "object" && parsed ? (parsed as Record<string, unknown>) : {};
-  const rawAllocations =
-    typeof state.allocations === "object" && state.allocations ? (state.allocations as Record<string, unknown>) : {};
   const rawAssetOverrides =
     typeof state.assetOverrides === "object" && state.assetOverrides
       ? (state.assetOverrides as Record<string, unknown>)
@@ -87,29 +73,6 @@ export function normalizeProjectionState(parsed: unknown, fallback: ProjectionSt
       ? (state.expenseOverrides as Record<string, unknown>)
       : {};
 
-  const allocations = Object.fromEntries(
-    Object.entries(rawAllocations).map(([bucketId, allocation]) => {
-      if (typeof allocation === "string" || typeof allocation === "number") {
-        return [
-          bucketId,
-          {
-            mode: "percent" as const,
-            value: Math.max(0, readNumber(allocation, 0)),
-          },
-        ];
-      }
-
-      const entry = allocation && typeof allocation === "object" ? (allocation as Record<string, unknown>) : {};
-      return [
-        bucketId,
-        {
-          mode: entry.mode === "amount" ? ("amount" as const) : ("percent" as const),
-          value: Math.max(0, readNumber(entry.value, 0)),
-        },
-      ];
-    }),
-  );
-
   const assetOverrides = Object.fromEntries(
     Object.entries(rawAssetOverrides).map(([bucketId, override]) => {
       const entry = override && typeof override === "object" ? (override as Record<string, unknown>) : {};
@@ -117,7 +80,6 @@ export function normalizeProjectionState(parsed: unknown, fallback: ProjectionSt
         bucketId,
         {
           growth: readNumber(entry.growth, null),
-          detailsOpen: Boolean(entry.detailsOpen),
         },
       ];
     }),
@@ -130,7 +92,6 @@ export function normalizeProjectionState(parsed: unknown, fallback: ProjectionSt
         expenseId,
         {
           growthRate: readNumber(entry.growthRate, null),
-          detailsOpen: Boolean(entry.detailsOpen),
         },
       ];
     }),
@@ -147,40 +108,14 @@ export function normalizeProjectionState(parsed: unknown, fallback: ProjectionSt
     advancedOpen: Boolean(state.advancedOpen),
     mortgageFundingBucketId:
       typeof state.mortgageFundingBucketId === "string" ? state.mortgageFundingBucketId : fallback.mortgageFundingBucketId,
-    allocations,
+    freeCashFlowBucketId:
+      typeof state.freeCashFlowBucketId === "string" ? state.freeCashFlowBucketId : fallback.freeCashFlowBucketId,
     assetOverrides,
     expenseOverrides,
   };
 }
 
-export function createProjection(
-  state: ProjectionState,
-  assets: Assets,
-  incomeDirectedContributions: Record<string, number> = {},
-): Projection {
-  const allocations: Projection["allocations"] = {};
-  let allocationPercentTotal = 0;
-  let allocationAmountTotal = 0;
-  const reserveCashBucketId = PINNED_BUCKETS.reserveCashBucketId.id;
-
-  assets.buckets.forEach((bucket) => {
-    if (bucket.id === reserveCashBucketId || (incomeDirectedContributions[bucket.id] ?? 0) > 0) {
-      allocations[bucket.id] = { mode: "amount", value: 0 };
-      return;
-    }
-
-    const allocation = state.allocations[bucket.id] ?? { mode: "percent", value: 0 };
-    const mode = allocation.mode === "amount" ? "amount" : "percent";
-    const value = Math.max(0, allocation.value ?? 0);
-
-    allocations[bucket.id] = { mode, value };
-    if (mode === "amount") {
-      allocationAmountTotal += value;
-    } else {
-      allocationPercentTotal += clamp(value, 0, 100);
-    }
-  });
-
+export function createProjection(state: ProjectionState): Projection {
   const horizonYears = clamp(Math.round(state.horizonYears), 1, 60);
 
   return {
@@ -195,9 +130,7 @@ export function createProjection(
     displayMode: state.displayMode,
     includeVestedRsusInNetWorth: state.includeVestedRsusInNetWorth,
     mortgageFundingBucketId: state.mortgageFundingBucketId,
-    allocations,
-    allocationPercentTotal,
-    allocationAmountTotal,
+    freeCashFlowBucketId: state.freeCashFlowBucketId,
   };
 }
 

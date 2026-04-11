@@ -53,20 +53,25 @@ function shouldRebuildSummaries(name: string) {
   return name === INCOME_STATE_KEY || name === MORTGAGE_STATE_KEY || name === TAX_CONFIG_KEY;
 }
 
+function buildStoredMortgageSummary(documentValue: StorageDocument) {
+  const mortgage = createMortgage(
+    normalizeMortgageState(documentValue[MORTGAGE_STATE_KEY], DEFAULT_MORTGAGE_STATE),
+  );
+  return serializeMortgageSummary(buildMortgageScenario(mortgage, mortgage.activeLoanId));
+}
+
 function rebuildStoredSummaries(documentValue: StorageDocument) {
   if (documentValue[MORTGAGE_STATE_KEY]) {
-    const mortgage = createMortgage(
-      normalizeMortgageState(documentValue[MORTGAGE_STATE_KEY], DEFAULT_MORTGAGE_STATE),
-    );
-    documentValue[MORTGAGE_SUMMARY_KEY] = serializeMortgageSummary(
-      buildMortgageScenario(mortgage, mortgage.activeLoanId),
-    );
+    documentValue[MORTGAGE_SUMMARY_KEY] = buildStoredMortgageSummary(documentValue);
   }
 
   if (documentValue[INCOME_STATE_KEY]) {
-    const mortgageSummary = (documentValue[MORTGAGE_SUMMARY_KEY] ?? {}) as Partial<MortgageSummary>;
+    const mortgageSummary =
+      documentValue[MORTGAGE_SUMMARY_KEY] != null
+        ? (documentValue[MORTGAGE_SUMMARY_KEY] as MortgageSummary)
+        : buildStoredMortgageSummary(documentValue);
     const income = resolveIncome(normalizeIncome(documentValue[INCOME_STATE_KEY], DEFAULT_INCOME), {
-      mortgageInterest: getMortgageYearInterest(mortgageSummary, 1),
+      mortgageInterest: getMortgageYearInterest(mortgageSummary, 0),
       propertyTax: getMortgageYearPropertyTax(mortgageSummary),
     });
     documentValue[INCOME_SUMMARY_KEY] = buildIncomeSummary(

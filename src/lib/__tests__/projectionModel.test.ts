@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { computeRsuGrossForItems } from "../incomeModel";
+import { computeRsuGrossForItems, computeRsuGrossForProjectionYear } from "../incomeModel";
+import { getMortgageAnnualHousingCost, getMortgageYearInterest } from "../mortgagePage";
 import { computeAdditionalTax, DEFAULT_CONFIG, normalizeConfig } from "../taxConfig";
 import { projectionGoldens } from "./goldens/projection";
 import { runIncomeScenario } from "./helpers/incomeScenario";
@@ -94,28 +95,33 @@ describe("calculateProjection", () => {
   });
 
   it("keeps RSU vesting out of reserve cash", () => {
-    const yearOne = runProjectionScenario({
+    const projection = runProjectionScenario({
       salary: 150000,
       rsuValue: 100000,
-    }).getYear(1);
+    });
+    const today = projection.getYear(0);
+    const yearOne = projection.getYear(1);
 
-    expect(yearOne.rsuGross).toBe(100000);
-    expect(yearOne.rsuNet).toBeGreaterThan(0);
-    expect(yearOne.freeCashBeforeAllocation).toBe(yearOne.takeHome);
-    expect(yearOne.residualCash).toBe(yearOne.takeHome);
+    expect(today.rsuGross).toBe(100000);
+    expect(today.rsuNet).toBeGreaterThan(0);
+    expect(today.freeCashBeforeAllocation).toBe(today.takeHome);
+    expect(yearOne.vestedRsuBalance).toBe(today.rsuNet);
+    expect(yearOne.residualCash).toBe(today.takeHome);
   });
 
   it("optionally counts vested RSUs in net worth without treating them as reserve cash", () => {
-    const yearOne = runProjectionScenario({
+    const projection = runProjectionScenario({
       salary: 150000,
       rsuValue: 100000,
       includeVestedRsusInNetWorth: true,
-    }).getYear(1);
+    });
+    const today = projection.getYear(0);
+    const yearOne = projection.getYear(1);
 
-    expect(yearOne.vestedRsuBalance).toBe(yearOne.rsuNet);
+    expect(yearOne.vestedRsuBalance).toBe(today.rsuNet);
     expect(yearOne.assetsGross).toBe(yearOne.residualCash);
-    expect(yearOne.netWorth).toBe(yearOne.residualCash + yearOne.rsuNet);
-    expect(yearOne.residualCash).toBe(yearOne.takeHome);
+    expect(yearOne.netWorth).toBe(yearOne.residualCash + today.rsuNet);
+    expect(yearOne.residualCash).toBe(today.takeHome);
   });
 
   it("grows annual RSU refreshers with income growth in projection", () => {
@@ -133,6 +139,96 @@ describe("calculateProjection", () => {
     const growingYearThree = computeRsuGrossForItems(rsuItems, 2, 0, 0.1);
 
     expect(growingYearThree).toBeGreaterThan(flatYearThree);
+  });
+
+  it("uses projection year zero for the first RSU vest slice", () => {
+    const rsuItems = [
+      {
+        id: "rsu-1",
+        name: "RSU",
+        grantAmount: 40000,
+        refresherAmount: 0,
+        vestingYears: 4,
+      },
+    ];
+
+    expect(computeRsuGrossForProjectionYear(rsuItems, 0)).toBe(10000);
+    expect(computeRsuGrossForProjectionYear(rsuItems, 1)).toBe(10000);
+    expect(computeRsuGrossForProjectionYear(rsuItems, 2)).toBe(10000);
+    expect(computeRsuGrossForProjectionYear(rsuItems, 3)).toBe(10000);
+    expect(computeRsuGrossForProjectionYear(rsuItems, 4)).toBe(0);
+  });
+
+  it("keeps ownership costs after the mortgage payoff year", () => {
+    expect(
+      getMortgageAnnualHousingCost({
+        type: "loan",
+        kind: "conventional",
+        typeLabel: "Conventional",
+        isArm: false,
+        rentGrowthRate: 0,
+        homePrice: 600000,
+        currentEquity: 100000,
+        loanAmount: 500000,
+        totalMonthlyPayment: 2500,
+        principalInterest: 1950,
+        monthlyTax: 400,
+        monthlyInsurance: 100,
+        monthlyHoa: 50,
+        totalInterest: 100000,
+        yearlyLoan: [{ year: 1, payment: 2500, principal: 1000, interest: 950, endingBalance: 0 }],
+      }, 2),
+    ).toBe(6600);
+  });
+
+  it("maps projection year zero to the first mortgage year", () => {
+    const mortgageSummary = {
+      type: "loan",
+      kind: "conventional" as const,
+      typeLabel: "Conventional",
+      isArm: false,
+      rentGrowthRate: 0,
+      homePrice: 600000,
+      currentEquity: 100000,
+      loanAmount: 500000,
+      totalMonthlyPayment: 3250,
+      principalInterest: 2700,
+      monthlyTax: 400,
+      monthlyInsurance: 100,
+      monthlyHoa: 50,
+      totalInterest: 100000,
+      yearlyLoan: [
+        { year: 1, payment: 3250, principal: 1800, interest: 900, endingBalance: 500000 },
+        { year: 2, payment: 3150, principal: 1900, interest: 800, endingBalance: 480000 },
+      ],
+    };
+
+    expect(getMortgageAnnualHousingCost(mortgageSummary, 0)).toBe(39000);
+    expect(getMortgageAnnualHousingCost(mortgageSummary, 1)).toBe(37800);
+    expect(getMortgageYearInterest(mortgageSummary, 0)).toBe(900);
+    expect(getMortgageYearInterest(mortgageSummary, 1)).toBe(800);
+  });
+
+  it("includes principal, tax, insurance, and hoa in year-zero housing cost", () => {
+    expect(
+      getMortgageAnnualHousingCost({
+        type: "loan",
+        kind: "conventional",
+        typeLabel: "Conventional",
+        isArm: false,
+        rentGrowthRate: 0,
+        homePrice: 600000,
+        currentEquity: 100000,
+        loanAmount: 500000,
+        totalMonthlyPayment: 3250,
+        principalInterest: 2700,
+        monthlyTax: 400,
+        monthlyInsurance: 100,
+        monthlyHoa: 50,
+        totalInterest: 100000,
+        yearlyLoan: [{ year: 1, payment: 3250, principal: 1800, interest: 900, endingBalance: 500000 }],
+      }, 0),
+    ).toBe(39000);
   });
 
   it("adds current-year tax savings for deductible bucket contributions", () => {
@@ -171,11 +267,11 @@ describe("calculateProjection", () => {
       },
     });
 
+    const today = projection.getYear(0);
     const yearOne = projection.getYear(1);
-    const yearTwo = projection.getYear(2);
 
-    expect(yearTwo.takeHome).toBeLessThan(yearOne.takeHome);
-    expect(yearTwo.freeCashBeforeAllocation).toBeLessThan(yearOne.freeCashBeforeAllocation);
+    expect(yearOne.takeHome).toBeLessThan(today.takeHome);
+    expect(yearOne.freeCashBeforeAllocation).toBeLessThan(today.freeCashBeforeAllocation);
   });
 
   it("grows rent housing cost over time without creating home equity", () => {

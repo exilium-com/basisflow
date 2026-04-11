@@ -75,6 +75,7 @@ export function MortgageSection({
               prefix="$"
               value={mortgageState.homePrice}
               step="50000"
+              disabled={isRentScenario}
               onValueChange={(value) => onUpdateMortgageState({ homePrice: value ?? 0 })}
             />
 
@@ -84,6 +85,7 @@ export function MortgageSection({
                 ariaLabel="Down payment mode"
                 className="w-fit shrink-0"
                 value={mortgageState.downPaymentMode}
+                disabled={isRentScenario}
                 onChange={onHandleDownPaymentMode}
                 options={[
                   { value: "dollar", label: "$" },
@@ -95,6 +97,7 @@ export function MortgageSection({
                 label={null}
                 value={mortgageState.downPayment}
                 step={mortgageState.downPaymentMode === "dollar" ? "1" : "0.001"}
+                disabled={isRentScenario}
                 onValueChange={(value) => onUpdateMortgageState({ downPayment: value ?? 0 })}
               />
             </div>
@@ -104,6 +107,7 @@ export function MortgageSection({
               suffix="/ year"
               value={mortgageState.insurancePerYear}
               step="1"
+              disabled={isRentScenario}
               onValueChange={(value) => onUpdateMortgageState({ insurancePerYear: value ?? 0 })}
             />
             <NumberField
@@ -112,6 +116,7 @@ export function MortgageSection({
               suffix="/ month"
               value={mortgageState.hoaPerMonth}
               step="1"
+              disabled={isRentScenario}
               onValueChange={(value) => onUpdateMortgageState({ hoaPerMonth: value ?? 0 })}
             />
           </div>
