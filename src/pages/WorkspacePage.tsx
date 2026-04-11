@@ -48,7 +48,6 @@ import {
   type MortgageState,
 } from "../lib/mortgageConfig";
 import {
-  buildMortgageComparisonRows,
   buildMortgageSummaryItems,
   getMortgageMonthlyPaymentForYear,
   getMortgageYearInterest,
@@ -121,14 +120,8 @@ export function WorkspacePage() {
     mortgage.options.map((option) => [option.id, buildMortgageScenario(mortgage, option.id)]),
   ) as Record<string, MortgageScenario>;
   const mortgageScenario = scenariosById[mortgage.activeLoanId];
-  const compareScenario = scenariosById[mortgage.compareLoanId];
   const mortgageSummary = serializeMortgageSummary(mortgageScenario);
   const mortgageSummaryItems = buildMortgageSummaryItems(mortgageScenario, projectionState.currentYear);
-  const mortgageComparisonRows = buildMortgageComparisonRows(
-    mortgageScenario,
-    compareScenario,
-    projectionState.currentYear,
-  );
 
   const resolvedIncome = resolveIncome(income, {
     mortgageInterest: getMortgageYearInterest(mortgageSummary, 1),
@@ -301,6 +294,12 @@ export function WorkspacePage() {
       }
 
       option.kind = kind;
+      if (kind === "rent") {
+        option.rentPerMonth ??= 3500;
+        option.rentGrowthRate ??= 3;
+        return;
+      }
+
       if (kind === "arm") {
         option.rate = null;
         option.initialRate ??= 5.635;
@@ -344,14 +343,7 @@ export function WorkspacePage() {
     }
 
     setMortgageState((draft) => {
-      if (draft.compareLoanId !== optionId) {
-        draft.activeLoanId = optionId;
-        return;
-      }
-
-      const fallbackCompareId = draft.options.find((option) => option.id !== optionId)?.id ?? optionId;
       draft.activeLoanId = optionId;
-      draft.compareLoanId = fallbackCompareId;
     });
   }
 
@@ -359,7 +351,6 @@ export function WorkspacePage() {
     setMortgageState((draft) => {
       const nextOption = createMortgageOption({ name: `Mortgage option ${draft.options.length + 1}` });
       draft.options.push(nextOption);
-      draft.compareLoanId = nextOption.id;
     });
   }
 
@@ -373,10 +364,6 @@ export function WorkspacePage() {
       .map((option) => option.id);
     const nextActiveLoanId =
       mortgageState.activeLoanId === optionId ? remainingOptionIds[0] : mortgageState.activeLoanId;
-    const nextCompareLoanId =
-      mortgageState.compareLoanId === optionId || mortgageState.compareLoanId === nextActiveLoanId
-        ? (remainingOptionIds.find((entry) => entry !== nextActiveLoanId) ?? nextActiveLoanId)
-        : mortgageState.compareLoanId;
 
     if (expandedLoanId === optionId) {
       setExpandedLoanId(null);
@@ -385,7 +372,6 @@ export function WorkspacePage() {
     setMortgageState((draft) => {
       draft.options = draft.options.filter((option) => option.id !== optionId);
       draft.activeLoanId = nextActiveLoanId;
-      draft.compareLoanId = nextCompareLoanId;
     });
   }
 
@@ -534,11 +520,9 @@ export function WorkspacePage() {
           />
 
           <MortgageSection
-            compareScenario={compareScenario}
             currentYear={projection.currentYear}
             expandedLoanId={expandedLoanId}
             mortgage={mortgage}
-            mortgageComparisonRows={mortgageComparisonRows}
             mortgageScenario={mortgageScenario}
             mortgageState={mortgageState}
             mortgageSummaryItems={mortgageSummaryItems}
@@ -547,7 +531,6 @@ export function WorkspacePage() {
             onHandleDownPaymentMode={handleDownPaymentMode}
             onRemoveLoan={removeMortgageOption}
             onSelectLoan={selectLoan}
-            onSetCompareLoanId={(optionId) => updateMortgageState({ compareLoanId: optionId })}
             onSetExpandedLoanId={setExpandedLoanId}
             onUpdateLoanField={updateLoanField}
             onUpdateLoanKind={updateLoanKind}

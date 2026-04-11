@@ -69,7 +69,7 @@ export function buildMonthlyCashFlow({
       color: "#0d6a73",
     },
     {
-      label: "Mortgage",
+      label: "Housing",
       value: mortgage,
       color: "#7c8e97",
     },

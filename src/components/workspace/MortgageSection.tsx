@@ -4,14 +4,11 @@ import { ChartPanel } from "../ChartPanel";
 import { NumberField } from "../Field";
 import { MetricGrid } from "../MetricGrid";
 import { MortgageBalanceChart, MortgageCompositionChart } from "../MortgageCharts";
-import { MortgageComparisonTable, MortgageLoanOptionList } from "../MortgageLoanOptions";
+import { MortgageLoanOptionList } from "../MortgageLoanOptions";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { WorkspaceSection } from "./WorkspaceSection";
 import { usd } from "../../lib/format";
-import {
-  getMortgageMonthlyPaymentForYear,
-  type MortgageComparisonRow,
-} from "../../lib/mortgagePage";
+import { getMortgageMonthlyPaymentForYear } from "../../lib/mortgagePage";
 import {
   type Mortgage,
   type MortgageDownPaymentMode,
@@ -24,11 +21,9 @@ import { type MortgageScenario } from "../../lib/mortgageSchedule";
 type MetricItem = { label: string; value: string };
 
 type MortgageSectionProps = {
-  compareScenario: MortgageScenario;
   currentYear: number;
   expandedLoanId: string | null;
   mortgage: Mortgage;
-  mortgageComparisonRows: MortgageComparisonRow[];
   mortgageScenario: MortgageScenario;
   mortgageState: MortgageState;
   mortgageSummaryItems: MetricItem[];
@@ -36,7 +31,6 @@ type MortgageSectionProps = {
   onHandleDownPaymentMode: (mode: MortgageDownPaymentMode) => void;
   onRemoveLoan: (optionId: string) => void;
   onSelectLoan: (optionId: string) => void;
-  onSetCompareLoanId: (optionId: string) => void;
   onSetExpandedLoanId: (optionId: string | null) => void;
   onUpdateLoanField: (optionId: string, field: MortgageLoanField, value: number | null) => void;
   onUpdateLoanKind: (optionId: string, kind: MortgageOptionKind) => void;
@@ -46,11 +40,9 @@ type MortgageSectionProps = {
 };
 
 export function MortgageSection({
-  compareScenario,
   currentYear,
   expandedLoanId,
   mortgage,
-  mortgageComparisonRows,
   mortgageScenario,
   mortgageState,
   mortgageSummaryItems,
@@ -58,7 +50,6 @@ export function MortgageSection({
   onHandleDownPaymentMode,
   onRemoveLoan,
   onSelectLoan,
-  onSetCompareLoanId,
   onSetExpandedLoanId,
   onUpdateLoanField,
   onUpdateLoanKind,
@@ -66,15 +57,17 @@ export function MortgageSection({
   onUpdateMortgageState,
   scenariosById,
 }: MortgageSectionProps) {
+  const isRentScenario = mortgageScenario.kind === "rent";
+
   return (
     <WorkspaceSection
       id="mortgage"
       index="02"
       title="Home & Mortgage"
       summary="Housing Cost"
-      actions={<ActionButton onClick={onAddMortgageOption}>Add mortgage option</ActionButton>}
+      actions={<ActionButton onClick={onAddMortgageOption}>Add housing option</ActionButton>}
     >
-      <div className="split-main-sidebar">
+      <div className="split-main-sidebar-wide">
         <div className="grid gap-5">
           <div className="grid gap-4 md:grid-cols-2">
             <NumberField
@@ -85,11 +78,11 @@ export function MortgageSection({
               onValueChange={(value) => onUpdateMortgageState({ homePrice: value ?? 0 })}
             />
 
-            <div className="flex items-end gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
               <SegmentedToggle
                 label="Down payment"
                 ariaLabel="Down payment mode"
-                className="shrink-0"
+                className="w-fit shrink-0"
                 value={mortgageState.downPaymentMode}
                 onChange={onHandleDownPaymentMode}
                 options={[
@@ -127,11 +120,9 @@ export function MortgageSection({
             expandedLoanId={expandedLoanId}
             currentYear={currentYear}
             mortgage={mortgage}
-            optionIds={mortgageState.options.map((option) => option.id)}
             scenariosById={scenariosById}
             state={mortgageState}
             onSelectLoan={onSelectLoan}
-            onSetCompareLoanId={onSetCompareLoanId}
             onSetExpandedLoanId={onSetExpandedLoanId}
             onUpdateLoanField={onUpdateLoanField}
             onUpdateLoanName={onUpdateLoanName}
@@ -143,7 +134,7 @@ export function MortgageSection({
         <div>
           <MetricGrid
             primaryItem={{
-              label: "Estimated monthly payment",
+              label: isRentScenario ? "Estimated monthly rent" : "Estimated monthly payment",
               value: usd(getMortgageMonthlyPaymentForYear(mortgageScenario, currentYear)),
             }}
             items={mortgageSummaryItems}
@@ -151,31 +142,23 @@ export function MortgageSection({
         </div>
       </div>
 
-      <div className="mt-8 grid gap-4">
-        <ChartPanel title="Balance Over Time" legend={[{ label: "Remaining balance", color: "#0c6a7c" }]}>
-          <MortgageBalanceChart scenario={mortgageScenario} />
-        </ChartPanel>
+      {isRentScenario ? null : (
+        <div className="mt-8 grid gap-4">
+          <ChartPanel title="Balance Over Time" legend={[{ label: "Remaining balance", color: "#0c6a7c" }]}>
+            <MortgageBalanceChart scenario={mortgageScenario} />
+          </ChartPanel>
 
-        <ChartPanel
-          title="Principal vs Interest"
-          legend={[
-            { label: "Principal", color: "#0c6a7c" },
-            { label: "Interest", color: "#d28a47" },
-          ]}
-        >
-          <MortgageCompositionChart scenario={mortgageScenario} />
-        </ChartPanel>
-      </div>
-
-      {mortgageState.activeLoanId !== mortgageState.compareLoanId ? (
-        <div className="mt-8">
-          <MortgageComparisonTable
-            compareScenario={compareScenario}
-            comparisonRows={mortgageComparisonRows}
-            scenario={mortgageScenario}
-          />
+          <ChartPanel
+            title="Principal vs Interest"
+            legend={[
+              { label: "Principal", color: "#0c6a7c" },
+              { label: "Interest", color: "#d28a47" },
+            ]}
+          >
+            <MortgageCompositionChart scenario={mortgageScenario} />
+          </ChartPanel>
         </div>
-      ) : null}
+      )}
     </WorkspaceSection>
   );
 }

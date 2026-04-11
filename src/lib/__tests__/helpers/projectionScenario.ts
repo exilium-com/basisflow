@@ -47,7 +47,9 @@ type AccountInput = {
 export type ProjectionScenarioOptions = {
   salary?: number;
   annualMortgage?: number;
-  yearlyLoan?: Array<{ year: number; principal?: number; interest: number; endingBalance?: number }>;
+  housingKind?: "conventional" | "rent";
+  rentGrowthRate?: number;
+  yearlyLoan?: Array<{ year: number; payment?: number; principal?: number; interest: number; endingBalance?: number }>;
   annualExpenses?: number;
   homePrice?: number;
   currentEquity?: number;
@@ -248,22 +250,29 @@ function createIncomeSummary({
 }
 
 function createMortgageSummary({
+  housingKind = "conventional",
   annualMortgage = 0,
+  rentGrowthRate = 0,
   homePrice = 0,
   currentEquity = 0,
   yearlyLoan = [],
 }: {
+  housingKind?: "conventional" | "rent";
   annualMortgage?: number;
+  rentGrowthRate?: number;
   homePrice?: number;
   currentEquity?: number;
-  yearlyLoan?: Array<{ year: number; principal?: number; interest: number; endingBalance?: number }>;
+  yearlyLoan?: Array<{ year: number; payment?: number; principal?: number; interest: number; endingBalance?: number }>;
 }) {
   return {
+    kind: housingKind,
+    rentGrowthRate,
     totalMonthlyPayment: roundTo(annualMortgage / 12, 2),
-    currentEquity: roundTo(currentEquity, 2),
+    currentEquity: housingKind === "rent" ? 0 : roundTo(currentEquity, 2),
     homePrice: roundTo(homePrice, 2),
     yearlyLoan: yearlyLoan.map((row) => ({
       year: row.year,
+      payment: row.payment ?? roundTo(annualMortgage / 12, 2),
       principal: row.principal ?? 0,
       interest: row.interest,
       endingBalance: row.endingBalance ?? 0,
@@ -377,6 +386,8 @@ function createAssetsState(
 export function runProjectionScenario({
   salary = 150000,
   annualMortgage = 0,
+  housingKind = "conventional",
+  rentGrowthRate = 0,
   yearlyLoan = [],
   annualExpenses = 0,
   homePrice = 0,
@@ -413,7 +424,9 @@ export function runProjectionScenario({
       taxConfig: normalizeConfig(clone(taxConfig)),
     }),
     mortgageSummary: createMortgageSummary({
+      housingKind,
       annualMortgage,
+      rentGrowthRate,
       homePrice,
       currentEquity,
       yearlyLoan,
