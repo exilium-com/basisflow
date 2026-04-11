@@ -1,8 +1,15 @@
 import { readNumber } from "./format";
 
 export type MortgageDownPaymentMode = "percent" | "dollar";
-export type MortgageOptionKind = "conventional" | "arm";
-export type MortgageLoanField = "rate" | "term" | "initialRate" | "adjustedRate" | "fixedYears";
+export type MortgageOptionKind = "conventional" | "arm" | "rent";
+export type MortgageLoanField =
+  | "rate"
+  | "term"
+  | "initialRate"
+  | "adjustedRate"
+  | "fixedYears"
+  | "rentPerMonth"
+  | "rentGrowthRate";
 
 export type MortgageOptionState = {
   id: string;
@@ -13,6 +20,8 @@ export type MortgageOptionState = {
   initialRate: number | null;
   adjustedRate: number | null;
   fixedYears: number | null;
+  rentPerMonth: number | null;
+  rentGrowthRate: number | null;
 };
 
 export type MortgageLoan =
@@ -31,6 +40,13 @@ export type MortgageLoan =
       fixedYears: number;
       initialRate: number;
       adjustedRate: number;
+    }
+  | {
+      id: string;
+      name: string;
+      kind: "rent";
+      rentPerMonth: number;
+      rentGrowthRate: number;
     };
 
 export type MortgageState = {
@@ -41,7 +57,6 @@ export type MortgageState = {
   insurancePerYear: number;
   hoaPerMonth: number;
   activeLoanId: string;
-  compareLoanId: string;
   options: MortgageOptionState[];
 };
 
@@ -54,7 +69,6 @@ export type Mortgage = {
   insurancePerYear: number;
   hoaPerMonth: number;
   activeLoanId: string;
-  compareLoanId: string;
   options: MortgageLoan[];
 };
 
@@ -66,6 +80,8 @@ const CONVENTIONAL_DEFAULTS = {
   initialRate: null,
   adjustedRate: null,
   fixedYears: null,
+  rentPerMonth: null,
+  rentGrowthRate: null,
 };
 
 const ARM_DEFAULTS = {
@@ -76,6 +92,20 @@ const ARM_DEFAULTS = {
   initialRate: 5.635,
   adjustedRate: 7.135,
   fixedYears: 7,
+  rentPerMonth: null,
+  rentGrowthRate: null,
+};
+
+const RENT_DEFAULTS = {
+  name: "Rent",
+  kind: "rent" as const,
+  rate: null,
+  term: null,
+  initialRate: null,
+  adjustedRate: null,
+  fixedYears: null,
+  rentPerMonth: 3500,
+  rentGrowthRate: 3,
 };
 
 export const MORTGAGE_DEFAULTS = {
@@ -95,11 +125,20 @@ const MORTGAGE_NUMBER_FIELDS = [
 ] as const satisfies ReadonlyArray<keyof MortgageState>;
 
 function defaultOptionValues(kind: MortgageOptionKind) {
-  return kind === "arm" ? ARM_DEFAULTS : CONVENTIONAL_DEFAULTS;
+  if (kind === "arm") {
+    return ARM_DEFAULTS;
+  }
+
+  if (kind === "rent") {
+    return RENT_DEFAULTS;
+  }
+
+  return CONVENTIONAL_DEFAULTS;
 }
 
 export function createMortgageOption(overrides: Partial<MortgageOptionState> = {}): MortgageOptionState {
-  const kind = overrides.kind === "arm" ? "arm" : "conventional";
+  const kind =
+    overrides.kind === "arm" ? "arm" : overrides.kind === "rent" ? "rent" : "conventional";
   const defaults = defaultOptionValues(kind);
 
   return {
@@ -111,17 +150,17 @@ export function createMortgageOption(overrides: Partial<MortgageOptionState> = {
     initialRate: overrides.initialRate ?? defaults.initialRate,
     adjustedRate: overrides.adjustedRate ?? defaults.adjustedRate,
     fixedYears: overrides.fixedYears ?? defaults.fixedYears,
+    rentPerMonth: overrides.rentPerMonth ?? defaults.rentPerMonth,
+    rentGrowthRate: overrides.rentGrowthRate ?? defaults.rentGrowthRate,
   };
 }
 
 function buildDefaultOptions() {
   const primary = createMortgageOption({ name: "Primary", kind: "conventional" });
-  const compare = createMortgageOption({ name: "Compare", kind: "arm" });
 
   return {
-    options: [primary, compare],
+    options: [primary],
     activeLoanId: primary.id,
-    compareLoanId: compare.id,
   };
 }
 
@@ -135,13 +174,19 @@ export const DEFAULT_MORTGAGE_STATE: MortgageState = {
   insurancePerYear: MORTGAGE_DEFAULTS.insurancePerYear,
   hoaPerMonth: MORTGAGE_DEFAULTS.hoaPerMonth,
   activeLoanId: DEFAULT_MORTGAGE_OPTIONS.activeLoanId,
-  compareLoanId: DEFAULT_MORTGAGE_OPTIONS.compareLoanId,
   options: DEFAULT_MORTGAGE_OPTIONS.options,
 };
 
 function normalizeMortgageOption(parsed: unknown, fallback?: MortgageOptionState): MortgageOptionState {
   const raw = typeof parsed === "object" && parsed ? (parsed as Record<string, unknown>) : {};
-  const kind = raw.kind === "arm" ? "arm" : raw.kind === "conventional" ? "conventional" : fallback?.kind ?? "conventional";
+  const kind =
+    raw.kind === "arm"
+      ? "arm"
+      : raw.kind === "rent"
+        ? "rent"
+        : raw.kind === "conventional"
+          ? "conventional"
+          : fallback?.kind ?? "conventional";
   const defaults = defaultOptionValues(kind);
 
   return {
@@ -153,6 +198,8 @@ function normalizeMortgageOption(parsed: unknown, fallback?: MortgageOptionState
     initialRate: readNumber(raw.initialRate, fallback?.initialRate ?? defaults.initialRate),
     adjustedRate: readNumber(raw.adjustedRate, fallback?.adjustedRate ?? defaults.adjustedRate),
     fixedYears: readNumber(raw.fixedYears, fallback?.fixedYears ?? defaults.fixedYears),
+    rentPerMonth: readNumber(raw.rentPerMonth, fallback?.rentPerMonth ?? defaults.rentPerMonth),
+    rentGrowthRate: readNumber(raw.rentGrowthRate, fallback?.rentGrowthRate ?? defaults.rentGrowthRate),
   };
 }
 
@@ -168,27 +215,29 @@ export function normalizeMortgageState(parsed: unknown, fallback: MortgageState)
   const options = normalizedOptions.length > 0 ? normalizedOptions : fallback.options;
   const optionIds = new Set(options.map((option) => option.id));
   const fallbackActiveLoanId = options[0]?.id ?? fallback.activeLoanId;
-  const fallbackCompareLoanId = options.find((option) => option.id !== fallbackActiveLoanId)?.id ?? fallbackActiveLoanId;
   const activeLoanIdCandidate = typeof state.activeLoanId === "string" && state.activeLoanId ? state.activeLoanId : null;
   const activeLoanId = activeLoanIdCandidate && optionIds.has(activeLoanIdCandidate) ? activeLoanIdCandidate : fallbackActiveLoanId;
-  const compareLoanIdCandidate =
-    typeof state.compareLoanId === "string" && state.compareLoanId ? state.compareLoanId : null;
-  const compareLoanId =
-    compareLoanIdCandidate && optionIds.has(compareLoanIdCandidate)
-      ? compareLoanIdCandidate
-      : options.find((option) => option.id !== activeLoanId)?.id ?? fallbackCompareLoanId;
 
   return {
     ...fallback,
     ...numericState,
     downPaymentMode: state.downPaymentMode === "dollar" ? "dollar" : "percent",
     activeLoanId,
-    compareLoanId,
     options,
   };
 }
 
 function createMortgageLoan(option: MortgageOptionState): MortgageLoan {
+  if (option.kind === "rent") {
+    return {
+      id: option.id,
+      name: option.name || RENT_DEFAULTS.name,
+      kind: "rent",
+      rentPerMonth: Math.max(0, option.rentPerMonth ?? RENT_DEFAULTS.rentPerMonth),
+      rentGrowthRate: option.rentGrowthRate ?? RENT_DEFAULTS.rentGrowthRate,
+    };
+  }
+
   if (option.kind === "arm") {
     const initialRate = option.initialRate ?? ARM_DEFAULTS.initialRate;
 
@@ -219,10 +268,6 @@ export function createMortgage(state: MortgageState = DEFAULT_MORTGAGE_STATE): M
   const options = state.options.length > 0 ? state.options.map((option) => createMortgageLoan(option)) : DEFAULT_MORTGAGE_STATE.options.map(createMortgageLoan);
   const optionIds = new Set(options.map((option) => option.id));
   const activeLoanId = optionIds.has(state.activeLoanId) ? state.activeLoanId : options[0].id;
-  const compareLoanId =
-    optionIds.has(state.compareLoanId) && state.compareLoanId !== activeLoanId
-      ? state.compareLoanId
-      : options.find((option) => option.id !== activeLoanId)?.id ?? activeLoanId;
 
   return {
     homePrice,
@@ -233,7 +278,6 @@ export function createMortgage(state: MortgageState = DEFAULT_MORTGAGE_STATE): M
     insurancePerYear: Math.max(0, state.insurancePerYear ?? MORTGAGE_DEFAULTS.insurancePerYear),
     hoaPerMonth: Math.max(0, state.hoaPerMonth ?? MORTGAGE_DEFAULTS.hoaPerMonth),
     activeLoanId,
-    compareLoanId,
     options,
   };
 }

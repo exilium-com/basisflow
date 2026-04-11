@@ -1,5 +1,4 @@
 import React from "react";
-import { DataTable, type DataTableColumn } from "./DataTable";
 import { NumberField, TextField } from "./Field";
 import { RowItem } from "./RowItem";
 import { SegmentedToggle } from "./SegmentedToggle";
@@ -21,7 +20,6 @@ type MortgageLoanOptionCardProps = {
   currentYear: number;
   onRemoveLoan: (optionId: string) => void;
   onSelectLoan: (optionId: string) => void;
-  onSetCompareLoanId: (optionId: string) => void;
   onSetExpandedLoanId: (optionId: string | null) => void;
   onUpdateLoanField: (optionId: string, field: MortgageLoanField, value: number | null) => void;
   onUpdateLoanName: (optionId: string, name: string) => void;
@@ -30,53 +28,10 @@ type MortgageLoanOptionCardProps = {
   state: MortgageState;
 };
 
-type MortgageLoanOptionListProps = Omit<
-  MortgageLoanOptionCardProps,
-  "optionId" | "optionCount" | "scenario"
-> & {
+type MortgageLoanOptionListProps = Omit<MortgageLoanOptionCardProps, "optionId" | "optionCount" | "scenario"> & {
   optionIds: string[];
   scenariosById: Record<string, MortgageScenario>;
 };
-
-type MortgageComparisonRow = {
-  label: string;
-  left: string;
-  right: string;
-};
-
-type MortgageComparisonTableProps = {
-  compareScenario: MortgageScenario;
-  comparisonRows: MortgageComparisonRow[];
-  scenario: MortgageScenario;
-};
-
-function MortgageCompareButton({
-  disabled,
-  selected,
-  onClick,
-}: {
-  disabled: boolean;
-  selected: boolean;
-  onClick: React.MouseEventHandler<HTMLButtonElement>;
-}) {
-  return (
-    <button
-      className={
-        disabled
-          ? "h-10 min-w-24 shrink-0 border border-(--line-soft) bg-(--white) px-4 text-sm text-(--ink-soft) opacity-50"
-          : selected
-            ? "h-10 min-w-24 shrink-0 border border-(--teal) bg-(--teal-tint) px-4 text-sm text-(--teal)"
-            : "h-10 min-w-24 shrink-0 border border-(--line-soft) bg-transparent px-4 text-sm text-(--ink-soft)"
-      }
-      type="button"
-      aria-pressed={selected}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      Compare
-    </button>
-  );
-}
 
 function ConventionalLoanHeaderFields({
   optionId,
@@ -169,7 +124,31 @@ function ArmLoanDetails({
   );
 }
 
+function RentDetails({
+  optionId,
+  loanState,
+  onUpdateLoanField,
+}: {
+  optionId: string;
+  loanState: MortgageState["options"][number];
+  onUpdateLoanField: (optionId: string, field: MortgageLoanField, value: number | null) => void;
+}) {
+  return (
+    <NumberField
+      label="Growth"
+      suffix="%"
+      value={loanState.rentGrowthRate}
+      step="0.1"
+      onValueChange={(value) => onUpdateLoanField(optionId, "rentGrowthRate", value)}
+    />
+  );
+}
+
 function LoanOptionDetailsSummary({ loanState }: { loanState: MortgageState["options"][number] }) {
+  if (loanState.kind === "rent") {
+    return `Grows ${(loanState.rentGrowthRate ?? 0).toFixed(1)}% / year`;
+  }
+
   if (loanState.kind !== "arm") {
     return null;
   }
@@ -185,7 +164,6 @@ function MortgageLoanOptionCard({
   currentYear,
   onRemoveLoan,
   onSelectLoan,
-  onSetCompareLoanId,
   onSetExpandedLoanId,
   onUpdateLoanField,
   onUpdateLoanKind,
@@ -211,39 +189,38 @@ function MortgageLoanOptionCard({
         <div className="grid gap-3">
           <div className="flex items-end gap-3">
             <TextField
-              className="min-w-64 flex-1"
+              className="flex-1"
               label="Option name"
               value={loanState.name}
               onChange={(event) => onUpdateLoanName(optionId, event.target.value)}
             />
-            <div className="pb-2 text-lg font-semibold text-(--ink-soft)">
-              {usd(getMortgageMonthlyPaymentForYear(scenario, currentYear))}
-            </div>
+            {loan.kind === "rent" ? (
+              <NumberField
+                compact
+                className="w-min min-w-40"
+                label="Rent"
+                prefix="$"
+                suffix="/ month"
+                value={loanState.rentPerMonth}
+                step="1"
+                onValueChange={(value) => onUpdateLoanField(optionId, "rentPerMonth", value)}
+              />
+            ) : (
+              <div className="pb-2 text-lg font-semibold text-(--ink-soft)">
+                {usd(getMortgageMonthlyPaymentForYear(scenario, currentYear))} / month
+              </div>
+            )}
           </div>
-          <div className="flex items-end justify-between gap-3">
-            <div className="grid flex-1 gap-3 sm:grid-cols-2">
-              {loan.kind === "arm" ? (
-                <ArmLoanHeaderFields
-                  optionId={optionId}
-                  loanState={loanState}
-                  onUpdateLoanField={onUpdateLoanField}
-                />
-              ) : (
-                <ConventionalLoanHeaderFields
-                  optionId={optionId}
-                  loanState={loanState}
-                  onUpdateLoanField={onUpdateLoanField}
-                />
-              )}
-            </div>
-            <MortgageCompareButton
-              disabled={state.activeLoanId === optionId}
-              selected={state.activeLoanId !== optionId && state.compareLoanId === optionId}
-              onClick={(event) => {
-                event.stopPropagation();
-                onSetCompareLoanId(optionId);
-              }}
-            />
+          <div className="grid gap-3 sm:grid-cols-2">
+            {loan.kind === "arm" ? (
+              <ArmLoanHeaderFields optionId={optionId} loanState={loanState} onUpdateLoanField={onUpdateLoanField} />
+            ) : loan.kind !== "rent" ? (
+              <ConventionalLoanHeaderFields
+                optionId={optionId}
+                loanState={loanState}
+                onUpdateLoanField={onUpdateLoanField}
+              />
+            ) : null}
           </div>
         </div>
       }
@@ -263,11 +240,14 @@ function MortgageLoanOptionCard({
           options={[
             { value: "conventional", label: "Conv" },
             { value: "arm", label: "ARM" },
+            { value: "rent", label: "Rent" },
           ]}
         />
       </div>
       {loan.kind === "arm" ? (
         <ArmLoanDetails optionId={optionId} loanState={loanState} onUpdateLoanField={onUpdateLoanField} />
+      ) : loan.kind === "rent" ? (
+        <RentDetails optionId={optionId} loanState={loanState} onUpdateLoanField={onUpdateLoanField} />
       ) : null}
     </RowItem>
   );
@@ -286,41 +266,5 @@ export function MortgageLoanOptionList(props: MortgageLoanOptionListProps) {
         />
       ))}
     </div>
-  );
-}
-
-export function MortgageComparisonTable({
-  compareScenario,
-  comparisonRows,
-  scenario,
-}: MortgageComparisonTableProps) {
-  const columns: DataTableColumn<MortgageComparisonRow>[] = [
-    {
-      key: "label",
-      header: "Metric",
-      align: "text-left",
-      render: (row) => row.label,
-    },
-    {
-      key: "left",
-      header: scenario.typeLabel,
-      align: "text-right",
-      render: (row) => row.left,
-    },
-    {
-      key: "right",
-      header: compareScenario.typeLabel,
-      align: "text-right",
-      render: (row) => row.right,
-    },
-  ];
-
-  return (
-    <article className="border border-(--line-soft) bg-(--white-soft) px-4 pt-4 pb-2">
-      <p className="mb-3 text-sm leading-relaxed text-(--ink-soft)">
-        {`${scenario.typeLabel} against ${compareScenario.typeLabel}`}
-      </p>
-      <DataTable columns={columns} rows={comparisonRows} getRowKey={(row) => row.label} className="trim-last-table-row" />
-    </article>
   );
 }

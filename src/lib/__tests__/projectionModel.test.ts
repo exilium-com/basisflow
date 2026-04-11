@@ -178,6 +178,28 @@ describe("calculateProjection", () => {
     expect(yearTwo.freeCashBeforeAllocation).toBeLessThan(yearOne.freeCashBeforeAllocation);
   });
 
+  it("grows rent housing cost over time without creating home equity", () => {
+    const projection = runProjectionScenario({
+      salary: 180000,
+      annualMortgage: 36000,
+      housingKind: "rent",
+      rentGrowthRate: 3,
+      horizonYears: 2,
+      currentYear: 2,
+    });
+
+    const today = projection.getYear(0);
+    const yearOne = projection.getYear(1);
+    const yearTwo = projection.getYear(2);
+
+    expect(today.mortgageLineItem).toBe(36000);
+    expect(yearOne.mortgageLineItem).toBeCloseTo(37080, 2);
+    expect(yearTwo.mortgageLineItem).toBeCloseTo(38192.4, 2);
+    expect(yearOne.homeEquity).toBe(0);
+    expect(yearTwo.homeEquity).toBe(0);
+    expect(yearTwo.freeCashBeforeAllocation).toBeLessThan(yearOne.freeCashBeforeAllocation);
+  });
+
   it("handles a realistic salary plus mortgage scenario without double counting cash", () => {
     const yearOne = runProjectionScenario({
       salary: realisticIncome.grossSalary,

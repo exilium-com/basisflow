@@ -18,7 +18,12 @@ import {
   type IncomeSummary,
   type ResolvedIncome,
 } from "./incomeModel";
-import { getMortgageYearInterest, getMortgageYearPropertyTax, type MortgageSummary } from "./mortgagePage";
+import {
+  getMortgageAnnualHousingCost,
+  getMortgageYearInterest,
+  getMortgageYearPropertyTax,
+  type MortgageSummary,
+} from "./mortgagePage";
 import { type Projection } from "./projectionState";
 import { type ProjectionRow } from "./projectionUtils";
 import { computeAdditionalTax, type TaxConfig } from "./taxConfig";
@@ -33,7 +38,6 @@ type ProjectionBase = {
   taxConfig: TaxConfig;
   income: ResolvedIncome;
   mortgage: {
-    annualPayment: number;
     homePrice: number;
     currentEquity: number;
   };
@@ -70,6 +74,7 @@ type ProjectionYearContext = {
   takeHome: number;
   rsuGross: number;
   rsuNet: number;
+  housingCost: number;
   nonHousingExpenses: number;
   ordinaryIncome: number;
   taxBases: { federalTaxableIncome?: number };
@@ -254,14 +259,13 @@ function createProjectionSimulation({
     assets,
     expenses,
     projection,
-    mortgageSummary,
-    taxConfig,
-    income,
-    mortgage: {
-      annualPayment: (mortgageSummary.totalMonthlyPayment ?? 0) * 12,
-      homePrice: mortgageSummary.homePrice ?? 0,
-      currentEquity: mortgageSummary.currentEquity ?? 0,
-    },
+      mortgageSummary,
+      taxConfig,
+      income,
+      mortgage: {
+        homePrice: mortgageSummary.homePrice ?? 0,
+        currentEquity: mortgageSummary.currentEquity ?? 0,
+      },
     assetPlan: {
       totalContributions: assets.buckets.reduce((sum, bucket) => sum + bucket.contribution, 0),
       deductibleContributions: assets.buckets.reduce(
@@ -307,6 +311,7 @@ function createProjectionSimulation({
         takeHome: calculateIncome(base.income, base.taxConfig).annualTakeHome,
         rsuGross: 0,
         rsuNet: 0,
+        housingCost: getMortgageAnnualHousingCost(base.mortgageSummary, 0),
         nonHousingExpenses: roundTo(getAnnualNonHousingExpenses(base.expenses.expenses, 0), 2),
         freeCashBeforeAllocation: currentSnapshot.reserveCash,
         snapshot: currentSnapshot,
@@ -363,6 +368,7 @@ function buildProjectionRow({
   takeHome,
   rsuGross,
   rsuNet,
+  housingCost,
   nonHousingExpenses,
   freeCashBeforeAllocation,
   snapshot,
@@ -374,6 +380,7 @@ function buildProjectionRow({
   takeHome: number;
   rsuGross: number;
   rsuNet: number;
+  housingCost: number;
   nonHousingExpenses: number;
   freeCashBeforeAllocation: number;
   snapshot: ProjectionSnapshot;
@@ -386,7 +393,7 @@ function buildProjectionRow({
     rsuGross,
     rsuNet,
     nonHousingExpenses,
-    mortgageLineItem: base.mortgage.annualPayment,
+    mortgageLineItem: housingCost,
     freeCashBeforeAllocation,
     bucketSnapshotsById: mapSnapshotsById(snapshot.assetSnapshots),
     expenseSnapshotsById: mapSnapshotsById(snapshot.expenseSnapshots),
@@ -405,6 +412,7 @@ function buildProjectionRow({
 
 function buildProjectionYearContext(base: ProjectionBase, year: number): ProjectionYearContext {
   const growthFactor = Math.pow(1 + base.projection.incomeGrowthRate, year);
+  const housingCost = getMortgageAnnualHousingCost(base.mortgageSummary, year);
   const income: ResolvedIncome = {
     ...base.income,
     grossSalary: base.income.grossSalary * growthFactor,
@@ -431,12 +439,13 @@ function buildProjectionYearContext(base: ProjectionBase, year: number): Project
     takeHome,
     rsuGross,
     rsuNet,
+    housingCost,
     nonHousingExpenses,
     ordinaryIncome,
     taxBases,
     freeCashBeforeAllocation: roundTo(
       takeHome -
-        base.mortgage.annualPayment -
+        housingCost -
         nonHousingExpenses -
         base.assetPlan.totalContributions +
         deductionTaxSavings,
@@ -521,8 +530,10 @@ function advanceProjectionYear(simulation: ProjectionSimulation, year: number) {
     2,
   );
   const homeEquity =
-    base.mortgage.homePrice * Math.pow(1 + base.projection.homeAppreciationRate, year) -
-    getMortgageEndingBalance(base.mortgageSummary, year);
+    base.mortgageSummary.kind === "rent"
+      ? 0
+      : base.mortgage.homePrice * Math.pow(1 + base.projection.homeAppreciationRate, year) -
+        getMortgageEndingBalance(base.mortgageSummary, year);
   const snapshot = buildProjectionSnapshot({
     base,
     year,
@@ -539,6 +550,7 @@ function advanceProjectionYear(simulation: ProjectionSimulation, year: number) {
       takeHome: yearContext.takeHome,
       rsuGross: yearContext.rsuGross,
       rsuNet: yearContext.rsuNet,
+      housingCost: yearContext.housingCost,
       nonHousingExpenses: yearContext.nonHousingExpenses,
       freeCashBeforeAllocation: yearContext.freeCashBeforeAllocation,
       snapshot,

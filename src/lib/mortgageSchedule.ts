@@ -54,9 +54,11 @@ export type MortgageArmDetails = {
 export type MortgageScenario = {
   mortgage: Mortgage;
   optionId: string;
+  kind: Mortgage["options"][number]["kind"];
   typeLabel: string;
   isArm: boolean;
   primaryRate: number;
+  rentGrowthRate: number;
   loanAmount: number;
   monthlyTax: number;
   monthlyInsurance: number;
@@ -230,6 +232,29 @@ export function buildMortgageScenario(mortgage: Mortgage, selectedOptionId: stri
     mortgage.options.find((option) => option.id === selectedOptionId) ??
     mortgage.options.find((option) => option.id === mortgage.activeLoanId) ??
     mortgage.options[0];
+  if (loanOption.kind === "rent") {
+    return {
+      mortgage,
+      optionId: loanOption.id,
+      kind: "rent",
+      typeLabel: loanOption.name,
+      isArm: false,
+      primaryRate: 0,
+      rentGrowthRate: loanOption.rentGrowthRate,
+      loanAmount: 0,
+      monthlyTax: 0,
+      monthlyInsurance: 0,
+      monthlyHoa: 0,
+      principalInterest: 0,
+      totalMonthlyPayment: loanOption.rentPerMonth,
+      totalInterest: 0,
+      schedule: [],
+      modeledMonths: 0,
+      armDetails: null,
+      yearlyBreakdown: [],
+    };
+  }
+
   const loanAmount = Math.max(0, mortgage.homePrice - mortgage.downPaymentAmount);
   const monthlyTax = (mortgage.homePrice * (mortgage.propertyTaxRate / 100)) / 12;
   const monthlyInsurance = mortgage.insurancePerYear / 12;
@@ -275,9 +300,11 @@ export function buildMortgageScenario(mortgage: Mortgage, selectedOptionId: stri
   return {
     mortgage,
     optionId: loanOption.id,
+    kind: loanOption.kind,
     typeLabel: loanOption.name,
     isArm,
     primaryRate,
+    rentGrowthRate: 0,
     loanAmount,
     monthlyTax,
     monthlyInsurance,
