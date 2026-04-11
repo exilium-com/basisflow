@@ -9,7 +9,9 @@ export function ProjectedValueDisplay({ label, value }: ProjectedValueDisplayPro
   return (
     <div className="grid gap-1">
       <div className="text-sm text-(--ink-soft)">{label}</div>
-      <div className="min-h-10 pt-2 text-base font-semibold text-(--ink-soft) sm:text-lg">{value}</div>
+      <div className="flex min-h-10 items-center text-base font-semibold text-(--ink-soft)">
+        {value}
+      </div>
     </div>
   );
 }
