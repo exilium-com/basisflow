@@ -100,7 +100,7 @@ export function AssetsSection({
                   label="Growth override"
                   suffix="%"
                   min="0"
-                  step="0.1"
+                  step="0.5"
                   value={override?.growth ?? null}
                   placeholder={String(assetGrowthRate)}
                   onValueChange={(value) => onUpdateAssetOverride(bucket.id, { growth: value })}

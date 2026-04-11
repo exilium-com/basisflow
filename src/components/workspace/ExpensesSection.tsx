@@ -112,7 +112,7 @@ export function ExpensesSection({
                   label="Growth override"
                   suffix="%"
                   min="-20"
-                  step="0.1"
+                  step="0.5"
                   value={override?.growthRate ?? null}
                   placeholder={String(expenseGrowthRate)}
                   onValueChange={(value) => onUpdateExpenseOverride(expense.id, { growthRate: value })}

@@ -7,31 +7,24 @@ const TOOL_AREAS = [
   {
     title: "Income",
     description: "Salary, RSUs, taxes, and take-home pay in one place.",
-    accent: "var(--teal)",
     border: "rgba(13,106,115,0.18)",
   },
   {
     title: "Assets",
     description: "Balances, basis, and tax treatment without spreadsheet sprawl.",
-    accent: "var(--clay)",
     border: "rgba(197,107,61,0.22)",
   },
   {
     title: "Housing",
     description: "Mortgage cost, down payment, and home equity impact.",
-    accent: "var(--teal)",
     border: "rgba(13,106,115,0.18)",
   },
   {
     title: "Projection",
     description: "A long-run view of how cash flow compounds into net worth.",
-    accent: "var(--clay)",
     border: "rgba(197,107,61,0.22)",
   },
 ];
-
-const mutedText = { color: "var(--ink-soft)" };
-const sectionBorder = { borderColor: "var(--line-soft)" };
 
 export function HomePage() {
   return (
@@ -62,38 +55,30 @@ export function HomePage() {
                 <h1 className="max-w-4xl text-4xl leading-none">
                   See how income turns to net worth.
                 </h1>
-                <p className="home-reveal home-delay-1 max-w-2xl text-base leading-6" style={mutedText}>
+                <p className="home-reveal home-delay-1 max-w-2xl text-base leading-6 text-(--ink-soft)">
                   Basisflow combines income, assets, mortgage, expenses, and projection into one working model so you
                   can understand how today&apos;s cash flow compounds into long-run outcomes.
                 </p>
-                <div className="home-reveal home-delay-2 pt-2">
-                  <ActionButton
-                    to="/workspace"
-                    className="h-10 px-4 text-base font-extrabold uppercase"
-                    style={{
-                      backgroundColor: "var(--teal)",
-                      borderColor: "var(--teal)",
-                      color: "var(--white)",
-                      letterSpacing: "0.08em",
-                    }}
-                  >
-                    Get started
-                  </ActionButton>
-                </div>
+                <ActionButton
+                  to="/workspace"
+                  className="home-reveal home-delay-2 h-10 border-(--teal) bg-(--teal) px-4 text-base font-extrabold
+                    text-(--white) uppercase tracking-wide"
+                >
+                  Get started
+                </ActionButton>
               </div>
 
-              <div className="grid gap-2 border-t pt-4" style={sectionBorder}>
+              <div className="grid gap-2 border-t border-(--line-soft) pt-4">
                 {TOOL_AREAS.map((item) => (
                   <article
                     key={item.title}
-                    className="home-reveal home-delay-2 border-b py-4 transition duration-200 hover:translate-x-1"
-                    style={sectionBorder}
+                    className="home-reveal home-delay-2 border-b border-(--line-soft) py-4 transition duration-200 hover:translate-x-1"
                   >
                     <div className="grid gap-1 border-l pl-4" style={{ borderColor: item.border }}>
                       <h2 className="text-2xl leading-none">
                         {item.title}
                       </h2>
-                      <p className="max-w-xl leading-6" style={mutedText}>
+                      <p className="max-w-xl leading-6 text-(--ink-soft)">
                         {item.description}
                       </p>
                     </div>

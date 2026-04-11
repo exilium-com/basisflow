@@ -67,8 +67,8 @@ export function MortgageSection({
       summary="Housing Cost"
       actions={<ActionButton onClick={onAddMortgageOption}>Add housing option</ActionButton>}
     >
-      <div className="split-main-sidebar-wide">
-        <div className="grid gap-4">
+      <div className="grid grid-cols-5 gap-4">
+        <div className="col-span-3 grid gap-4">
           <div className="grid grid-cols-2 gap-4">
             <NumberField
               label="Home price"
@@ -96,7 +96,7 @@ export function MortgageSection({
                 className="min-w-0 flex-1"
                 label={null}
                 value={mortgageState.downPayment}
-                step={mortgageState.downPaymentMode === "dollar" ? "1" : "0.001"}
+                step={mortgageState.downPaymentMode === "dollar" ? "1000" : "0.5"}
                 disabled={isRentScenario}
                 onValueChange={(value) => onUpdateMortgageState({ downPayment: value ?? 0 })}
               />
@@ -136,7 +136,7 @@ export function MortgageSection({
           />
         </div>
 
-        <div>
+        <div className="col-span-2">
           <MetricGrid
             primaryItem={{
               label: isRentScenario ? "Estimated monthly rent" : "Estimated monthly payment",

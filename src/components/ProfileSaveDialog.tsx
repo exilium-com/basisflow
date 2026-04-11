@@ -26,18 +26,13 @@ export function ProfileSaveDialog({
         value={value}
         onChange={(event) => onProfileNameChange(event.target.value)}
       />
-      <div className="flex justify-end gap-2">
+      <div className="flex gap-2 justify-end">
         <ActionButton className="px-4 text-xs tracking-wide uppercase" onClick={onClose}>
           Cancel
         </ActionButton>
         <ActionButton
-          className="px-4 text-xs tracking-wide uppercase"
+          className="border-(--teal) bg-(--teal) px-4 text-xs text-(--white) tracking-wide uppercase"
           onClick={onSave}
-          style={{
-            backgroundColor: "var(--teal)",
-            borderColor: "var(--teal)",
-            color: "var(--white)",
-          }}
         >
           Save
         </ActionButton>

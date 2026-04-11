@@ -53,8 +53,8 @@ export function TaxesSection({
 }: TaxesSectionProps) {
   return (
     <WorkspaceSection id="taxes" index="03" title="Taxes" summary="Deduction Logic">
-      <div className="split-main-sidebar-wide">
-        <div className="grid content-start gap-4">
+      <div className="grid grid-cols-5 gap-4">
+        <div className="col-span-3 grid content-start gap-4">
           <SegmentedToggle
             label="Deduction mode"
             ariaLabel="Deduction mode"
@@ -72,7 +72,7 @@ export function TaxesSection({
                 label="CA SDI rate"
                 suffix="%"
                 min="0"
-                step="0.1"
+                step="0.5"
                 value={taxConfig.caSdiRate}
                 onValueChange={(value) => onUpdateTaxConfig({ caSdiRate: value ?? 0 })}
               />
@@ -80,7 +80,7 @@ export function TaxesSection({
                 label="Property tax rate"
                 suffix="%"
                 value={mortgageState.propertyTaxRate}
-                step="0.001"
+                step="0.1"
                 onValueChange={(value) => onUpdateMortgageState({ propertyTaxRate: value ?? 0 })}
               />
               <NumberField
@@ -146,7 +146,7 @@ export function TaxesSection({
           </AdvancedPanel>
         </div>
 
-        <div>
+        <div className="col-span-2">
           <MetricGrid
             primaryItem={{ label: "Total tax", value: usd(incomeResults.totalTaxes) }}
             items={[

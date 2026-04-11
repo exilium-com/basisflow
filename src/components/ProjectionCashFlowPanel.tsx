@@ -51,8 +51,8 @@ export function MonthlyCashFlowPanel({ items, total, netFlow }: MonthlyCashFlowP
   let currentAngle = -Math.PI / 2;
 
   return (
-    <div className="cashflow-chart-grid px-4 pt-2 pb-4">
-      <div className="flex justify-center">
+    <div className="flex items-center gap-4 p-4">
+      <div className="flex w-60 shrink-0 justify-center">
         <svg viewBox="0 0 224 224" role="img" aria-label="Monthly cash flow breakdown">
           <circle cx={cx} cy={cy} r={outerRadius} fill="var(--white)" stroke="var(--line-soft)" />
           {total > 0
@@ -89,7 +89,7 @@ export function MonthlyCashFlowPanel({ items, total, netFlow }: MonthlyCashFlowP
           </text>
         </svg>
       </div>
-      <div className="grid gap-2">
+      <div className="grid flex-1 gap-2">
         {items.map((item: MonthlyCashFlowItem) => (
           <div key={item.label} className="flex items-center justify-between gap-4 border-b border-(--line) py-2">
             <div className="inline-flex items-center gap-4">

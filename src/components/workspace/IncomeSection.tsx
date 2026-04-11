@@ -209,8 +209,8 @@ export function IncomeSection({
         })}
       </div>
 
-      <div className="split-main-sidebar-wide mt-8">
-        <div>
+      <div className="mt-8 grid grid-cols-5 gap-4">
+        <div className="col-span-3">
           <div className="mb-4 text-xs font-extrabold tracking-widest text-(--ink-soft) uppercase">
             Retirement saving
           </div>
@@ -258,7 +258,7 @@ export function IncomeSection({
           </div>
         </div>
 
-        <div className="grid gap-4">
+        <div className="col-span-2 grid gap-4">
           <MetricGrid
             primaryItem={{ label: "Monthly take-home", value: usd(incomeResults.monthlyTakeHome, 2) }}
             items={[

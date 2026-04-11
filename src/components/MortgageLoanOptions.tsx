@@ -103,7 +103,7 @@ function MortgageLoanOptionCard({
                 label={loan.kind === "arm" ? "Initial rate" : "Interest rate"}
                 suffix="%"
                 value={loan.kind === "arm" ? loanState.initialRate : loanState.rate}
-                step="0.001"
+                step="0.125"
                 onValueChange={(value) =>
                   onUpdateLoanField(loan.id, loan.kind === "arm" ? "initialRate" : "rate", value)
                 }
@@ -142,7 +142,7 @@ function MortgageLoanOptionCard({
             label="Reset rate"
             suffix="%"
             value={loanState.adjustedRate}
-            step="0.001"
+            step="0.125"
             onValueChange={(value) => onUpdateLoanField(loan.id, "adjustedRate", value)}
           />
           <NumberField
@@ -158,7 +158,7 @@ function MortgageLoanOptionCard({
           label="Growth"
           suffix="%"
           value={loanState.rentGrowthRate}
-          step="0.1"
+          step="0.5"
           onValueChange={(value) => onUpdateLoanField(loan.id, "rentGrowthRate", value)}
         />
       ) : null}

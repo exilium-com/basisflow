@@ -40,7 +40,7 @@ function SummaryLinkRow({ href, label, annualValue }: SummaryRow) {
       </a>
       <button
         type="button"
-        className="text-s ml-2 text-(--ink-soft) transition hover:text-(--ink)"
+        className="ml-2 text-sm text-(--ink-soft) transition hover:text-(--ink)"
         onClick={() => setPeriod(period === "annual" ? "monthly" : "annual")}
       >
         {period === "monthly" ? "/ month" : "/ year"}
