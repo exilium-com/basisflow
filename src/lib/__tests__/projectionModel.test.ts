@@ -31,7 +31,6 @@ const deductibleTaxSavings =
 describe("calculateProjection", () => {
   it("subtracts cash-funded asset contributions from year-one reserve cash", () => {
     const yearOne = runProjectionScenario({
-      annualTakeHome: 120000,
       accounts: [
         {
           id: "taxable-bucket",
@@ -42,13 +41,12 @@ describe("calculateProjection", () => {
       ],
     }).getYear(1);
 
-    expect(yearOne.freeCashBeforeAllocation).toBe(90000);
-    expect(yearOne.residualCash).toBe(90000);
+    expect(yearOne.freeCashBeforeAllocation).toBe(yearOne.takeHome - 30000);
+    expect(yearOne.residualCash).toBe(yearOne.takeHome - 30000);
   });
 
   it("does not subtract income-directed retirement contributions from reserve cash a second time", () => {
     const yearOne = runProjectionScenario({
-      annualTakeHome: 100000,
       retirement: {
         employee401k: 23000,
         employerMatch: 7000,
@@ -63,14 +61,13 @@ describe("calculateProjection", () => {
       ],
     }).getYear(1);
 
-    expect(yearOne.freeCashBeforeAllocation).toBe(100000);
-    expect(yearOne.residualCash).toBe(100000);
+    expect(yearOne.freeCashBeforeAllocation).toBe(yearOne.takeHome);
+    expect(yearOne.residualCash).toBe(yearOne.takeHome);
     expect(yearOne.bucketSnapshotsById["traditional-401k"]?.balance).toBe(80000);
   });
 
   it("routes retirement contributions into the configured destination buckets", () => {
     const yearOne = runProjectionScenario({
-      annualTakeHome: 100000,
       retirement: {
         employee401k: 20000,
         employerMatch: 5000,
@@ -99,31 +96,29 @@ describe("calculateProjection", () => {
   it("keeps RSU vesting out of reserve cash", () => {
     const yearOne = runProjectionScenario({
       salary: 150000,
-      annualTakeHome: 100000,
       rsuValue: 100000,
     }).getYear(1);
 
     expect(yearOne.rsuGross).toBe(100000);
     expect(yearOne.rsuNet).toBeGreaterThan(0);
-    expect(yearOne.freeCashBeforeAllocation).toBe(100000);
-    expect(yearOne.residualCash).toBe(100000);
+    expect(yearOne.freeCashBeforeAllocation).toBe(yearOne.takeHome);
+    expect(yearOne.residualCash).toBe(yearOne.takeHome);
   });
 
   it("optionally counts vested RSUs in net worth without treating them as reserve cash", () => {
     const yearOne = runProjectionScenario({
       salary: 150000,
-      annualTakeHome: 100000,
       rsuValue: 100000,
       includeVestedRsusInNetWorth: true,
     }).getYear(1);
 
     expect(yearOne.vestedRsuBalance).toBe(yearOne.rsuNet);
-    expect(yearOne.assetsGross).toBe(100000);
-    expect(yearOne.netWorth).toBe(100000 + yearOne.rsuNet);
-    expect(yearOne.residualCash).toBe(100000);
+    expect(yearOne.assetsGross).toBe(yearOne.residualCash);
+    expect(yearOne.netWorth).toBe(yearOne.residualCash + yearOne.rsuNet);
+    expect(yearOne.residualCash).toBe(yearOne.takeHome);
   });
 
-  it("grows annual RSU refreshers with take-home growth in projection", () => {
+  it("grows annual RSU refreshers with income growth in projection", () => {
     const rsuItems = [
       {
         id: "rsu-1",
@@ -143,7 +138,6 @@ describe("calculateProjection", () => {
   it("adds current-year tax savings for deductible bucket contributions", () => {
     const yearOne = runProjectionScenario({
       salary: 180000,
-      annualTakeHome: 120000,
       accounts: [
         {
           id: "traditional-bucket",
@@ -154,14 +148,39 @@ describe("calculateProjection", () => {
       ],
     }).getYear(1);
 
-    expect(yearOne.freeCashBeforeAllocation).toBe(110000 + deductibleTaxSavings);
-    expect(yearOne.residualCash).toBe(110000 + deductibleTaxSavings);
+    expect(yearOne.freeCashBeforeAllocation).toBe(yearOne.takeHome - 10000 + deductibleTaxSavings);
+    expect(yearOne.residualCash).toBe(yearOne.takeHome - 10000 + deductibleTaxSavings);
+  });
+
+  it("reduces projected take-home as itemized mortgage interest falls over time", () => {
+    const projection = runProjectionScenario({
+      salary: 250000,
+      annualMortgage: 60000,
+      homePrice: 900000,
+      currentEquity: 200000,
+      horizonYears: 2,
+      currentYear: 2,
+      yearlyLoan: [
+        { year: 1, interest: 30000, endingBalance: 700000 },
+        { year: 2, interest: 20000, endingBalance: 680000 },
+      ],
+      taxConfig: {
+        ...DEFAULT_CONFIG,
+        deductionMode: "itemized",
+        federalSaltCap: 40400,
+      },
+    });
+
+    const yearOne = projection.getYear(1);
+    const yearTwo = projection.getYear(2);
+
+    expect(yearTwo.takeHome).toBeLessThan(yearOne.takeHome);
+    expect(yearTwo.freeCashBeforeAllocation).toBeLessThan(yearOne.freeCashBeforeAllocation);
   });
 
   it("handles a realistic salary plus mortgage scenario without double counting cash", () => {
     const yearOne = runProjectionScenario({
       salary: realisticIncome.grossSalary,
-      annualTakeHome: realisticIncome.annualTakeHome,
       annualMortgage: 84000,
       homePrice: 1200000,
       currentEquity: 300000,
@@ -211,7 +230,6 @@ describe("calculateProjection", () => {
   it("shows the realistic salary plus mortgage plus spending scenario going negative in year one", () => {
     const yearOne = runProjectionScenario({
       salary: realisticIncome.grossSalary,
-      annualTakeHome: realisticIncome.annualTakeHome,
       annualMortgage: 84000,
       annualExpenses: 50000,
       homePrice: 1200000,

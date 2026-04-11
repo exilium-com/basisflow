@@ -139,12 +139,12 @@ export function ProjectionSummaryPanel({
             onValueChange={(value) => onUpdateState({ expenseGrowthRate: value ?? 0 })}
           />
           <NumberField
-            label="Take-home growth"
+            label="Gross income growth"
             suffix="%"
             min="-10"
             step="0.1"
-            value={state.takeHomeGrowthRate}
-            onValueChange={(value) => onUpdateState({ takeHomeGrowthRate: value ?? 0 })}
+            value={state.incomeGrowthRate}
+            onValueChange={(value) => onUpdateState({ incomeGrowthRate: value ?? 0 })}
           />
           <NumberField
             label="Home appreciation"

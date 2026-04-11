@@ -10,6 +10,7 @@ import {
 } from "./assetsModel";
 import { getAnnualNonHousingExpenses, type Expenses, type ExpenseSnapshot } from "./expensesModel";
 import {
+  calculateIncome,
   createIncome,
   computeAnnualTaxes,
   computeIncrementalTakeHome,
@@ -31,7 +32,6 @@ type ProjectionBase = {
   mortgageSummary: ProjectionMortgageSummary;
   taxConfig: TaxConfig;
   income: Income;
-  annualTakeHome: number;
   mortgage: {
     annualPayment: number;
     homePrice: number;
@@ -257,7 +257,6 @@ function createProjectionSimulation({
     mortgageSummary,
     taxConfig,
     income,
-    annualTakeHome: incomeSummary.annualTakeHome,
     mortgage: {
       annualPayment: (mortgageSummary.totalMonthlyPayment ?? 0) * 12,
       homePrice: mortgageSummary.homePrice ?? 0,
@@ -305,7 +304,7 @@ function createProjectionSimulation({
       buildProjectionRow({
         base,
         year: 0,
-        takeHome: base.annualTakeHome,
+        takeHome: calculateIncome(base.income, base.taxConfig).annualTakeHome,
         rsuGross: 0,
         rsuNet: 0,
         nonHousingExpenses: roundTo(getAnnualNonHousingExpenses(base.expenses.expenses, 0), 2),
@@ -405,7 +404,7 @@ function buildProjectionRow({
 }
 
 function buildProjectionYearContext(base: ProjectionBase, year: number): ProjectionYearContext {
-  const growthFactor = Math.pow(1 + base.projection.takeHomeGrowthRate, year);
+  const growthFactor = Math.pow(1 + base.projection.incomeGrowthRate, year);
   const income: Income = {
     ...base.income,
     grossSalary: base.income.grossSalary * growthFactor,
@@ -415,10 +414,10 @@ function buildProjectionYearContext(base: ProjectionBase, year: number): Project
     income.rsuItems,
     year - 1,
     base.projection.rsuStockGrowthRate,
-    base.projection.takeHomeGrowthRate,
+    base.projection.incomeGrowthRate,
   );
   const rsuNet = roundTo(computeIncrementalTakeHome(income, base.taxConfig, rsuGross), 2);
-  const takeHome = roundTo(base.annualTakeHome * growthFactor, 2);
+  const takeHome = calculateIncome(income, base.taxConfig).annualTakeHome;
   const nonHousingExpenses = roundTo(getAnnualNonHousingExpenses(base.expenses.expenses, year), 2);
   const ordinaryIncome = income.grossSalary;
   const taxBases = getTaxBases(income, rsuGross, base.taxConfig);

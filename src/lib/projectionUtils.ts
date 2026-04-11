@@ -37,7 +37,7 @@ export function buildMonthlyCashFlow({
   projection: Projection;
   currentRow: ProjectionRow;
 }) {
-  const growthFactor = Math.pow(1 + projection.takeHomeGrowthRate, projection.currentYear);
+  const growthFactor = Math.pow(1 + projection.incomeGrowthRate, projection.currentYear);
   const grossIncome = toDisplayValue(
     ((incomeSummary.grossSalary ?? 0) * growthFactor) / 12,
     projection.currentYear,

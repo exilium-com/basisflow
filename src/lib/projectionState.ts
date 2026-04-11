@@ -26,7 +26,7 @@ type ProjectionSettings = {
   assetGrowthRate: number;
   rsuStockGrowthRate: number;
   expenseGrowthRate: number;
-  takeHomeGrowthRate: number;
+  incomeGrowthRate: number;
   homeAppreciationRate: number;
   displayMode: ProjectionDisplayMode;
   includeVestedRsusInNetWorth: boolean;
@@ -52,7 +52,7 @@ const PROJECTION_NUMBER_FIELDS = [
   "assetGrowthRate",
   "rsuStockGrowthRate",
   "expenseGrowthRate",
-  "takeHomeGrowthRate",
+  "incomeGrowthRate",
   "homeAppreciationRate",
 ] as const satisfies ReadonlyArray<keyof ProjectionState>;
 
@@ -63,7 +63,7 @@ export const DEFAULT_PROJECTION_STATE: ProjectionState = {
   assetGrowthRate: 7,
   rsuStockGrowthRate: 0,
   expenseGrowthRate: 2.5,
-  takeHomeGrowthRate: 0,
+  incomeGrowthRate: 0,
   homeAppreciationRate: 3,
   displayMode: "nominal",
   includeVestedRsusInNetWorth: false,
@@ -190,7 +190,7 @@ export function createProjection(
     assetGrowthRate: Math.max(0, state.assetGrowthRate) / 100,
     rsuStockGrowthRate: state.rsuStockGrowthRate / 100,
     expenseGrowthRate: Math.max(-20, state.expenseGrowthRate) / 100,
-    takeHomeGrowthRate: state.takeHomeGrowthRate / 100,
+    incomeGrowthRate: state.incomeGrowthRate / 100,
     homeAppreciationRate: state.homeAppreciationRate / 100,
     displayMode: state.displayMode,
     includeVestedRsusInNetWorth: state.includeVestedRsusInNetWorth,
