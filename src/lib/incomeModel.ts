@@ -18,7 +18,7 @@ export type RsuInputItem = {
   vestingYears: number;
 };
 
-export type SalaryStateItem = {
+export type SalaryItem = {
   id: string;
   type: "salary";
   name: string;
@@ -27,7 +27,7 @@ export type SalaryStateItem = {
   detailsOpen: boolean;
 };
 
-export type RsuStateItem = {
+export type RsuItem = {
   id: string;
   type: "rsu";
   name: string;
@@ -37,10 +37,10 @@ export type RsuStateItem = {
   detailsOpen: boolean;
 };
 
-export type IncomeStateItem = SalaryStateItem | RsuStateItem;
+export type IncomeItem = SalaryItem | RsuItem;
 
-export type IncomeState = {
-  incomeItems: IncomeStateItem[];
+export type Income = {
+  incomeItems: IncomeItem[];
   employee401k: number;
   matchRate: number;
   iraContribution: number;
@@ -48,7 +48,7 @@ export type IncomeState = {
   hsaContribution: number;
 };
 
-export type Income = {
+export type ResolvedIncome = {
   grossSalary: number;
   rsuGrossNextYear: number;
   employee401k: number;
@@ -61,7 +61,7 @@ export type Income = {
   rsuItems: RsuInputItem[];
 };
 
-export type IncomeSummary = Income & {
+export type IncomeSummary = ResolvedIncome & {
   annualTakeHome: number;
   monthlyTakeHome: number;
   federalTax: number;
@@ -75,7 +75,7 @@ export type IncomeSummary = Income & {
   rsuNetNextYear: number;
 };
 
-export const DEFAULT_INCOME: Income = {
+export const DEFAULT_RESOLVED_INCOME: ResolvedIncome = {
   grossSalary: 0,
   rsuGrossNextYear: 0,
   employee401k: 0,
@@ -94,35 +94,19 @@ const INCOME_NUMBER_FIELDS = [
   "iraContribution",
   "megaBackdoor",
   "hsaContribution",
-] as const satisfies ReadonlyArray<keyof IncomeState>;
+] as const satisfies ReadonlyArray<keyof Income>;
 
-export function createSalaryItem(overrides: Partial<SalaryStateItem> = {}): SalaryStateItem {
-  return {
-    id: crypto.randomUUID(),
-    type: "salary",
-    name: "Salary",
-    amount: 150000,
-    frequency: "annual",
-    detailsOpen: false,
-    ...overrides,
-  };
-}
-
-export function createRsuItem(overrides: Partial<RsuStateItem> = {}): RsuStateItem {
-  return {
-    id: crypto.randomUUID(),
-    type: "rsu",
-    name: "RSU grant",
-    grantAmount: 0,
-    refresherAmount: 0,
-    vestingYears: 4,
-    detailsOpen: false,
-    ...overrides,
-  };
-}
-
-export const DEFAULT_INCOME_STATE: IncomeState = {
-  incomeItems: [createSalaryItem()],
+export const DEFAULT_INCOME: Income = {
+  incomeItems: [
+    {
+      id: crypto.randomUUID(),
+      type: "salary",
+      name: "Salary",
+      amount: 150000,
+      frequency: "annual",
+      detailsOpen: false,
+    },
+  ],
   employee401k: 0,
   matchRate: 50,
   iraContribution: 0,
@@ -131,7 +115,7 @@ export const DEFAULT_INCOME_STATE: IncomeState = {
 };
 
 export const DEFAULT_INCOME_SUMMARY: IncomeSummary = {
-  ...DEFAULT_INCOME,
+  ...DEFAULT_RESOLVED_INCOME,
   annualTakeHome: 0,
   monthlyTakeHome: 0,
   federalTax: 0,
@@ -148,11 +132,11 @@ export const DEFAULT_INCOME_SUMMARY: IncomeSummary = {
 export type IncomeTaxes = ReturnType<typeof computeAnnualTaxes>;
 export type IncomeResults = ReturnType<typeof calculateIncome>;
 
-export function createIncome(overrides: Partial<Income> = {}): Income {
+export function createResolvedIncome(overrides: Partial<ResolvedIncome> = {}): ResolvedIncome {
   return {
-    ...DEFAULT_INCOME,
+    ...DEFAULT_RESOLVED_INCOME,
     ...overrides,
-    rsuItems: overrides.rsuItems ?? DEFAULT_INCOME.rsuItems,
+    rsuItems: overrides.rsuItems ?? DEFAULT_RESOLVED_INCOME.rsuItems,
   };
 }
 
@@ -169,45 +153,47 @@ function annualizeSalary(amount: number, frequency: SalaryFrequency = "annual") 
   return frequency === "monthly" ? safeAmount * 12 : safeAmount;
 }
 
-export function normalizeIncomeItem(item: unknown): IncomeStateItem {
+export function normalizeIncomeItem(item: unknown): IncomeItem {
   const candidate = typeof item === "object" && item ? (item as Record<string, unknown>) : {};
 
   if (candidate.type === "rsu") {
-    return createRsuItem({
+    return {
       id: typeof candidate.id === "string" ? candidate.id : crypto.randomUUID(),
+      type: "rsu",
       name: typeof candidate.name === "string" ? candidate.name : "RSU grant",
       grantAmount: readNumber(candidate.grantAmount, null),
       refresherAmount: readNumber(candidate.refresherAmount, null),
       vestingYears: readNumber(candidate.vestingYears, null) ?? 4,
       detailsOpen: Boolean(candidate.detailsOpen),
-    });
+    };
   }
 
-  return createSalaryItem({
+  return {
     id: typeof candidate.id === "string" ? candidate.id : crypto.randomUUID(),
+    type: "salary",
     name: typeof candidate.name === "string" ? candidate.name : "Salary",
     amount: readNumber(candidate.amount, null),
     frequency: candidate.frequency === "monthly" ? "monthly" : "annual",
     detailsOpen: Boolean(candidate.detailsOpen),
-  });
+  };
 }
 
-export function normalizeIncomeState(parsed: unknown, fallback: IncomeState): IncomeState {
-  const state = typeof parsed === "object" && parsed ? (parsed as Record<string, unknown>) : {};
+export function normalizeIncome(parsed: unknown, fallback: Income): Income {
+  const income = typeof parsed === "object" && parsed ? (parsed as Record<string, unknown>) : {};
   const numericState = Object.fromEntries(
     INCOME_NUMBER_FIELDS.map((field) =>
       field === "megaBackdoor"
-        ? [field, readNumber(state.megaBackdoor ?? state.megaBackdoorInput, fallback.megaBackdoor)]
-        : [field, readNumber(state[field], fallback[field])],
+        ? [field, readNumber(income.megaBackdoor ?? income.megaBackdoorInput, fallback.megaBackdoor)]
+        : [field, readNumber(income[field], fallback[field])],
     ),
-  ) as Pick<IncomeState, (typeof INCOME_NUMBER_FIELDS)[number]>;
+  ) as Pick<Income, (typeof INCOME_NUMBER_FIELDS)[number]>;
 
   return {
     ...fallback,
     ...numericState,
     incomeItems:
-      Array.isArray(state.incomeItems) && state.incomeItems.length > 0
-        ? state.incomeItems.map((item) => normalizeIncomeItem(item))
+      Array.isArray(income.incomeItems) && income.incomeItems.length > 0
+        ? income.incomeItems.map((item) => normalizeIncomeItem(item))
         : fallback.incomeItems.map((item) => normalizeIncomeItem(item)),
   };
 }
@@ -241,9 +227,9 @@ export function getAnnualSalaryTotal(salaryItems: SalaryInputItem[] = []) {
   return salaryItems.reduce((sum, item) => sum + annualizeSalary(item.amount, item.frequency), 0);
 }
 
-export function toSalaryInputs(items: IncomeStateItem[]): SalaryInputItem[] {
+export function toSalaryInputs(items: IncomeItem[]): SalaryInputItem[] {
   return items
-    .filter((item): item is SalaryStateItem => item.type === "salary")
+    .filter((item): item is SalaryItem => item.type === "salary")
     .map((item) => ({
       id: item.id,
       name: item.name,
@@ -252,9 +238,9 @@ export function toSalaryInputs(items: IncomeStateItem[]): SalaryInputItem[] {
     }));
 }
 
-export function toRsuInputs(items: IncomeStateItem[]): RsuInputItem[] {
+export function toRsuInputs(items: IncomeItem[]): RsuInputItem[] {
   return items
-    .filter((item): item is RsuStateItem => item.type === "rsu")
+    .filter((item): item is RsuItem => item.type === "rsu")
     .map((item) => ({
       id: item.id,
       name: item.name,
@@ -264,7 +250,28 @@ export function toRsuInputs(items: IncomeStateItem[]): RsuInputItem[] {
     }));
 }
 
-export function computeSavings(income: Income, taxConfig: TaxConfig) {
+export function resolveIncome(
+  income: Income,
+  overrides: Partial<Pick<ResolvedIncome, "mortgageInterest" | "propertyTax" | "rsuGrossNextYear">> = {},
+) {
+  const salaryItems = toSalaryInputs(income.incomeItems);
+  const rsuItems = toRsuInputs(income.incomeItems);
+
+  return createResolvedIncome({
+    grossSalary: getAnnualSalaryTotal(salaryItems),
+    rsuGrossNextYear: overrides.rsuGrossNextYear ?? computeRsuGrossForItems(rsuItems, 0),
+    employee401k: income.employee401k,
+    matchRate: income.matchRate,
+    iraContribution: income.iraContribution,
+    megaBackdoor: income.megaBackdoor,
+    hsaContribution: income.hsaContribution,
+    mortgageInterest: overrides.mortgageInterest ?? 0,
+    propertyTax: overrides.propertyTax ?? 0,
+    rsuItems,
+  });
+}
+
+export function computeSavings(income: ResolvedIncome, taxConfig: TaxConfig) {
   const matchRate = clamp(income.matchRate / 100, 0, 5);
   const employee401k = Math.max(0, income.employee401k);
   const iraContribution = Math.max(0, income.iraContribution);
@@ -281,7 +288,7 @@ export function computeSavings(income: Income, taxConfig: TaxConfig) {
   };
 }
 
-export function computeAnnualTaxes(income: Income, taxConfig: TaxConfig, extraOrdinaryIncome = 0) {
+export function computeAnnualTaxes(income: ResolvedIncome, taxConfig: TaxConfig, extraOrdinaryIncome = 0) {
   const grossIncome = Math.max(0, income.grossSalary + extraOrdinaryIncome);
   const californiaAdjustedGross = Math.max(0, grossIncome - income.employee401k);
   const stateDeductions = getTaxDeductions(taxConfig, income);
@@ -308,7 +315,7 @@ export function computeAnnualTaxes(income: Income, taxConfig: TaxConfig, extraOr
 }
 
 export function computeIncrementalTakeHome(
-  income: Income,
+  income: ResolvedIncome,
   taxConfig: TaxConfig,
   extraOrdinaryIncome: number,
 ) {
@@ -360,10 +367,10 @@ export function computeRsuGrossForItems(
   );
 }
 
-export function calculateIncome(income: Income, taxConfig: TaxConfig) {
+export function calculateIncome(income: ResolvedIncome, taxConfig: TaxConfig) {
   const grossSalary = Math.max(0, income.grossSalary);
   const savings = computeSavings(income, taxConfig);
-  const taxableIncome = createIncome({ ...income, grossSalary });
+  const taxableIncome = createResolvedIncome({ ...income, grossSalary });
   const taxes = computeAnnualTaxes(taxableIncome, taxConfig, 0);
   const annualTakeHome = roundTo(
     grossSalary -
@@ -392,7 +399,7 @@ export function calculateIncome(income: Income, taxConfig: TaxConfig) {
   };
 }
 
-export function buildIncomeSummary(income: Income, results: IncomeResults): IncomeSummary {
+export function buildIncomeSummary(income: ResolvedIncome, results: IncomeResults): IncomeSummary {
   return createIncomeSummary({
     ...income,
     grossSalary: results.grossSalary,

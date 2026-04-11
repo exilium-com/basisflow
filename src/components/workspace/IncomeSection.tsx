@@ -10,27 +10,25 @@ import { usd } from "../../lib/format";
 import {
   getAnnualSalaryTotal,
   type Income,
+  type IncomeItem,
   type IncomeResults,
-  type IncomeState,
-  type IncomeStateItem,
 } from "../../lib/incomeModel";
 
 type IncomeSectionProps = {
   income: Income;
   incomeResults: IncomeResults;
-  incomeState: IncomeState;
   retirementSavingTotal: number;
   onAddSalaryItem: () => void;
   onAddRsuItem: () => void;
   onRemoveIncomeItem: (itemId: string) => void;
   onUpdateIncomeField: (
-    field: keyof Omit<IncomeState, "incomeItems">,
-    value: IncomeState[keyof Omit<IncomeState, "incomeItems">],
+    field: keyof Omit<Income, "incomeItems">,
+    value: Income[keyof Omit<Income, "incomeItems">],
   ) => void;
-  onUpdateIncomeItem: (itemId: string, patch: Partial<IncomeStateItem>) => void;
+  onUpdateIncomeItem: (itemId: string, patch: Partial<IncomeItem>) => void;
 };
 
-function renderIncomeSummary(item: IncomeStateItem, annualizedSalary: number) {
+function renderIncomeSummary(item: IncomeItem, annualizedSalary: number) {
   if (item.type === "salary") {
     return item.frequency === "monthly" ? `${usd(annualizedSalary)} / year` : "Annual";
   }
@@ -42,7 +40,6 @@ function renderIncomeSummary(item: IncomeStateItem, annualizedSalary: number) {
 export function IncomeSection({
   income,
   incomeResults,
-  incomeState,
   retirementSavingTotal,
   onAddSalaryItem,
   onAddRsuItem,
@@ -64,7 +61,7 @@ export function IncomeSection({
       }
     >
       <div className="grid gap-3">
-        {incomeState.incomeItems.map((item) => {
+        {income.incomeItems.map((item) => {
           if (item.type === "salary") {
             const annualizedSalary = getAnnualSalaryTotal([{ amount: item.amount ?? 0, frequency: item.frequency }]);
 
@@ -180,7 +177,7 @@ export function IncomeSection({
               min="0"
               max="24500"
               step="50"
-              value={incomeState.employee401k}
+              value={income.employee401k}
               onChange={(event) => onUpdateIncomeField("employee401k", Number(event.target.value))}
             />
             <SliderField
@@ -190,7 +187,7 @@ export function IncomeSection({
               min="0"
               max={Math.max(0, Math.round(incomeResults.availableMegaRoom))}
               step="50"
-              value={Math.min(incomeState.megaBackdoor, Math.max(0, Math.round(incomeResults.availableMegaRoom)))}
+              value={Math.min(income.megaBackdoor, Math.max(0, Math.round(incomeResults.availableMegaRoom)))}
               onChange={(event) => onUpdateIncomeField("megaBackdoor", Number(event.target.value))}
             />
             <SliderField
@@ -200,7 +197,7 @@ export function IncomeSection({
               min="0"
               max="7000"
               step="50"
-              value={incomeState.iraContribution}
+              value={income.iraContribution}
               onChange={(event) => onUpdateIncomeField("iraContribution", Number(event.target.value))}
             />
             <SliderField
@@ -210,7 +207,7 @@ export function IncomeSection({
               min="0"
               max="4400"
               step="50"
-              value={incomeState.hsaContribution}
+              value={income.hsaContribution}
               onChange={(event) => onUpdateIncomeField("hsaContribution", Number(event.target.value))}
             />
           </div>

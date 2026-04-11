@@ -1,11 +1,4 @@
-import { readNumber } from "./format";
-import {
-  createIncome,
-  buildIncomeSummary,
-  calculateIncome,
-  computeRsuGrossForItems,
-  getAnnualSalaryTotal,
-} from "./incomeModel";
+import { buildIncomeSummary, calculateIncome, DEFAULT_INCOME, normalizeIncome, resolveIncome } from "./incomeModel";
 import { createMortgage, DEFAULT_MORTGAGE_STATE, normalizeMortgageState } from "./mortgageConfig";
 import { getMortgageYearInterest, getMortgageYearPropertyTax, serializeMortgageSummary, type MortgageSummary } from "./mortgagePage";
 import { buildMortgageScenario } from "./mortgageSchedule";
@@ -16,25 +9,6 @@ export const APP_STORAGE_KEY = "basisflow_app_state";
 export const SAVED_PROFILE_PREFIX = "basisflow_saved_";
 
 type StorageDocument = Record<string, unknown>;
-
-type StoredIncomeItem = {
-  type?: "salary" | "rsu";
-  amount?: string | number;
-  frequency?: string;
-  grantAmount?: string | number;
-  refresherAmount?: string | number;
-  vestingYears?: string | number;
-};
-
-type StoredIncomeState = {
-  incomeItems?: StoredIncomeItem[];
-  employee401k?: string | number;
-  matchRate?: string | number;
-  iraContribution?: string | number;
-  megaBackdoor?: string | number;
-  megaBackdoorInput?: string | number;
-  hsaContribution?: string | number;
-};
 
 function runStorage<T>(fallback: T, action: () => T) {
   try {
@@ -89,34 +63,11 @@ function rebuildStoredSummaries(documentValue: StorageDocument) {
     );
   }
 
-  const incomeState = documentValue[INCOME_STATE_KEY];
-  if (incomeState && typeof incomeState === "object" && Array.isArray((incomeState as StoredIncomeState).incomeItems)) {
-    const state = incomeState as StoredIncomeState;
+  if (documentValue[INCOME_STATE_KEY]) {
     const mortgageSummary = (documentValue[MORTGAGE_SUMMARY_KEY] ?? {}) as Partial<MortgageSummary>;
-    const salaryItems = state.incomeItems!
-      .filter((item) => item?.type === "salary")
-      .map((item) => ({
-        amount: readNumber(item?.amount, 0),
-        frequency: item?.frequency === "monthly" ? ("monthly" as const) : ("annual" as const),
-      }));
-    const rsuItems = state.incomeItems!
-      .filter((item) => item?.type === "rsu")
-      .map((item) => ({
-        grantAmount: readNumber(item?.grantAmount, 0),
-        refresherAmount: readNumber(item?.refresherAmount, 0),
-        vestingYears: readNumber(item?.vestingYears, 4),
-      }));
-    const income = createIncome({
-      grossSalary: getAnnualSalaryTotal(salaryItems),
-      rsuGrossNextYear: computeRsuGrossForItems(rsuItems, 0),
-      employee401k: readNumber(state.employee401k, 0),
-      matchRate: readNumber(state.matchRate, 0),
-      iraContribution: readNumber(state.iraContribution, 0),
-      megaBackdoor: readNumber(state.megaBackdoor ?? state.megaBackdoorInput, 0),
-      hsaContribution: readNumber(state.hsaContribution, 0),
+    const income = resolveIncome(normalizeIncome(documentValue[INCOME_STATE_KEY], DEFAULT_INCOME), {
       mortgageInterest: getMortgageYearInterest(mortgageSummary, 1),
       propertyTax: getMortgageYearPropertyTax(mortgageSummary),
-      rsuItems,
     });
     documentValue[INCOME_SUMMARY_KEY] = buildIncomeSummary(
       income,

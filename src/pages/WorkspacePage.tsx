@@ -31,17 +31,11 @@ import { roundTo } from "../lib/format";
 import {
   buildIncomeSummary,
   calculateIncome,
-  computeRsuGrossForItems,
-  createIncome,
-  createRsuItem,
-  createSalaryItem,
-  DEFAULT_INCOME_STATE,
-  getAnnualSalaryTotal,
-  normalizeIncomeState,
-  toRsuInputs,
-  toSalaryInputs,
-  type IncomeState,
-  type IncomeStateItem,
+  DEFAULT_INCOME,
+  normalizeIncome,
+  resolveIncome,
+  type Income,
+  type IncomeItem,
 } from "../lib/incomeModel";
 import {
   createMortgage,
@@ -87,8 +81,8 @@ import { loadTaxConfig, saveTaxConfig, type TaxConfig } from "../lib/taxConfig";
 import { surfaceClass } from "../lib/ui";
 
 export function WorkspacePage() {
-  const [incomeState, setIncomeState] = useStoredState<IncomeState>(INCOME_STATE_KEY, DEFAULT_INCOME_STATE, {
-    normalize: normalizeIncomeState,
+  const [income, setIncome] = useStoredState<Income>(INCOME_STATE_KEY, DEFAULT_INCOME, {
+    normalize: normalizeIncome,
   });
   const [mortgageState, setMortgageState] = useStoredState<MortgageState>(MORTGAGE_STATE_KEY, DEFAULT_MORTGAGE_STATE, {
     normalize: normalizeMortgageState,
@@ -122,9 +116,6 @@ export function WorkspacePage() {
     setLongTermCapitalGains(JSON.stringify(taxConfig.longTermCapitalGains, null, 2));
   }, [taxConfig]);
 
-  const salaryItems = toSalaryInputs(incomeState.incomeItems);
-  const rsuItems = toRsuInputs(incomeState.incomeItems);
-
   const mortgage = createMortgage(mortgageState);
   const scenariosById = Object.fromEntries(
     mortgage.options.map((option) => [option.id, buildMortgageScenario(mortgage, option.id)]),
@@ -139,20 +130,12 @@ export function WorkspacePage() {
     projectionState.currentYear,
   );
 
-  const income = createIncome({
-    grossSalary: getAnnualSalaryTotal(salaryItems),
-    rsuGrossNextYear: computeRsuGrossForItems(rsuItems, 0),
-    employee401k: incomeState.employee401k,
-    matchRate: incomeState.matchRate,
-    iraContribution: incomeState.iraContribution,
-    megaBackdoor: incomeState.megaBackdoor,
-    hsaContribution: incomeState.hsaContribution,
+  const resolvedIncome = resolveIncome(income, {
     mortgageInterest: getMortgageYearInterest(mortgageSummary, 1),
     propertyTax: getMortgageYearPropertyTax(mortgageSummary),
-    rsuItems,
   });
-  const incomeResults = calculateIncome(income, taxConfig);
-  const incomeSummary = buildIncomeSummary(income, incomeResults);
+  const incomeResults = calculateIncome(resolvedIncome, taxConfig);
+  const incomeSummary = buildIncomeSummary(resolvedIncome, incomeResults);
   const incomeDirectedContributions = buildIncomeDirectedContributions(incomeSummary);
 
   const assetsView = deriveAssetsState(assetState, undefined, incomeDirectedContributions);
@@ -199,11 +182,11 @@ export function WorkspacePage() {
     currentRow,
   });
   const retirementSavingTotal =
-    income.employee401k +
+    resolvedIncome.employee401k +
     incomeResults.employerMatch +
-    income.iraContribution +
+    resolvedIncome.iraContribution +
     incomeResults.megaBackdoor +
-    income.hsaContribution;
+    resolvedIncome.hsaContribution;
   const annualGrossIncome = incomeResults.grossSalary + incomeResults.rsuGrossNextYear;
 
   useEffect(() => {
@@ -236,16 +219,16 @@ export function WorkspacePage() {
   }
 
   function updateIncomeField(
-    field: keyof Omit<IncomeState, "incomeItems">,
-    value: IncomeState[keyof Omit<IncomeState, "incomeItems">],
+    field: keyof Omit<Income, "incomeItems">,
+    value: Income[keyof Omit<Income, "incomeItems">],
   ) {
-    setIncomeState((draft) => {
-      Object.assign(draft, { [field]: value } as Partial<IncomeState>);
+    setIncome((draft) => {
+      Object.assign(draft, { [field]: value } as Partial<Income>);
     });
   }
 
-  function updateIncomeItem(itemId: string, patch: Partial<IncomeStateItem>) {
-    setIncomeState((draft) => {
+  function updateIncomeItem(itemId: string, patch: Partial<IncomeItem>) {
+    setIncome((draft) => {
       const item = draft.incomeItems.find((entry) => entry.id === itemId);
       if (item) {
         Object.assign(item, patch);
@@ -254,20 +237,35 @@ export function WorkspacePage() {
   }
 
   function removeIncomeItem(itemId: string) {
-    setIncomeState((draft) => {
+    setIncome((draft) => {
       draft.incomeItems = draft.incomeItems.filter((item) => item.id !== itemId);
     });
   }
 
   function addSalaryItem() {
-    setIncomeState((draft) => {
-      draft.incomeItems.push(createSalaryItem({ amount: null }));
+    setIncome((draft) => {
+      draft.incomeItems.push({
+        id: crypto.randomUUID(),
+        type: "salary",
+        name: "Salary",
+        amount: null,
+        frequency: "annual",
+        detailsOpen: false,
+      });
     });
   }
 
   function addRsuItem() {
-    setIncomeState((draft) => {
-      draft.incomeItems.push(createRsuItem());
+    setIncome((draft) => {
+      draft.incomeItems.push({
+        id: crypto.randomUUID(),
+        type: "rsu",
+        name: "RSU grant",
+        grantAmount: 0,
+        refresherAmount: 0,
+        vestingYears: 4,
+        detailsOpen: false,
+      });
     });
   }
 
@@ -518,7 +516,7 @@ export function WorkspacePage() {
               projectionState={projectionState}
               selectedYearLabel={selectedYearLabel}
               topLevelSummaryRows={topLevelSummaryRows}
-              matchRate={incomeState.matchRate}
+              matchRate={income.matchRate}
               onUpdateIncomeField={(field, value) => updateIncomeField(field, value)}
               onUpdateProjectionState={updateProjectionState}
             />
@@ -527,7 +525,6 @@ export function WorkspacePage() {
           <IncomeSection
             income={income}
             incomeResults={incomeResults}
-            incomeState={incomeState}
             retirementSavingTotal={retirementSavingTotal}
             onAddSalaryItem={addSalaryItem}
             onAddRsuItem={addRsuItem}
@@ -560,7 +557,7 @@ export function WorkspacePage() {
 
           <TaxesSection
             federalBrackets={federalBrackets}
-            income={income}
+            income={resolvedIncome}
             incomeResults={incomeResults}
             longTermCapitalGains={longTermCapitalGains}
             mortgageState={mortgageState}

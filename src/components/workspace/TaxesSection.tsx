@@ -6,13 +6,13 @@ import { NumberField, TextAreaField } from "../Field";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { WorkspaceSection } from "./WorkspaceSection";
 import { usd } from "../../lib/format";
-import { type Income, type IncomeResults } from "../../lib/incomeModel";
+import { type IncomeResults, type ResolvedIncome } from "../../lib/incomeModel";
 import { type MortgageState } from "../../lib/mortgageConfig";
 import { type TaxConfig } from "../../lib/taxConfig";
 
 type TaxesSectionProps = {
   federalBrackets: string;
-  income: Income;
+  income: ResolvedIncome;
   incomeResults: IncomeResults;
   longTermCapitalGains: string;
   mortgageState: MortgageState;

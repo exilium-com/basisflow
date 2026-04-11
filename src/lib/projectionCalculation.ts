@@ -11,12 +11,12 @@ import {
 import { getAnnualNonHousingExpenses, type Expenses, type ExpenseSnapshot } from "./expensesModel";
 import {
   calculateIncome,
-  createIncome,
+  createResolvedIncome,
   computeAnnualTaxes,
   computeIncrementalTakeHome,
   computeRsuGrossForItems,
-  type Income,
   type IncomeSummary,
+  type ResolvedIncome,
 } from "./incomeModel";
 import { getMortgageYearInterest, getMortgageYearPropertyTax, type MortgageSummary } from "./mortgagePage";
 import { type Projection } from "./projectionState";
@@ -31,7 +31,7 @@ type ProjectionBase = {
   projection: Projection;
   mortgageSummary: ProjectionMortgageSummary;
   taxConfig: TaxConfig;
-  income: Income;
+  income: ResolvedIncome;
   mortgage: {
     annualPayment: number;
     homePrice: number;
@@ -88,7 +88,7 @@ export type ProjectionResults = {
 };
 
 function getTaxBases(
-  income: Income,
+  income: ResolvedIncome,
   rsuGross: number,
   taxConfig: TaxConfig,
 ) {
@@ -245,7 +245,7 @@ function createProjectionSimulation({
 }): ProjectionSimulation {
   const incomeDirectedContributions = buildIncomeDirectedContributions(incomeSummary);
   const reserveCashBucketId = PINNED_BUCKETS.reserveCashBucketId.id;
-  const income = createIncome({
+  const income = createResolvedIncome({
     ...incomeSummary,
     mortgageInterest: getMortgageYearInterest(mortgageSummary, 1),
     propertyTax: getMortgageYearPropertyTax(mortgageSummary),
@@ -405,7 +405,7 @@ function buildProjectionRow({
 
 function buildProjectionYearContext(base: ProjectionBase, year: number): ProjectionYearContext {
   const growthFactor = Math.pow(1 + base.projection.incomeGrowthRate, year);
-  const income: Income = {
+  const income: ResolvedIncome = {
     ...base.income,
     grossSalary: base.income.grossSalary * growthFactor,
     mortgageInterest: getMortgageYearInterest(base.mortgageSummary, year),
