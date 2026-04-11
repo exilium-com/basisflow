@@ -37,6 +37,10 @@ export function serializeMortgageSummary(scenario: MortgageScenario) {
 
 export type MortgageSummary = ReturnType<typeof serializeMortgageSummary>;
 
+function getMortgageMonthlyOwnershipCost(summary: Partial<MortgageSummary>) {
+  return (summary.monthlyTax ?? 0) + (summary.monthlyInsurance ?? 0) + (summary.monthlyHoa ?? 0);
+}
+
 export function getMortgageMonthlyPaymentForSummaryYear(summary: Partial<MortgageSummary>, year = 0) {
   if (summary.kind === "rent") {
     const monthlyRent = summary.totalMonthlyPayment ?? 0;
@@ -53,7 +57,11 @@ export function getMortgageMonthlyPaymentForSummaryYear(summary: Partial<Mortgag
     return loanYear.payment;
   }
 
-  return summary.yearlyLoan?.length && year > summary.yearlyLoan.length ? 0 : (summary.totalMonthlyPayment ?? 0);
+  if (summary.yearlyLoan?.length && year > summary.yearlyLoan.length) {
+    return getMortgageMonthlyOwnershipCost(summary);
+  }
+
+  return summary.totalMonthlyPayment ?? getMortgageMonthlyOwnershipCost(summary);
 }
 
 export function getMortgageAnnualHousingCost(summary: Partial<MortgageSummary>, year = 0) {
@@ -74,7 +82,10 @@ export function getMortgageMonthlyPaymentForYear(scenario: MortgageScenario, yea
     return scenario.totalMonthlyPayment * Math.pow(1 + growthRate, Math.max(year, 0));
   }
 
-  return getMortgageScheduleRowForYear(scenario, year)?.payment ?? 0;
+  return (
+    getMortgageScheduleRowForYear(scenario, year)?.payment ??
+    scenario.monthlyTax + scenario.monthlyInsurance + scenario.monthlyHoa
+  );
 }
 
 function getMortgageScheduleRowForYear(scenario: MortgageScenario, year = 0) {

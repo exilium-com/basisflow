@@ -9,7 +9,7 @@ import { NumberField, TextField } from "../Field";
 import { WorkspaceSection } from "./WorkspaceSection";
 import { usd } from "../../lib/format";
 import {
-  computeRsuGrossForItems,
+  computeRsuGrossForProjectionYear,
   getAnnualSalaryTotal,
   type Income,
   type IncomeItem,
@@ -52,12 +52,8 @@ function projectedIncomeValue(item: IncomeItem, projection: Projection) {
     );
   }
 
-  if (projection.currentYear === 0) {
-    return 0;
-  }
-
   return toDisplayValue(
-    computeRsuGrossForItems(
+    computeRsuGrossForProjectionYear(
       [
         {
           id: item.id,
@@ -67,7 +63,7 @@ function projectedIncomeValue(item: IncomeItem, projection: Projection) {
           vestingYears: item.vestingYears ?? 4,
         },
       ],
-      projection.currentYear - 1,
+      projection.currentYear,
       projection.rsuStockGrowthRate,
       projection.incomeGrowthRate,
     ),

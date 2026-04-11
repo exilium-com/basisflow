@@ -28,7 +28,7 @@ type WorkspaceSummaryPanelProps = {
 
 function SummaryLinkRow({ href, label, annualValue }: SummaryRow) {
   const [period, setPeriod] = useState<"annual" | "monthly">("annual");
-  const value = usd(period === "monthly" ? annualValue / 12 : annualValue, 2);
+  const value = usd(period === "monthly" ? annualValue / 12 : annualValue);
 
   return (
     <div className="flex items-center justify-between gap-4 border-b border-(--line) py-3">

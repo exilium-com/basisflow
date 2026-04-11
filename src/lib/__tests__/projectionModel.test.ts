@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { computeRsuGrossForItems } from "../incomeModel";
+import { computeRsuGrossForItems, computeRsuGrossForProjectionYear } from "../incomeModel";
+import { getMortgageAnnualHousingCost } from "../mortgagePage";
 import { computeAdditionalTax, DEFAULT_CONFIG, normalizeConfig } from "../taxConfig";
 import { projectionGoldens } from "./goldens/projection";
 import { runIncomeScenario } from "./helpers/incomeScenario";
@@ -133,6 +134,37 @@ describe("calculateProjection", () => {
     const growingYearThree = computeRsuGrossForItems(rsuItems, 2, 0, 0.1);
 
     expect(growingYearThree).toBeGreaterThan(flatYearThree);
+  });
+
+  it("uses projection year zero for the first RSU vest slice", () => {
+    const rsuItems = [
+      {
+        id: "rsu-1",
+        name: "RSU",
+        grantAmount: 40000,
+        refresherAmount: 0,
+        vestingYears: 4,
+      },
+    ];
+
+    expect(computeRsuGrossForProjectionYear(rsuItems, 0)).toBe(10000);
+    expect(computeRsuGrossForProjectionYear(rsuItems, 1)).toBe(10000);
+    expect(computeRsuGrossForProjectionYear(rsuItems, 2)).toBe(10000);
+    expect(computeRsuGrossForProjectionYear(rsuItems, 3)).toBe(10000);
+    expect(computeRsuGrossForProjectionYear(rsuItems, 4)).toBe(0);
+  });
+
+  it("keeps ownership costs after the mortgage payoff year", () => {
+    expect(
+      getMortgageAnnualHousingCost({
+        kind: "conventional",
+        totalMonthlyPayment: 2500,
+        monthlyTax: 400,
+        monthlyInsurance: 100,
+        monthlyHoa: 50,
+        yearlyLoan: [{ year: 1, payment: 2500, principal: 1000, interest: 950, endingBalance: 0 }],
+      }, 2),
+    ).toBe(6600);
   });
 
   it("adds current-year tax savings for deductible bucket contributions", () => {

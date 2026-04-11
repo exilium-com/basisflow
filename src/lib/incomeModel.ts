@@ -367,6 +367,15 @@ export function computeRsuGrossForItems(
   );
 }
 
+export function computeRsuGrossForProjectionYear(
+  rsuItems: RsuInputItem[] = [],
+  projectionYear: number,
+  stockGrowthRate = 0,
+  refresherGrowthRate = 0,
+) {
+  return computeRsuGrossForItems(rsuItems, Math.max(0, projectionYear), stockGrowthRate, refresherGrowthRate);
+}
+
 export function calculateIncome(income: ResolvedIncome, taxConfig: TaxConfig) {
   const grossSalary = Math.max(0, income.grossSalary);
   const rsuGrossNextYear = Math.max(0, income.rsuGrossNextYear);

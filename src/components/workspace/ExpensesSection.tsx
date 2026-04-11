@@ -46,6 +46,7 @@ export function ExpensesSection({
       <div className="grid gap-2.5">
         {expenseState.expenses.map((expense) => {
           const override = expenseOverrides[expense.id];
+          const showsGrowthOverride = expense.frequency !== "one_off";
 
           return (
             <RowItem
@@ -53,7 +54,7 @@ export function ExpensesSection({
               removeLabel="Remove expense"
               onRemove={() => onRemoveExpense(expense.id)}
               detailsTitle="Expense details"
-              detailsSummary={override?.growthRate != null ? `Growth ${override.growthRate}%` : null}
+              detailsSummary={showsGrowthOverride && override?.growthRate != null ? `Growth ${override.growthRate}%` : null}
               detailsOpen={expense.detailsOpen}
               onToggleDetails={(detailsOpen) => onUpdateExpense(expense.id, { detailsOpen })}
               headerClassName="grid items-center gap-3 lg:grid-cols-3"
@@ -103,16 +104,18 @@ export function ExpensesSection({
                   { value: "one_off", label: "One-off" },
                 ]}
               />
-              <NumberField
-                className="w-32"
-                label="Growth override"
-                suffix="%"
-                min="-20"
-                step="0.1"
-                value={override?.growthRate ?? null}
-                placeholder={String(expenseGrowthRate)}
-                onValueChange={(value) => onUpdateExpenseOverride(expense.id, { growthRate: value })}
-              />
+              {showsGrowthOverride ? (
+                <NumberField
+                  className="w-32"
+                  label="Growth override"
+                  suffix="%"
+                  min="-20"
+                  step="0.1"
+                  value={override?.growthRate ?? null}
+                  placeholder={String(expenseGrowthRate)}
+                  onValueChange={(value) => onUpdateExpenseOverride(expense.id, { growthRate: value })}
+                />
+              ) : null}
               {expense.frequency === "one_off" ? (
                 <NumberField
                   className="w-28"
