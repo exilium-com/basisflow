@@ -4,8 +4,8 @@ import { CheckboxField, NumberField, SelectField, fieldLabelClass } from "./Fiel
 import { SegmentedToggle } from "./SegmentedToggle";
 import { ResultList } from "./ResultList";
 import { usd } from "../lib/format";
-import { toDisplayValue, type ProjectionState, type ProjectionInputs } from "../lib/projectionState";
-import { type AssetInputs } from "../lib/assetsModel";
+import { toDisplayValue, type ProjectionState, type Projection } from "../lib/projectionState";
+import { type Assets } from "../lib/assetsModel";
 import { type ProjectionRow } from "../lib/projectionUtils";
 
 type ProjectionSummaryItem = {
@@ -14,8 +14,8 @@ type ProjectionSummaryItem = {
 };
 
 type ProjectionSummaryPanelProps = {
-  assetInputs: AssetInputs;
-  projectionInputs: ProjectionInputs;
+  assets: Assets;
+  projection: Projection;
   currentRow: ProjectionRow;
   selectedYearLabel: string;
   state: ProjectionState;
@@ -24,8 +24,8 @@ type ProjectionSummaryPanelProps = {
 };
 
 export function ProjectionSummaryPanel({
-  assetInputs,
-  projectionInputs,
+  assets,
+  projection,
   currentRow,
   selectedYearLabel,
   state,
@@ -40,7 +40,7 @@ export function ProjectionSummaryPanel({
         </p>
         <div className="flex items-end justify-between gap-4">
           <strong className="block font-serif text-5xl leading-none tracking-tight text-(--teal) md:text-6xl">
-            {usd(toDisplayValue(currentRow.netWorth, projectionInputs.currentYear, projectionInputs))}
+            {usd(toDisplayValue(currentRow.netWorth, projection.currentYear, projection))}
           </strong>
           <SegmentedToggle
             ariaLabel="Display mode"
@@ -68,9 +68,9 @@ export function ProjectionSummaryPanel({
                 <input
                   type="range"
                   min="0"
-                  max={projectionInputs.horizonYears}
+                  max={projection.horizonYears}
                   step="1"
-                  value={projectionInputs.currentYear}
+                  value={projection.currentYear}
                   onChange={(event) => onUpdateState({ currentYear: Number(event.target.value) })}
                   className="slider-input w-full"
                 />
@@ -139,12 +139,12 @@ export function ProjectionSummaryPanel({
             onValueChange={(value) => onUpdateState({ expenseGrowthRate: value ?? 0 })}
           />
           <NumberField
-            label="Take-home growth"
+            label="Gross income growth"
             suffix="%"
             min="-10"
             step="0.1"
-            value={state.takeHomeGrowthRate}
-            onValueChange={(value) => onUpdateState({ takeHomeGrowthRate: value ?? 0 })}
+            value={state.incomeGrowthRate}
+            onValueChange={(value) => onUpdateState({ incomeGrowthRate: value ?? 0 })}
           />
           <NumberField
             label="Home appreciation"
@@ -164,7 +164,7 @@ export function ProjectionSummaryPanel({
             }
           >
             <option value="">None</option>
-            {assetInputs.buckets.map((bucket) => (
+            {assets.buckets.map((bucket) => (
               <option key={bucket.id} value={bucket.id}>
                 {bucket.name}
               </option>

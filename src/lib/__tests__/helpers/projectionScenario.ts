@@ -2,22 +2,27 @@ import {
   DEFAULT_ASSETS_STATE,
   PINNED_BUCKETS,
   buildIncomeDirectedContributions,
-  normalizeAssetInputs,
+  createAssets,
   normalizeAssetsState,
   type AssetBucketState,
   type AssetTaxTreatment,
 } from "../../assetsModel";
 import {
   DEFAULT_EXPENSES_STATE,
-  normalizeExpenseInputs,
+  createExpenses,
   normalizeExpensesState,
 } from "../../expensesModel";
-import { DEFAULT_PROJECTION_STATE, normalizeProjectionInputs, normalizeProjectionState } from "../../projectionState";
+import { DEFAULT_PROJECTION_STATE, createProjection, normalizeProjectionState } from "../../projectionState";
 import { calculateProjection, type ProjectionResults } from "../../projectionCalculation";
 import { roundTo } from "../../format";
 import { DEFAULT_CONFIG, normalizeConfig, type TaxConfig } from "../../taxConfig";
 import { type ProjectionRow } from "../../projectionUtils";
-import { type RsuInputItem } from "../../incomeModel";
+import {
+  buildIncomeSummary,
+  calculateIncome,
+  createIncome,
+  type RsuInputItem,
+} from "../../incomeModel";
 
 type RetirementInputs = {
   employee401k?: number;
@@ -41,8 +46,8 @@ type AccountInput = {
 
 export type ProjectionScenarioOptions = {
   salary?: number;
-  annualTakeHome?: number;
   annualMortgage?: number;
+  yearlyLoan?: Array<{ year: number; principal?: number; interest: number; endingBalance?: number }>;
   annualExpenses?: number;
   homePrice?: number;
   currentEquity?: number;
@@ -54,7 +59,7 @@ export type ProjectionScenarioOptions = {
   currentYear?: number;
   assetGrowthRate?: number;
   expenseGrowthRate?: number;
-  takeHomeGrowthRate?: number;
+  incomeGrowthRate?: number;
   homeAppreciationRate?: number;
   rsuStockGrowthRate?: number;
   includeVestedRsusInNetWorth?: boolean;
@@ -72,9 +77,9 @@ type ProjectionScenarioRun = {
     taxConfig: TaxConfig;
   };
   taxConfig: TaxConfig;
-  assetInputs: ReturnType<typeof normalizeAssetInputs>;
-  expenseInputs: ReturnType<typeof normalizeExpenseInputs>;
-  projectionInputs: ReturnType<typeof normalizeProjectionInputs>;
+  assets: ReturnType<typeof createAssets>;
+  expenses: ReturnType<typeof createExpenses>;
+  projection: ReturnType<typeof createProjection>;
   results: ProjectionResults;
   getYear: (year: number) => ProjectionRow;
 };
@@ -210,14 +215,14 @@ function ensureRetirementAccounts(accounts: AssetBucketState[], retirement: Requ
 
 function createIncomeSummary({
   salary = 150000,
-  annualTakeHome = 100000,
   retirement = {},
   rsuValue = 0,
+  taxConfig = DEFAULT_CONFIG,
 }: {
   salary?: number;
-  annualTakeHome?: number;
   retirement?: RetirementInputs;
   rsuValue?: number;
+  taxConfig?: TaxConfig;
 }) {
   const {
     employee401k = 0,
@@ -227,37 +232,42 @@ function createIncomeSummary({
     hsaContribution = 0,
   } = retirement;
 
-  return {
+  const income = createIncome({
     grossSalary: salary,
-    annualTakeHome: roundTo(annualTakeHome, 2),
-    monthlyTakeHome: roundTo(annualTakeHome / 12, 2),
-    totalTaxes: 0,
     employee401k,
-    employerMatch,
+    matchRate: employee401k > 0 ? (employerMatch / employee401k) * 100 : 0,
     iraContribution,
     megaBackdoor,
     hsaContribution,
-    matchRate: 0,
     rsuItems: createProjectionRsuItems(rsuValue),
     rsuGrossNextYear: roundTo(rsuValue, 2),
-    rsuNetNextYear: 0,
-  };
+  });
+  const results = calculateIncome(income, taxConfig);
+
+  return buildIncomeSummary(income, results);
 }
 
 function createMortgageSummary({
   annualMortgage = 0,
   homePrice = 0,
   currentEquity = 0,
+  yearlyLoan = [],
 }: {
   annualMortgage?: number;
   homePrice?: number;
   currentEquity?: number;
+  yearlyLoan?: Array<{ year: number; principal?: number; interest: number; endingBalance?: number }>;
 }) {
   return {
     totalMonthlyPayment: roundTo(annualMortgage / 12, 2),
     currentEquity: roundTo(currentEquity, 2),
     homePrice: roundTo(homePrice, 2),
-    yearlyLoan: [],
+    yearlyLoan: yearlyLoan.map((row) => ({
+      year: row.year,
+      principal: row.principal ?? 0,
+      interest: row.interest,
+      endingBalance: row.endingBalance ?? 0,
+    })),
   };
 }
 
@@ -288,7 +298,7 @@ function createProjectionState({
   currentYear = 1,
   assetGrowthRate = 0,
   expenseGrowthRate = 0,
-  takeHomeGrowthRate = 0,
+  incomeGrowthRate = 0,
   homeAppreciationRate = 0,
   rsuStockGrowthRate = 0,
   includeVestedRsusInNetWorth = false,
@@ -314,7 +324,7 @@ function createProjectionState({
     currentYear,
     assetGrowthRate,
     expenseGrowthRate,
-    takeHomeGrowthRate,
+    incomeGrowthRate,
     homeAppreciationRate,
     rsuStockGrowthRate,
     includeVestedRsusInNetWorth,
@@ -366,8 +376,8 @@ function createAssetsState(
 
 export function runProjectionScenario({
   salary = 150000,
-  annualTakeHome = 100000,
   annualMortgage = 0,
+  yearlyLoan = [],
   annualExpenses = 0,
   homePrice = 0,
   currentEquity = 0,
@@ -379,7 +389,7 @@ export function runProjectionScenario({
   currentYear = 1,
   assetGrowthRate = 0,
   expenseGrowthRate = 0,
-  takeHomeGrowthRate = 0,
+  incomeGrowthRate = 0,
   homeAppreciationRate = 0,
   rsuStockGrowthRate = 0,
   includeVestedRsusInNetWorth = false,
@@ -398,14 +408,15 @@ export function runProjectionScenario({
   const scenario = {
     incomeSummary: createIncomeSummary({
       salary,
-      annualTakeHome,
       retirement: normalizedRetirement,
       rsuValue,
+      taxConfig: normalizeConfig(clone(taxConfig)),
     }),
     mortgageSummary: createMortgageSummary({
       annualMortgage,
       homePrice,
       currentEquity,
+      yearlyLoan,
     }),
     assetsState: createAssetsState(accounts, normalizedRetirement, allocations),
     expensesState: createExpensesState(annualExpenses),
@@ -414,7 +425,7 @@ export function runProjectionScenario({
       currentYear,
       assetGrowthRate,
       expenseGrowthRate,
-      takeHomeGrowthRate,
+      incomeGrowthRate,
       homeAppreciationRate,
       rsuStockGrowthRate,
       includeVestedRsusInNetWorth,
@@ -432,25 +443,25 @@ export function runProjectionScenario({
   const expensesState = normalizeExpensesState(clone(scenario.expensesState), fallbackExpensesState);
   const projectionState = normalizeProjectionState(clone(scenario.projectionState), fallbackProjectionState);
 
-  const assetInputs = normalizeAssetInputs(assetsState, projectionState.assetGrowthRate);
-  const expenseInputs = normalizeExpenseInputs(expensesState, projectionState.expenseGrowthRate);
+  const assets = createAssets(assetsState, projectionState.assetGrowthRate);
+  const expenses = createExpenses(expensesState, projectionState.expenseGrowthRate);
   const incomeDirectedContributions = buildIncomeDirectedContributions(scenario.incomeSummary);
-  const projectionInputs = normalizeProjectionInputs(projectionState, assetInputs, incomeDirectedContributions);
+  const projection = createProjection(projectionState, assets, incomeDirectedContributions);
   const results = calculateProjection({
     incomeSummary: scenario.incomeSummary,
     mortgageSummary: scenario.mortgageSummary,
-    assetInputs,
-    expenseInputs,
-    projectionInputs,
+    assets,
+    expenses,
+    projection,
     taxConfig: scenario.taxConfig,
   });
 
   return {
     scenario,
     taxConfig: scenario.taxConfig,
-    assetInputs,
-    expenseInputs,
-    projectionInputs,
+    assets,
+    expenses,
+    projection,
     results,
     getYear(year) {
       const snapshot = results.projection.find((row) => row.year === year);

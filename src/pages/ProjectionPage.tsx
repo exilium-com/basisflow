@@ -14,12 +14,12 @@ import {
   DEFAULT_ASSETS_STATE,
   PINNED_BUCKETS,
   buildIncomeDirectedContributions,
-  normalizeAssetInputs,
+  createAssets,
   normalizeAssetsState,
   resolvePinnedBuckets,
 } from "../lib/assetsModel";
 import { calculateProjection } from "../lib/projectionCalculation";
-import { DEFAULT_EXPENSES_STATE, normalizeExpenseInputs, normalizeExpensesState } from "../lib/expensesModel";
+import { DEFAULT_EXPENSES_STATE, createExpenses, normalizeExpensesState } from "../lib/expensesModel";
 import { usd } from "../lib/format";
 import {
   type AllocationMode,
@@ -27,7 +27,7 @@ import {
   type ProjectionExpenseOverride,
   type ProjectionState,
   DEFAULT_PROJECTION_STATE,
-  normalizeProjectionInputs,
+  createProjection,
   normalizeProjectionState,
   toDisplayValue,
 } from "../lib/projectionState";
@@ -42,14 +42,14 @@ import {
 } from "../lib/storageKeys";
 import { loadTaxConfig } from "../lib/taxConfig";
 import { surfaceClass } from "../lib/ui";
-import { type IncomeSummary } from "../lib/incomeModel";
+import { createIncomeSummary, type IncomeSummary } from "../lib/incomeModel";
 
 export function ProjectionPage() {
   const [state, setState] = useStoredState(PROJECTION_STATE_KEY, DEFAULT_PROJECTION_STATE, {
     normalize: normalizeProjectionState,
   });
   const taxConfig = loadTaxConfig();
-  const incomeSummary = (loadStoredJson(INCOME_SUMMARY_KEY) ?? {}) as Partial<IncomeSummary>;
+  const incomeSummary = createIncomeSummary((loadStoredJson(INCOME_SUMMARY_KEY) ?? {}) as Partial<IncomeSummary>);
   const mortgageSummary = loadStoredJson(MORTGAGE_SUMMARY_KEY) ?? {};
   const assetState = normalizeAssetsState(
     loadStoredJson(ASSETS_STATE_KEY, true) ?? DEFAULT_ASSETS_STATE,
@@ -81,44 +81,44 @@ export function ProjectionPage() {
       expense.growthRate = state.expenseOverrides?.[expense.id]?.growthRate ?? null;
     });
   });
-  const assetInputs = normalizeAssetInputs(projectionAssetState, state.assetGrowthRate);
-  const expenseInputs = normalizeExpenseInputs(projectionExpenseState, state.expenseGrowthRate);
-  const projectionInputs = normalizeProjectionInputs(state, assetInputs, incomeDirectedContributions);
+  const assets = createAssets(projectionAssetState, state.assetGrowthRate);
+  const expenses = createExpenses(projectionExpenseState, state.expenseGrowthRate);
+  const projection = createProjection(state, assets, incomeDirectedContributions);
   const results = calculateProjection({
     incomeSummary,
     mortgageSummary,
-    assetInputs,
-    expenseInputs,
-    projectionInputs,
+    assets,
+    expenses,
+    projection,
     taxConfig,
   });
-  const currentRow = results.projection.find((row) => row.year === projectionInputs.currentYear) ?? results.ending;
-  const selectedYearLabel = projectionInputs.currentYear === 0 ? "Today" : `Year ${projectionInputs.currentYear}`;
+  const currentRow = results.projection.find((row) => row.year === projection.currentYear) ?? results.ending;
+  const selectedYearLabel = projection.currentYear === 0 ? "Today" : `Year ${projection.currentYear}`;
   const summaryItems = [
     {
       label: "Gross assets",
-      value: usd(toDisplayValue(currentRow.assetsGross, projectionInputs.currentYear, projectionInputs)),
+      value: usd(toDisplayValue(currentRow.assetsGross, projection.currentYear, projection)),
     },
     {
       label: "Home equity",
-      value: usd(toDisplayValue(currentRow.homeEquity, projectionInputs.currentYear, projectionInputs)),
+      value: usd(toDisplayValue(currentRow.homeEquity, projection.currentYear, projection)),
     },
     {
       label: "Capital gains tax",
-      value: usd(toDisplayValue(currentRow.capitalGainsTax, projectionInputs.currentYear, projectionInputs)),
+      value: usd(toDisplayValue(currentRow.capitalGainsTax, projection.currentYear, projection)),
     },
     {
       label: "Total capital gains",
-      value: usd(toDisplayValue(currentRow.totalCapitalGains, projectionInputs.currentYear, projectionInputs)),
+      value: usd(toDisplayValue(currentRow.totalCapitalGains, projection.currentYear, projection)),
     },
     {
       label: "Vested RSUs",
-      value: usd(toDisplayValue(currentRow.vestedRsuBalance, projectionInputs.currentYear, projectionInputs)),
+      value: usd(toDisplayValue(currentRow.vestedRsuBalance, projection.currentYear, projection)),
     },
   ];
   const monthlyCashFlow = buildMonthlyCashFlow({
     incomeSummary,
-    projectionInputs,
+    projection,
     currentRow,
   });
   const pinnedProjectionBucketIds = pinnedAssets.pinnedBucketIds;
@@ -165,8 +165,8 @@ export function ProjectionPage() {
         <WorkspaceLayout
           summary={
             <ProjectionSummaryPanel
-              assetInputs={assetInputs}
-              projectionInputs={projectionInputs}
+              assets={assets}
+              projection={projection}
               currentRow={currentRow}
               selectedYearLabel={selectedYearLabel}
               state={state}
@@ -177,9 +177,9 @@ export function ProjectionPage() {
         >
           <Section title="Assets">
             <ProjectionAssetRows
-              assetInputs={assetInputs}
+              assets={assets}
               pinnedProjectionBucketIds={pinnedProjectionBucketIds}
-              projectionInputs={projectionInputs}
+              projection={projection}
               results={results}
               currentRow={currentRow}
               selectedYearLabel={selectedYearLabel}
@@ -193,8 +193,8 @@ export function ProjectionPage() {
 
           <Section title="Expenses" divider>
             <ProjectionExpenseRows
-              expenseInputs={expenseInputs}
-              projectionInputs={projectionInputs}
+              expenses={expenses}
+              projection={projection}
               currentRow={currentRow}
               selectedYearLabel={selectedYearLabel}
               state={state}
@@ -224,7 +224,7 @@ export function ProjectionPage() {
                 { label: "Reserve cash", color: "#566773" },
               ]}
             >
-              <NetWorthChart inputs={projectionInputs} results={results} currentYear={projectionInputs.currentYear} />
+              <NetWorthChart projection={projection} results={results} currentYear={projection.currentYear} />
             </ChartPanel>
           </Section>
 
@@ -236,12 +236,12 @@ export function ProjectionPage() {
                 { label: "Capital gains tax", color: "#d28a47" },
               ]}
             >
-              <AssetTaxChart inputs={projectionInputs} results={results} currentYear={projectionInputs.currentYear} />
+              <AssetTaxChart projection={projection} results={results} currentYear={projection.currentYear} />
             </ChartPanel>
           </Section>
 
           <Section title="Year-by-Year Projection" divider>
-            <ProjectionTable projectionInputs={projectionInputs} rows={results.projection} />
+            <ProjectionTable projection={projection} rows={results.projection} />
           </Section>
         </WorkspaceLayout>
       </main>

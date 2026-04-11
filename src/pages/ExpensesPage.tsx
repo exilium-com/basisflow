@@ -11,9 +11,9 @@ import { WorkspaceLayout } from "../components/WorkspaceLayout";
 import { usd } from "../lib/format";
 import {
   calculateExpenseSnapshot,
+  createExpenses,
   DEFAULT_EXPENSES_STATE,
   type ExpenseStateItem,
-  normalizeExpenseInputs,
   normalizeExpensesState,
 } from "../lib/expensesModel";
 import { useStoredState } from "../hooks/useStoredState";
@@ -25,8 +25,8 @@ export function ExpensesPage() {
     normalize: normalizeExpensesState,
   });
 
-  const inputs = normalizeExpenseInputs(state);
-  const results = calculateExpenseSnapshot(inputs);
+  const expenses = createExpenses(state);
+  const results = calculateExpenseSnapshot(expenses);
 
   function updateExpense(expenseId: string, patch: Partial<ExpenseStateItem>) {
     setState((draft) => {

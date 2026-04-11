@@ -31,7 +31,7 @@ type ArmLoanOption = {
 export type LoanOption = FixedLoanOption | ArmLoanOption;
 export type MortgageLoanState = Partial<Record<MortgageLoanField, number | null>>;
 
-export type MortgageLoanInputs =
+export type MortgageLoan =
   | {
       kind: "fixed";
       label: string;
@@ -68,7 +68,7 @@ function buildDefaultLoanOptions(): Record<LoanType, MortgageLoanState> {
   };
 }
 
-export type MortgageInputs = {
+export type Mortgage = {
   homePrice: number;
   downPaymentMode: MortgageDownPaymentMode;
   downPaymentInput: number;
@@ -78,7 +78,7 @@ export type MortgageInputs = {
   hoaPerMonth: number;
   activeLoanType: LoanType;
   compareLoanType: LoanType;
-  loanOptions: Record<LoanType, MortgageLoanInputs>;
+  loanOptions: Record<LoanType, MortgageLoan>;
 };
 
 export const LOAN_OPTIONS: LoanOption[] = [
@@ -160,7 +160,7 @@ function normalizeLoanOptionState(
   };
 }
 
-function buildLoanOptionInputs(option: LoanOption, loanState: MortgageLoanState): MortgageLoanInputs {
+function createMortgageLoan(option: LoanOption, loanState: MortgageLoanState): MortgageLoan {
   const term = Math.max(1, Math.round(loanState.term ?? option.defaults.term));
 
   if (option.kind === "fixed") {
@@ -218,7 +218,7 @@ export function normalizeMortgageState(parsed: unknown, fallback: MortgageState)
   };
 }
 
-export function buildMortgageInputs(state: MortgageState = DEFAULT_MORTGAGE_STATE): MortgageInputs {
+export function createMortgage(state: MortgageState = DEFAULT_MORTGAGE_STATE): Mortgage {
   const homePrice = Math.max(0, state.homePrice ?? MORTGAGE_DEFAULTS.homePrice);
   const downPaymentMode = state.downPaymentMode === "dollar" ? "dollar" : "percent";
   const downPaymentInput = Math.max(0, state.downPayment ?? MORTGAGE_DEFAULTS.downPaymentPercent);
@@ -235,13 +235,13 @@ export function buildMortgageInputs(state: MortgageState = DEFAULT_MORTGAGE_STAT
     compareLoanType: state.compareLoanType,
     loanOptions: Object.fromEntries(
       LOAN_OPTIONS.map((option) => {
-        return [option.type, buildLoanOptionInputs(option, state.loanOptions[option.type] ?? {})];
+        return [option.type, createMortgageLoan(option, state.loanOptions[option.type] ?? {})];
       }),
-    ) as Record<LoanType, MortgageLoanInputs>,
+    ) as Record<LoanType, MortgageLoan>,
   };
 }
 
-export function getMortgageLoanMeta(loanOption: MortgageLoanInputs) {
+export function getMortgageLoanMeta(loanOption: MortgageLoan) {
   if (loanOption.kind === "arm") {
     return Math.abs(loanOption.adjustedRate - loanOption.initialRate) < 0.0005
       ? `${percent(loanOption.initialRate, 3)} / ${Math.round(loanOption.term)}y`

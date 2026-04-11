@@ -20,7 +20,6 @@ export const projectionGoldens: ProjectionGolden[] = [
     name: "250k income with maxed 401k and hsa with 1.2m house and 300k down",
     scenario: {
       salary: 250000,
-      annualTakeHome: 101150.52,
       annualMortgage: 84000,
       annualExpenses: 0,
       homePrice: 1200000,
@@ -64,7 +63,6 @@ export const projectionGoldens: ProjectionGolden[] = [
     name: "200k income with no HSA and no traditional 401(k) with 1.2m house and 300k down",
     scenario: {
       salary: 200000,
-      annualTakeHome: 131819.02,
       annualMortgage: 84000,
       annualExpenses: 0,
       homePrice: 1200000,

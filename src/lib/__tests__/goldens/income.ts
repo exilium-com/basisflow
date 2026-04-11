@@ -19,11 +19,11 @@ export const incomeGoldens: IncomeGolden[] = [
     name: "250k income with maxed 401k and hsa",
     scenario: {
       salary: 250000,
-      inputs: {
+      income: {
         employee401k: 24500,
         hsaContribution: 4400,
         iraContribution: 7000,
-        megaBackdoorInput: 35250,
+        megaBackdoor: 35250,
         matchRate: 50,
       },
     },
@@ -41,11 +41,11 @@ export const incomeGoldens: IncomeGolden[] = [
     name: "200k income with no HSA and no traditional 401(k)",
     scenario: {
       salary: 200000,
-      inputs: {
+      income: {
         employee401k: 0,
         hsaContribution: 0,
         iraContribution: 0,
-        megaBackdoorInput: 0,
+        megaBackdoor: 0,
         matchRate: 0,
       },
     },

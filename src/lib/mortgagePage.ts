@@ -24,8 +24,8 @@ export function serializeMortgageSummary(scenario: MortgageScenario) {
     type: scenario.type,
     typeLabel: scenario.typeLabel,
     isArm: scenario.isArm,
-    homePrice: scenario.inputs.homePrice,
-    currentEquity: scenario.inputs.homePrice - scenario.loanAmount,
+    homePrice: scenario.mortgage.homePrice,
+    currentEquity: scenario.mortgage.homePrice - scenario.loanAmount,
     loanAmount: scenario.loanAmount,
     totalMonthlyPayment: scenario.totalMonthlyPayment,
     principalInterest: scenario.principalInterest,
@@ -35,6 +35,16 @@ export function serializeMortgageSummary(scenario: MortgageScenario) {
     totalInterest: scenario.totalInterest,
     yearlyLoan,
   };
+}
+
+export type MortgageSummary = ReturnType<typeof serializeMortgageSummary>;
+
+export function getMortgageYearInterest(summary: Partial<MortgageSummary>, year = 1) {
+  return summary.yearlyLoan?.find((row) => row.year === year)?.interest ?? 0;
+}
+
+export function getMortgageYearPropertyTax(summary: Partial<MortgageSummary>) {
+  return (summary.monthlyTax ?? 0) * 12;
 }
 
 export function buildMortgageComparisonRows(

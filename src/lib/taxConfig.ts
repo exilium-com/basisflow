@@ -1,4 +1,5 @@
 import { readNumber, roundTo } from "./format";
+import type { Income } from "./incomeModel";
 import { loadStoredJson, saveJson } from "./storage";
 
 export const STORAGE_KEY = "basisflow_tax_config";
@@ -8,10 +9,14 @@ export type TaxBracket = {
   rate: number;
 };
 
+export type TaxDeductionMode = "standard" | "itemized";
+
 export type TaxConfig = {
   annualAdditionsLimit: number;
+  deductionMode: TaxDeductionMode;
   federalStandardDeduction: number;
   stateStandardDeduction: number;
+  federalSaltCap: number;
   caSdiRate: number;
   federalBrackets: TaxBracket[];
   stateBrackets: TaxBracket[];
@@ -20,8 +25,10 @@ export type TaxConfig = {
 
 export const DEFAULT_CONFIG = {
   annualAdditionsLimit: 72000,
+  deductionMode: "standard" as TaxDeductionMode,
   federalStandardDeduction: 16100,
   stateStandardDeduction: 5706,
+  federalSaltCap: 40400,
   caSdiRate: 1.3,
   federalBrackets: [
     { top: 12400, rate: 10 },
@@ -105,6 +112,8 @@ export function normalizeConfig(rawConfig: unknown): TaxConfig {
       (config as { annualAdditionsLimit?: unknown }).annualAdditionsLimit,
       fallback.annualAdditionsLimit,
     ),
+    deductionMode:
+      (config as { deductionMode?: unknown }).deductionMode === "itemized" ? "itemized" : fallback.deductionMode,
     federalStandardDeduction: readNonNegativeConfigNumber(
       (config as { federalStandardDeduction?: unknown }).federalStandardDeduction,
       fallback.federalStandardDeduction,
@@ -112,6 +121,10 @@ export function normalizeConfig(rawConfig: unknown): TaxConfig {
     stateStandardDeduction: readNonNegativeConfigNumber(
       (config as { stateStandardDeduction?: unknown }).stateStandardDeduction,
       fallback.stateStandardDeduction,
+    ),
+    federalSaltCap: readNonNegativeConfigNumber(
+      (config as { federalSaltCap?: unknown }).federalSaltCap,
+      fallback.federalSaltCap,
     ),
     caSdiRate: readNonNegativeConfigNumber((config as { caSdiRate?: unknown }).caSdiRate, fallback.caSdiRate),
     federalBrackets: normalizeBracketList((config as { federalBrackets?: unknown }).federalBrackets, fallback.federalBrackets),
@@ -137,6 +150,27 @@ export function resetTaxConfig(): TaxConfig {
   const defaults = cloneDefaultConfig();
   saveJson(STORAGE_KEY, defaults);
   return defaults;
+}
+
+export function getTaxDeductions(
+  config: TaxConfig,
+  income?: Income,
+  stateIncomeTax = 0,
+) {
+  if (config.deductionMode === "itemized") {
+    const mortgageInterest = income?.mortgageInterest ?? 0;
+    const propertyTax = income?.propertyTax ?? 0;
+
+    return {
+      federalDeduction: mortgageInterest + Math.min(propertyTax + stateIncomeTax, config.federalSaltCap),
+      stateDeduction: mortgageInterest + propertyTax,
+    };
+  }
+
+  return {
+    federalDeduction: config.federalStandardDeduction,
+    stateDeduction: config.stateStandardDeduction,
+  };
 }
 
 export function computeProgressiveTax(income: number, brackets: TaxBracket[]) {

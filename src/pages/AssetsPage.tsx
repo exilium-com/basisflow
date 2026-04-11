@@ -18,7 +18,7 @@ import {
   deriveAssetsState,
   normalizeAssetsState,
 } from "../lib/assetsModel";
-import { type IncomeSummary } from "../lib/incomeModel";
+import { createIncomeSummary, type IncomeSummary } from "../lib/incomeModel";
 import { loadStoredJson } from "../lib/storage";
 import { useStoredState } from "../hooks/useStoredState";
 import { surfaceClass } from "../lib/ui";
@@ -29,7 +29,7 @@ export function AssetsPage() {
     normalize: normalizeAssetsState,
   });
 
-  const incomeSummary = (loadStoredJson(INCOME_SUMMARY_KEY) ?? {}) as Partial<IncomeSummary>;
+  const incomeSummary = createIncomeSummary((loadStoredJson(INCOME_SUMMARY_KEY) ?? {}) as Partial<IncomeSummary>);
   const incomeDirectedContributions = buildIncomeDirectedContributions(incomeSummary);
   const assets = deriveAssetsState(storedState, undefined, incomeDirectedContributions);
 

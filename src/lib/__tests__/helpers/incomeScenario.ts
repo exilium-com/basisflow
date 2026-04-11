@@ -1,10 +1,10 @@
-import { calculateIncome, computeAnnualTaxes, computeSavings, type IncomeInputs } from "../../incomeModel";
+import { createIncome, calculateIncome, computeAnnualTaxes, computeSavings, type Income } from "../../incomeModel";
 import { DEFAULT_CONFIG, normalizeConfig, type TaxConfig } from "../../taxConfig";
 
 export type IncomeScenarioOptions = {
   salary?: number;
   rsuValue?: number;
-  inputs?: Partial<IncomeInputs>;
+  income?: Partial<Income>;
   taxConfig?: Partial<TaxConfig>;
   extraOrdinaryIncome?: number;
 };
@@ -13,17 +13,12 @@ export function money(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-export function createIncomeInputs({ salary = 0, rsuValue = 0, ...overrides }: IncomeScenarioOptions = {}): IncomeInputs {
-  return {
+export function createScenarioIncome({ salary = 0, rsuValue = 0, ...overrides }: IncomeScenarioOptions = {}): Income {
+  return createIncome({
     grossSalary: salary,
     rsuGrossNextYear: rsuValue,
-    employee401k: 0,
-    matchRate: 0,
-    iraContribution: 0,
-    megaBackdoorInput: 0,
-    hsaContribution: 0,
     ...overrides,
-  };
+  });
 }
 
 export function createIncomeTaxConfig(overrides: Partial<TaxConfig> = {}) {
@@ -36,23 +31,23 @@ export function createIncomeTaxConfig(overrides: Partial<TaxConfig> = {}) {
 export function runIncomeScenario({
   salary = 0,
   rsuValue = 0,
-  inputs = {},
+  income = {},
   taxConfig = {},
   extraOrdinaryIncome = 0,
 }: IncomeScenarioOptions = {}) {
-  const resolvedInputs = createIncomeInputs({
+  const resolvedIncome = createScenarioIncome({
     salary,
     rsuValue,
-    ...inputs,
+    ...income,
   });
   const resolvedTaxConfig = createIncomeTaxConfig(taxConfig);
 
   return {
-    inputs: resolvedInputs,
+    income: resolvedIncome,
     taxConfig: resolvedTaxConfig,
-    grossSalary: resolvedInputs.grossSalary,
-    savings: computeSavings(resolvedInputs, resolvedTaxConfig),
-    taxes: computeAnnualTaxes(resolvedInputs, resolvedTaxConfig, extraOrdinaryIncome),
-    income: calculateIncome(resolvedInputs, resolvedTaxConfig),
+    grossSalary: resolvedIncome.grossSalary,
+    savings: computeSavings(resolvedIncome, resolvedTaxConfig),
+    taxes: computeAnnualTaxes(resolvedIncome, resolvedTaxConfig, extraOrdinaryIncome),
+    results: calculateIncome(resolvedIncome, resolvedTaxConfig),
   };
 }

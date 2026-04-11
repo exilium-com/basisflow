@@ -4,12 +4,12 @@ import { runIncomeScenario, type IncomeScenarioOptions } from "./helpers/incomeS
 
 function withInputOverrides(
   base: IncomeScenarioOptions,
-  overrides: Partial<NonNullable<IncomeScenarioOptions["inputs"]>>,
+  overrides: Partial<NonNullable<IncomeScenarioOptions["income"]>>,
 ): IncomeScenarioOptions {
   return {
     ...base,
-    inputs: {
-      ...base.inputs,
+    income: {
+      ...base.income,
       ...overrides,
     },
   };
@@ -17,11 +17,11 @@ function withInputOverrides(
 
 const maxed: IncomeScenarioOptions = {
   salary: 250000,
-  inputs: {
+  income: {
     employee401k: 24500,
     hsaContribution: 4400,
     iraContribution: 7000,
-    megaBackdoorInput: 35250,
+    megaBackdoor: 35250,
     matchRate: 50,
   },
 };
@@ -32,7 +32,7 @@ describe("calculateIncome", () => {
     const comparison = runIncomeScenario(
       withInputOverrides(maxed, {
         iraContribution: 0,
-        megaBackdoorInput: 0,
+        megaBackdoor: 0,
       }),
     ).taxes.totalTaxes;
 
@@ -75,6 +75,60 @@ describe("calculateIncome", () => {
     expect(baseline.federalTax).toBeLessThan(without.federalTax);
     expect(baseline.californiaTax).toBe(without.californiaTax);
     expect(baseline.fica.total).toBe(without.fica.total);
+  });
+
+  it("uses itemized deductions when selected", () => {
+    const standard = runIncomeScenario({
+      salary: 250000,
+      taxConfig: {
+        deductionMode: "standard",
+        federalStandardDeduction: 1000,
+        stateStandardDeduction: 1000,
+      },
+    }).taxes;
+    const itemized = runIncomeScenario({
+      salary: 250000,
+      taxConfig: {
+        deductionMode: "itemized",
+        federalStandardDeduction: 1000,
+        stateStandardDeduction: 1000,
+        federalSaltCap: 40400,
+      },
+      income: {
+        mortgageInterest: 30000,
+        propertyTax: 12000,
+      },
+    }).taxes;
+
+    expect(itemized.federalTax).toBeLessThan(standard.federalTax);
+    expect(itemized.californiaTax).toBeLessThan(standard.californiaTax);
+  });
+
+  it("caps federal SALT deductions at ten thousand dollars", () => {
+    const lowSalt = runIncomeScenario({
+      salary: 250000,
+      taxConfig: {
+        deductionMode: "itemized",
+        federalSaltCap: 10000,
+      },
+      income: {
+        mortgageInterest: 0,
+        propertyTax: 10000,
+      },
+    }).taxes.federalTax;
+    const highSalt = runIncomeScenario({
+      salary: 250000,
+      taxConfig: {
+        deductionMode: "itemized",
+        federalSaltCap: 10000,
+      },
+      income: {
+        mortgageInterest: 0,
+        propertyTax: 25000,
+      },
+    }).taxes.federalTax;
+
+    expect(highSalt).toBe(lowSalt);
   });
 
   it.each(incomeGoldens)("$name", (testCase) => {

@@ -1,5 +1,5 @@
 import { clamp, readNumber, roundTo } from "./format";
-import { type IncomeSummary } from "./incomeModel";
+import { DEFAULT_INCOME_SUMMARY, type IncomeSummary } from "./incomeModel";
 import { computeAdditionalTax, type TaxConfig } from "./taxConfig";
 
 export type AssetTaxTreatment = "none" | "taxDeductible" | "taxDeferred";
@@ -19,16 +19,16 @@ export type AssetsState = {
   buckets: AssetBucketState[];
 };
 
-export type AssetInputBucket = Omit<AssetBucketState, "current" | "contribution" | "growth" | "basis"> & {
+export type AssetBucket = Omit<AssetBucketState, "current" | "contribution" | "growth" | "basis"> & {
   current: number;
   contribution: number;
   growth: number;
   basis: number;
 };
 
-export type AssetInputs = {
+export type Assets = {
   baselineGrowthRate: number;
-  buckets: AssetInputBucket[];
+  buckets: AssetBucket[];
 };
 
 export type AssetTotals = {
@@ -41,7 +41,7 @@ export type AssetTotals = {
 export type DerivedAssetsState = {
   state: AssetsState;
   pinnedBucketIds: Set<string>;
-  inputs: AssetInputs;
+  assets: Assets;
   orderedBuckets: AssetBucketState[];
   totals: AssetTotals;
 };
@@ -52,7 +52,7 @@ export type ResolvedPinnedBuckets = {
   orderedBuckets: AssetBucketState[];
 };
 
-export type ProjectedBucketState = AssetInputBucket & {
+export type ProjectedBucketState = AssetBucket & {
   balance: number;
   basisValue: number;
 };
@@ -173,7 +173,7 @@ export function normalizeAssetsState(parsed: unknown, fallback: AssetsState): As
   };
 }
 
-export function buildIncomeDirectedContributions(summary: Partial<IncomeSummary> = {}) {
+export function buildIncomeDirectedContributions(summary: IncomeSummary = DEFAULT_INCOME_SUMMARY) {
   const contributions: Record<string, number> = {};
 
   function add(bucketId: string, amount = 0) {
@@ -289,10 +289,10 @@ export function resolvePinnedBuckets(
   };
 }
 
-export function normalizeAssetInputs(
+export function createAssets(
   state: AssetsState,
   baselineGrowthRate = TYPE_DEFAULTS.none.growth,
-): AssetInputs {
+): Assets {
   return {
     baselineGrowthRate: baselineGrowthRate / 100,
     buckets: state.buckets.map((bucket) => {
@@ -312,18 +312,18 @@ export function normalizeAssetInputs(
   };
 }
 
-export function summarizeAssetInputs(inputs: AssetInputs): AssetTotals {
+export function summarizeAssets(assets: Assets): AssetTotals {
   return {
-    currentTotal: inputs.buckets.reduce((sum, bucket) => sum + bucket.current, 0),
-    taxableCurrentTotal: inputs.buckets.reduce(
+    currentTotal: assets.buckets.reduce((sum, bucket) => sum + bucket.current, 0),
+    taxableCurrentTotal: assets.buckets.reduce(
       (sum, bucket) => sum + (bucket.taxTreatment === "none" ? bucket.current : 0),
       0,
     ),
-    taxDeductibleCurrentTotal: inputs.buckets.reduce(
+    taxDeductibleCurrentTotal: assets.buckets.reduce(
       (sum, bucket) => sum + (bucket.taxTreatment === "taxDeductible" ? bucket.current : 0),
       0,
     ),
-    taxDeferredCurrentTotal: inputs.buckets.reduce(
+    taxDeferredCurrentTotal: assets.buckets.reduce(
       (sum, bucket) => sum + (bucket.taxTreatment === "taxDeferred" ? bucket.current : 0),
       0,
     ),
@@ -336,14 +336,14 @@ export function deriveAssetsState(
   incomeDirectedContributions: Record<string, number> = {},
 ): DerivedAssetsState {
   const pinnedBuckets = resolvePinnedBuckets(state, incomeDirectedContributions);
-  const inputs = normalizeAssetInputs(pinnedBuckets.state, baselineGrowthRate);
+  const assets = createAssets(pinnedBuckets.state, baselineGrowthRate);
 
   return {
     state: pinnedBuckets.state,
     pinnedBucketIds: pinnedBuckets.pinnedBucketIds,
-    inputs,
+    assets,
     orderedBuckets: pinnedBuckets.orderedBuckets,
-    totals: summarizeAssetInputs(inputs),
+    totals: summarizeAssets(assets),
   };
 }
 
