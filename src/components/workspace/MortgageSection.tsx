@@ -65,7 +65,7 @@ export function MortgageSection({
       index="02"
       title="Home & Mortgage"
       summary="Housing Cost"
-      actions={<ActionButton onClick={onAddMortgageOption}>Add mortgage option</ActionButton>}
+      actions={<ActionButton onClick={onAddMortgageOption}>Add housing option</ActionButton>}
     >
       <div className="split-main-sidebar-wide">
         <div className="grid gap-5">
