@@ -57,79 +57,78 @@ export function AssetsSection({
               removeLabel={isPinnedBucket ? undefined : "Remove asset"}
               onRemove={isPinnedBucket ? undefined : () => onRemoveAssetBucket(bucket.id)}
               detailsTitle="Asset details"
-              detailsSummary={override?.growth != null ? `Growth ${override.growth}%` : null}
+              detailsSummary={override?.growth != null ? `Annual increase ${override.growth}%` : null}
               detailsOpen={bucket.detailsOpen}
               onToggleDetails={(detailsOpen) => onUpdateAssetBucket(bucket.id, { detailsOpen })}
-              headerClassName="grid grid-cols-3 items-center gap-4"
-              detailsContentClassName="grid grid-cols-2 gap-4"
-              header={
+              detailsClassName="grid grid-cols-2 gap-4"
+              details={
                 <>
-                  <TextField
-                    label="Asset name"
-                    value={bucket.name}
-                    placeholder="Asset name"
+                  {showsGrowthOverride ? (
+                    <NumberField
+                      label="Annual increase"
+                      suffix="%"
+                      min="0"
+                      step="0.5"
+                      value={override?.growth ?? null}
+                      placeholder={String(assetGrowthRate)}
+                      onValueChange={(value) => onUpdateAssetOverride(bucket.id, { growth: value })}
+                    />
+                  ) : null}
+                  <SelectField
+                    label="Tax treatment"
+                    value={bucket.taxTreatment}
                     disabled={isPinnedBucket}
-                    inputClassName={isPinnedBucket ? "text-(--ink-soft)" : ""}
-                    onChange={(event) => onUpdateAssetBucket(bucket.id, { name: event.target.value })}
-                  />
-                  <NumberField
-                    label="Current value"
-                    prefix="$"
-                    min="0"
-                    step="1000"
-                    value={bucket.current}
-                    placeholder="0"
-                    inputClassName={isPinnedBucket ? "text-(--ink-soft)" : ""}
-                    onValueChange={(value) => onUpdateAssetBucket(bucket.id, { current: value })}
-                  />
-                  <ProjectedValueDisplay
-                    label={selectedYearLabel}
-                    value={usd(
-                      toDisplayValue(
-                        currentRow.bucketSnapshotsById[bucket.id]?.balance ?? (bucket.current ?? 0),
-                        projection.currentYear,
-                        projection,
-                      ),
-                    )}
-                  />
+                    onChange={(event) =>
+                      onUpdateAssetBucket(bucket.id, { taxTreatment: event.target.value as AssetTaxTreatment })
+                    }
+                  >
+                    <option value="none">Taxable</option>
+                    <option value="taxDeductible">Tax-deductible</option>
+                    <option value="taxDeferred">Tax-deferred</option>
+                  </SelectField>
+                  {bucket.taxTreatment === "none" ? (
+                    <NumberField
+                      label="Current basis"
+                      prefix="$"
+                      min="0"
+                      step="1000"
+                      value={bucket.basis}
+                      placeholder="0"
+                      inputClassName={isPinnedBucket ? "text-(--ink-soft)" : ""}
+                      onValueChange={(value) => onUpdateAssetBucket(bucket.id, { basis: value })}
+                    />
+                  ) : null}
                 </>
               }
             >
-              {showsGrowthOverride ? (
-                <NumberField
-                  label="Growth override"
-                  suffix="%"
-                  min="0"
-                  step="0.5"
-                  value={override?.growth ?? null}
-                  placeholder={String(assetGrowthRate)}
-                  onValueChange={(value) => onUpdateAssetOverride(bucket.id, { growth: value })}
-                />
-              ) : null}
-              <SelectField
-                label="Tax treatment"
-                value={bucket.taxTreatment}
+              <TextField
+                label="Asset name"
+                value={bucket.name}
+                placeholder="Asset name"
                 disabled={isPinnedBucket}
-                onChange={(event) =>
-                  onUpdateAssetBucket(bucket.id, { taxTreatment: event.target.value as AssetTaxTreatment })
-                }
-              >
-                <option value="none">None</option>
-                <option value="taxDeductible">Tax-deductible</option>
-                <option value="taxDeferred">Tax-deferred</option>
-              </SelectField>
-              {bucket.taxTreatment === "none" ? (
-                <NumberField
-                  label="Current basis"
-                  prefix="$"
-                  min="0"
-                  step="1000"
-                  value={bucket.basis}
-                  placeholder="0"
-                  inputClassName={isPinnedBucket ? "text-(--ink-soft)" : ""}
-                  onValueChange={(value) => onUpdateAssetBucket(bucket.id, { basis: value })}
-                />
-              ) : null}
+                inputClassName={isPinnedBucket ? "text-(--ink-soft)" : ""}
+                onChange={(event) => onUpdateAssetBucket(bucket.id, { name: event.target.value })}
+              />
+              <NumberField
+                label="Current value"
+                prefix="$"
+                min="0"
+                step="1000"
+                value={bucket.current}
+                placeholder="0"
+                      inputClassName={isPinnedBucket ? "text-(--ink-soft)" : ""}
+                onValueChange={(value) => onUpdateAssetBucket(bucket.id, { current: value })}
+              />
+              <ProjectedValueDisplay
+                label={selectedYearLabel}
+                value={usd(
+                  toDisplayValue(
+                    currentRow.bucketSnapshotsById[bucket.id]?.balance ?? (bucket.current ?? 0),
+                    projection.currentYear,
+                    projection,
+                  ),
+                )}
+              />
             </RowItem>
           );
         })}

@@ -1,11 +1,16 @@
 import React, { useState } from "react";
 import { AdvancedPanel } from "../AdvancedPanel";
+import { ChartPanel } from "../ChartPanel";
 import { CheckboxField, NumberField, SelectField } from "../Field";
+import { MonthlyCashFlowPanel } from "../ProjectionCashFlowPanel";
+import { NetWorthChart } from "../ProjectionLineCharts";
 import { SegmentedToggle } from "../SegmentedToggle";
-import { SliderField } from "../SliderField";
+import { SliderField } from "../Field";
 import { usd } from "../../lib/format";
+import { type ProjectionResults } from "../../lib/projectionCalculation";
 import { toDisplayValue, type Projection, type ProjectionState } from "../../lib/projectionState";
-import { type ProjectionRow } from "../../lib/projectionUtils";
+import { type MonthlyCashFlow, type ProjectionRow } from "../../lib/projectionUtils";
+import { labelTextClass, primaryNumberTextClass, smallCapsTextClass } from "../../lib/text";
 
 type SummaryRow = {
   href: string;
@@ -15,12 +20,13 @@ type SummaryRow = {
 
 type WorkspaceSummaryPanelProps = {
   currentRow: ProjectionRow;
+  monthlyCashFlow: MonthlyCashFlow;
   projection: Projection;
+  projectionResults: ProjectionResults;
   projectionState: ProjectionState;
   selectedYearLabel: string;
   topLevelSummaryRows: SummaryRow[];
   matchRate: number;
-  assetOptions: Array<{ id: string; name: string }>;
   freeCashFlowOptions: Array<{ id: string; name: string }>;
   onUpdateIncomeField: (field: "matchRate", value: number) => void;
   onUpdateProjectionState: (patch: Partial<ProjectionState>) => void;
@@ -32,7 +38,7 @@ function SummaryLinkRow({ href, label, annualValue }: SummaryRow) {
 
   return (
     <div className="flex gap-2 border-t border-(--line) py-4">
-      <a href={href} className="flex-1 text-sm text-(--ink-soft) hover:text-(--ink)">
+      <a href={href} className={`flex-1 ${labelTextClass} hover:text-(--ink)`}>
         {label}
       </a>
       <a href={href} className="font-bold">
@@ -40,7 +46,7 @@ function SummaryLinkRow({ href, label, annualValue }: SummaryRow) {
       </a>
       <button
         type="button"
-        className="text-sm text-(--ink-soft) transition hover:text-(--ink)"
+        className={`${labelTextClass} transition hover:text-(--ink)`}
         onClick={() => setPeriod(period === "annual" ? "monthly" : "annual")}
       >
         {period === "monthly" ? "/ month" : "/ year"}
@@ -51,12 +57,13 @@ function SummaryLinkRow({ href, label, annualValue }: SummaryRow) {
 
 export function WorkspaceSummaryPanel({
   currentRow,
+  monthlyCashFlow,
   projection,
+  projectionResults,
   projectionState,
   selectedYearLabel,
   topLevelSummaryRows,
   matchRate,
-  assetOptions,
   freeCashFlowOptions,
   onUpdateIncomeField,
   onUpdateProjectionState,
@@ -66,10 +73,10 @@ export function WorkspaceSummaryPanel({
       <div className="grid gap-4 pb-4">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-xs font-extrabold tracking-widest text-(--ink-soft) uppercase">
+            <div className={smallCapsTextClass}>
               {`Net Worth ${selectedYearLabel === "Today" ? "Today" : `In ${selectedYearLabel}`}`}
             </div>
-            <strong className="font-serif text-4xl text-(--teal)">
+            <strong className={primaryNumberTextClass}>
               {usd(toDisplayValue(currentRow.netWorth, projection.currentYear, projection))}
             </strong>
           </div>
@@ -111,11 +118,42 @@ export function WorkspaceSummaryPanel({
         <SummaryLinkRow key={row.href} {...row} />
       ))}
 
+      <div className="grid gap-4 pt-4 pb-4">
+        <ChartPanel
+          title={
+            projection.currentYear === 0
+              ? "Monthly Cash Flow Today"
+              : `Monthly Cash Flow in Year ${projection.currentYear}`
+          }
+        >
+          <MonthlyCashFlowPanel
+            items={monthlyCashFlow.items}
+            netFlow={monthlyCashFlow.netFlow}
+            total={monthlyCashFlow.total}
+          />
+        </ChartPanel>
+
+        <ChartPanel
+          title="Net Worth Curve"
+          legend={[
+            { label: "Net worth", color: "#0a4a53" },
+            { label: "Assets", color: "#0d6a73" },
+            { label: "Home equity", color: "#c56b3d" },
+            { label: "Reserve cash", color: "#566773" },
+          ]}
+        >
+          <NetWorthChart
+            projection={projection}
+            results={projectionResults}
+            currentYear={projection.currentYear}
+          />
+        </ChartPanel>
+      </div>
+
       <AdvancedPanel
         id="workspaceParameters"
         title="Parameters"
-        open={projectionState.advancedOpen}
-        onToggle={(advancedOpen) => onUpdateProjectionState({ advancedOpen })}
+        defaultOpen={false}
       >
         <div className="grid grid-cols-2 gap-4">
           <NumberField
@@ -181,18 +219,6 @@ export function WorkspaceSummaryPanel({
             checked={projectionState.includeVestedRsusInNetWorth}
             onChange={(event) => onUpdateProjectionState({ includeVestedRsusInNetWorth: event.target.checked })}
           />
-          <SelectField
-            label="Down payment funded by"
-            value={projectionState.mortgageFundingBucketId}
-            onChange={(event) => onUpdateProjectionState({ mortgageFundingBucketId: event.target.value })}
-          >
-            <option value="">None</option>
-            {assetOptions.map((bucket) => (
-              <option key={bucket.id} value={bucket.id}>
-                {bucket.name}
-              </option>
-            ))}
-          </SelectField>
           <SelectField
             label="Free cash goes to"
             value={projectionState.freeCashFlowBucketId}

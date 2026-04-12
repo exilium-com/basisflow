@@ -1,9 +1,7 @@
 import React from "react";
 import { ActionButton } from "../ActionButton";
-import { ChartPanel } from "../ChartPanel";
-import { NumberField } from "../Field";
+import { NumberField, SelectField } from "../Field";
 import { MetricGrid } from "../MetricGrid";
-import { MortgageBalanceChart, MortgageCompositionChart } from "../MortgageCharts";
 import { MortgageLoanOptionList } from "../MortgageLoanOptions";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { WorkspaceSection } from "./WorkspaceSection";
@@ -21,10 +19,12 @@ import { type MortgageScenario } from "../../lib/mortgageSchedule";
 type MetricItem = { label: string; value: string };
 
 type MortgageSectionProps = {
+  assetOptions: Array<{ id: string; name: string }>;
   currentYear: number;
   expandedLoanId: string | null;
   mortgage: Mortgage;
   mortgageScenario: MortgageScenario;
+  mortgageFundingBucketId: string;
   mortgageState: MortgageState;
   mortgageSummaryItems: MetricItem[];
   onAddMortgageOption: () => void;
@@ -35,15 +35,18 @@ type MortgageSectionProps = {
   onUpdateLoanField: (optionId: string, field: MortgageLoanField, value: number | null) => void;
   onUpdateLoanKind: (optionId: string, kind: MortgageOptionKind) => void;
   onUpdateLoanName: (optionId: string, name: string) => void;
+  onUpdateMortgageFundingBucketId: (bucketId: string) => void;
   onUpdateMortgageState: (patch: Partial<MortgageState>) => void;
   scenariosById: Record<string, MortgageScenario>;
 };
 
 export function MortgageSection({
+  assetOptions,
   currentYear,
   expandedLoanId,
   mortgage,
   mortgageScenario,
+  mortgageFundingBucketId,
   mortgageState,
   mortgageSummaryItems,
   onAddMortgageOption,
@@ -54,6 +57,7 @@ export function MortgageSection({
   onUpdateLoanField,
   onUpdateLoanKind,
   onUpdateLoanName,
+  onUpdateMortgageFundingBucketId,
   onUpdateMortgageState,
   scenariosById,
 }: MortgageSectionProps) {
@@ -101,24 +105,38 @@ export function MortgageSection({
                 onValueChange={(value) => onUpdateMortgageState({ downPayment: value ?? 0 })}
               />
             </div>
-            <NumberField
-              label="Home insurance"
-              prefix="$"
-              suffix="/ year"
-              value={mortgageState.insurancePerYear}
-              step="1"
-              disabled={isRentScenario}
-              onValueChange={(value) => onUpdateMortgageState({ insurancePerYear: value ?? 0 })}
-            />
-            <NumberField
-              label="HOA"
-              prefix="$"
-              suffix="/ month"
-              value={mortgageState.hoaPerMonth}
-              step="1"
-              disabled={isRentScenario}
-              onValueChange={(value) => onUpdateMortgageState({ hoaPerMonth: value ?? 0 })}
-            />
+            <div className="col-span-2 grid grid-cols-3 gap-4">
+              <NumberField
+                label="Home insurance"
+                prefix="$"
+                suffix="/ year"
+                value={mortgageState.insurancePerYear}
+                step="1"
+                disabled={isRentScenario}
+                onValueChange={(value) => onUpdateMortgageState({ insurancePerYear: value ?? 0 })}
+              />
+              <NumberField
+                label="HOA"
+                prefix="$"
+                suffix="/ month"
+                value={mortgageState.hoaPerMonth}
+                step="1"
+                disabled={isRentScenario}
+                onValueChange={(value) => onUpdateMortgageState({ hoaPerMonth: value ?? 0 })}
+              />
+              <SelectField
+                label="Down payment funded by"
+                value={mortgageFundingBucketId}
+                onChange={(event) => onUpdateMortgageFundingBucketId(event.target.value)}
+              >
+                <option value="">None</option>
+                {assetOptions.map((bucket) => (
+                  <option key={bucket.id} value={bucket.id}>
+                    {bucket.name}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
           </div>
 
           <MortgageLoanOptionList
@@ -146,24 +164,6 @@ export function MortgageSection({
           />
         </div>
       </div>
-
-      {isRentScenario ? null : (
-        <div className="mt-8 grid gap-4">
-          <ChartPanel title="Balance Over Time" legend={[{ label: "Remaining balance", color: "#0c6a7c" }]}>
-            <MortgageBalanceChart scenario={mortgageScenario} />
-          </ChartPanel>
-
-          <ChartPanel
-            title="Principal vs Interest"
-            legend={[
-              { label: "Principal", color: "#0c6a7c" },
-              { label: "Interest", color: "#d28a47" },
-            ]}
-          >
-            <MortgageCompositionChart scenario={mortgageScenario} />
-          </ChartPanel>
-        </div>
-      )}
     </WorkspaceSection>
   );
 }

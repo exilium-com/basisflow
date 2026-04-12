@@ -4,8 +4,7 @@ import { MetricGrid } from "../MetricGrid";
 import { ProjectedValueDisplay } from "../ProjectedValueDisplay";
 import { RowItem } from "../RowItem";
 import { SegmentedToggle } from "../SegmentedToggle";
-import { SliderField } from "../SliderField";
-import { NumberField, TextField } from "../Field";
+import { NumberField, SliderField, TextField } from "../Field";
 import { WorkspaceSection } from "./WorkspaceSection";
 import { usd } from "../../lib/format";
 import {
@@ -14,8 +13,11 @@ import {
   type Income,
   type IncomeItem,
   type IncomeResults,
+  type RsuItem,
+  type SalaryItem,
 } from "../../lib/incomeModel";
 import { toDisplayValue, type Projection } from "../../lib/projectionState";
+import { smallCapsTextClass } from "../../lib/text";
 
 type IncomeSectionProps = {
   income: Income;
@@ -30,6 +32,14 @@ type IncomeSectionProps = {
     field: keyof Omit<Income, "incomeItems">,
     value: Income[keyof Omit<Income, "incomeItems">],
   ) => void;
+  onUpdateIncomeItem: (itemId: string, patch: Partial<IncomeItem>) => void;
+};
+
+type IncomeRowProps<T extends IncomeItem> = {
+  item: T;
+  projection: Projection;
+  selectedYearLabel: string;
+  onRemoveIncomeItem: (itemId: string) => void;
   onUpdateIncomeItem: (itemId: string, patch: Partial<IncomeItem>) => void;
 };
 
@@ -72,6 +82,120 @@ function projectedIncomeValue(item: IncomeItem, projection: Projection) {
   );
 }
 
+function SalaryRowItem({
+  item,
+  projection,
+  selectedYearLabel,
+  onRemoveIncomeItem,
+  onUpdateIncomeItem,
+}: IncomeRowProps<SalaryItem>) {
+  const annualizedSalary = getAnnualSalaryTotal([{ amount: item.amount ?? 0, frequency: item.frequency }]);
+
+  return (
+    <RowItem
+      removeLabel={`Remove ${item.name || "salary"}`}
+      onRemove={(event) => {
+        event.stopPropagation();
+        onRemoveIncomeItem(item.id);
+      }}
+      detailsTitle="Salary details"
+      detailsSummary={renderIncomeSummary(item, annualizedSalary)}
+      detailsOpen={Boolean(item.detailsOpen)}
+      onToggleDetails={(detailsOpen) => onUpdateIncomeItem(item.id, { detailsOpen })}
+      details={
+        <SegmentedToggle
+          label="Frequency"
+          ariaLabel={`${item.name || "Salary"} frequency`}
+          className="w-fit"
+          value={item.frequency}
+          onChange={(frequency) => onUpdateIncomeItem(item.id, { frequency })}
+          options={[
+            { value: "annual", label: "Annual" },
+            { value: "monthly", label: "Monthly" },
+          ]}
+        />
+      }
+    >
+      <TextField
+        label="Income name"
+        value={item.name}
+        onChange={(event) => onUpdateIncomeItem(item.id, { name: event.target.value })}
+      />
+      <NumberField
+        label="Amount"
+        prefix="$"
+        min="0"
+        step="1000"
+        value={item.amount}
+        onValueChange={(value) => onUpdateIncomeItem(item.id, { amount: value })}
+      />
+      <ProjectedValueDisplay
+        label={selectedYearLabel}
+        value={usd(projectedIncomeValue(item, projection))}
+      />
+    </RowItem>
+  );
+}
+
+function RsuRowItem({
+  item,
+  projection,
+  selectedYearLabel,
+  onRemoveIncomeItem,
+  onUpdateIncomeItem,
+}: IncomeRowProps<RsuItem>) {
+  return (
+    <RowItem
+      removeLabel={`Remove ${item.name || "RSU grant"}`}
+      onRemove={(event) => {
+        event.stopPropagation();
+        onRemoveIncomeItem(item.id);
+      }}
+      detailsTitle="RSU details"
+      detailsOpen={Boolean(item.detailsOpen)}
+      onToggleDetails={(detailsOpen) => onUpdateIncomeItem(item.id, { detailsOpen })}
+      details={
+        <div className="grid grid-cols-2 gap-4">
+          <NumberField
+            label="Annual refresher"
+            prefix="$"
+            min="0"
+            step="1000"
+            value={item.refresherAmount}
+            onValueChange={(value) => onUpdateIncomeItem(item.id, { refresherAmount: value })}
+          />
+          <NumberField
+            label="Years left to vest"
+            suffix="years"
+            min="1"
+            step="1"
+            value={item.vestingYears}
+            onValueChange={(value) => onUpdateIncomeItem(item.id, { vestingYears: value })}
+          />
+        </div>
+      }
+    >
+      <TextField
+        label="Income name"
+        value={item.name}
+        onChange={(event) => onUpdateIncomeItem(item.id, { name: event.target.value })}
+      />
+      <NumberField
+        label="Unvested remaining"
+        prefix="$"
+        min="0"
+        step="1000"
+        value={item.grantAmount}
+        onValueChange={(value) => onUpdateIncomeItem(item.id, { grantAmount: value })}
+      />
+      <ProjectedValueDisplay
+        label={selectedYearLabel}
+        value={usd(projectedIncomeValue(item, projection))}
+      />
+    </RowItem>
+  );
+}
+
 export function IncomeSection({
   income,
   incomeResults,
@@ -98,120 +222,32 @@ export function IncomeSection({
       }
     >
       <div className="grid gap-4">
-        {income.incomeItems.map((item) => {
-          if (item.type === "salary") {
-            const annualizedSalary = getAnnualSalaryTotal([{ amount: item.amount ?? 0, frequency: item.frequency }]);
-
-            return (
-              <RowItem
-                key={item.id}
-                headerClassName="grid grid-cols-3 gap-4"
-                removeLabel={`Remove ${item.name || "salary"}`}
-                onRemove={(event) => {
-                  event.stopPropagation();
-                  onRemoveIncomeItem(item.id);
-                }}
-                detailsTitle="Salary details"
-                detailsSummary={renderIncomeSummary(item, annualizedSalary)}
-                detailsOpen={Boolean(item.detailsOpen)}
-                onToggleDetails={(detailsOpen) => onUpdateIncomeItem(item.id, { detailsOpen })}
-                header={
-                  <>
-                    <TextField
-                      label="Income name"
-                      value={item.name}
-                      onChange={(event) => onUpdateIncomeItem(item.id, { name: event.target.value })}
-                    />
-                    <NumberField
-                      label="Amount"
-                      prefix="$"
-                      min="0"
-                      step="1000"
-                      value={item.amount}
-                      onValueChange={(value) => onUpdateIncomeItem(item.id, { amount: value })}
-                    />
-                    <ProjectedValueDisplay
-                      label={selectedYearLabel}
-                      value={usd(projectedIncomeValue(item, projection))}
-                    />
-                  </>
-                }
-              >
-                <SegmentedToggle
-                  label="Frequency"
-                  ariaLabel={`${item.name || "Salary"} frequency`}
-                  className="w-fit"
-                  value={item.frequency}
-                  onChange={(frequency) => onUpdateIncomeItem(item.id, { frequency })}
-                  options={[
-                    { value: "annual", label: "Annual" },
-                    { value: "monthly", label: "Monthly" },
-                  ]}
-                />
-              </RowItem>
-            );
-          }
-
-          return (
-            <RowItem
+        {income.incomeItems.map((item) =>
+          item.type === "salary" ? (
+            <SalaryRowItem
               key={item.id}
-              headerClassName="grid grid-cols-3 gap-4"
-              removeLabel={`Remove ${item.name || "RSU grant"}`}
-              onRemove={(event) => {
-                event.stopPropagation();
-                onRemoveIncomeItem(item.id);
-              }}
-              detailsTitle="RSU details"
-              detailsOpen={Boolean(item.detailsOpen)}
-              onToggleDetails={(detailsOpen) => onUpdateIncomeItem(item.id, { detailsOpen })}
-              header={
-                <>
-                  <TextField
-                    label="Income name"
-                    value={item.name}
-                    onChange={(event) => onUpdateIncomeItem(item.id, { name: event.target.value })}
-                  />
-                  <NumberField
-                    label="Unvested remaining"
-                    prefix="$"
-                    min="0"
-                    step="1000"
-                    value={item.grantAmount}
-                    onValueChange={(value) => onUpdateIncomeItem(item.id, { grantAmount: value })}
-                  />
-                  <ProjectedValueDisplay
-                    label={selectedYearLabel}
-                    value={usd(projectedIncomeValue(item, projection))}
-                  />
-                </>
-              }
-            >
-              <div className="grid grid-cols-2 gap-4">
-                <NumberField
-                  label="Annual refresher"
-                  prefix="$"
-                  min="0"
-                  step="1000"
-                  value={item.refresherAmount}
-                  onValueChange={(value) => onUpdateIncomeItem(item.id, { refresherAmount: value })}
-                />
-                <NumberField
-                  label="Years left to vest"
-                  suffix="years"
-                  min="1"
-                  step="1"
-                  value={item.vestingYears}
-                  onValueChange={(value) => onUpdateIncomeItem(item.id, { vestingYears: value })}
-                />
-              </div>
-            </RowItem>
-          );
-        })}
+              item={item}
+              projection={projection}
+              selectedYearLabel={selectedYearLabel}
+              onRemoveIncomeItem={onRemoveIncomeItem}
+              onUpdateIncomeItem={onUpdateIncomeItem}
+            />
+          ) : (
+            <RsuRowItem
+              key={item.id}
+              item={item}
+              projection={projection}
+              selectedYearLabel={selectedYearLabel}
+              onRemoveIncomeItem={onRemoveIncomeItem}
+              onUpdateIncomeItem={onUpdateIncomeItem}
+            />
+          ),
+        )}
       </div>
 
-      <div className="mt-8 grid grid-cols-5 gap-4">
+      <div className="mt-8 grid grid-cols-5 items-start gap-4">
         <div className="col-span-3">
-          <div className="mb-4 text-xs font-extrabold tracking-widest text-(--ink-soft) uppercase">
+          <div className={`mb-4 ${smallCapsTextClass}`}>
             Retirement saving
           </div>
           <div className="grid gap-4 divide-y divide-(--line-soft) pb-4">
@@ -258,7 +294,7 @@ export function IncomeSection({
           </div>
         </div>
 
-        <div className="col-span-2 grid gap-4">
+        <div className="col-span-2 self-start">
           <MetricGrid
             primaryItem={{ label: "Monthly take-home", value: usd(incomeResults.monthlyTakeHome, 2) }}
             items={[

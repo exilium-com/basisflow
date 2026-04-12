@@ -1,5 +1,7 @@
 import React from "react";
+import clsx from "clsx";
 import { usd } from "../lib/format";
+import { labelTextClass } from "../lib/text";
 
 type MonthlyCashFlowItem = {
   label: string;
@@ -90,11 +92,17 @@ export function MonthlyCashFlowPanel({ items, total, netFlow }: MonthlyCashFlowP
         </svg>
       </div>
       <div className="grid flex-1 gap-2">
-        {items.map((item: MonthlyCashFlowItem) => (
-          <div key={item.label} className="flex items-center justify-between gap-4 border-b border-(--line) py-2">
+        {items.map((item: MonthlyCashFlowItem, index: number) => (
+          <div
+            key={item.label}
+            className={clsx(
+              "flex items-center justify-between gap-4 py-2",
+              index < items.length - 1 && "border-b border-(--line)",
+            )}
+          >
             <div className="flex items-center gap-4">
               <i className="size-4" style={{ background: item.color }} />
-              <span className="text-(--ink-soft)">{item.label}</span>
+              <span className={labelTextClass}>{item.label}</span>
             </div>
             <strong>{usd(item.value)}</strong>
           </div>

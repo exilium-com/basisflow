@@ -7,6 +7,7 @@ import { ActionButton } from "./ActionButton";
 import { ProfileLoadDialog } from "./ProfileLoadDialog";
 import { ProfileSaveDialog } from "./ProfileSaveDialog";
 import { ToastMessage } from "./ToastMessage";
+import { buttonTextClass } from "../lib/text";
 
 const PROFILE_NAME_OPTIONS = [
   "Golden Path",
@@ -45,8 +46,8 @@ function ToolNavLinks() {
       key={item.key}
       className={({ isActive }) =>
         clsx(
-          `inline-flex h-10 items-center gap-2 border border-(--line) bg-(--white-soft) px-4 text-xs font-extrabold
-          tracking-wide text-(--ink) uppercase no-underline transition hover:-translate-y-px
+          `inline-flex h-10 items-center gap-2 border border-(--line) bg-(--white-soft) px-4 ${buttonTextClass}
+          text-(--ink) no-underline transition hover:-translate-y-px
           hover:bg-(--white) focus-visible:-translate-y-px focus-visible:bg-(--white) focus-visible:outline-none`,
           isActive && "!border-(--teal) !bg-(--teal-tint) !text-(--teal)",
         )
@@ -71,17 +72,17 @@ function ShellActions({
   return (
     <div className="flex items-center gap-2">
       {statusMessage ? <ToastMessage message={statusMessage} /> : null}
-      <ActionButton className="text-xs tracking-wide uppercase" onClick={onOpenSaveDialog}>
+      <ActionButton onClick={onOpenSaveDialog}>
         Save
       </ActionButton>
       <ActionButton
-        className="text-xs tracking-wide uppercase disabled:cursor-not-allowed disabled:opacity-50"
+        className="disabled:cursor-not-allowed disabled:opacity-50"
         onClick={onOpenLoadDialog}
         disabled={!profileAvailable}
       >
         Load
       </ActionButton>
-      <ActionButton className="text-xs tracking-wide uppercase" onClick={onResetAll}>
+      <ActionButton onClick={onResetAll}>
         Reset
       </ActionButton>
       {actions}

@@ -78,7 +78,7 @@ export function HomePage() {
                       <h2 className="text-2xl leading-none">
                         {item.title}
                       </h2>
-                      <p className="max-w-xl leading-6 text-(--ink-soft)">
+                      <p className="max-w-xl text-base leading-6 text-(--ink-soft)">
                         {item.description}
                       </p>
                     </div>

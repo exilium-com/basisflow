@@ -3,7 +3,6 @@ import { AssetsSection } from "../components/workspace/AssetsSection";
 import { ExpensesSection } from "../components/workspace/ExpensesSection";
 import { IncomeSection } from "../components/workspace/IncomeSection";
 import { MortgageSection } from "../components/workspace/MortgageSection";
-import { ProjectionSection } from "../components/workspace/ProjectionSection";
 import { TaxesSection } from "../components/workspace/TaxesSection";
 import { WorkspaceSummaryPanel } from "../components/workspace/WorkspaceSummaryPanel";
 import { WorkspaceLayout } from "../components/WorkspaceLayout";
@@ -104,8 +103,6 @@ export function WorkspacePage() {
   const [longTermCapitalGains, setLongTermCapitalGains] = useState(() =>
     JSON.stringify(taxConfig.longTermCapitalGains, null, 2),
   );
-  const [taxLimitsOpen, setTaxLimitsOpen] = useState(false);
-  const [taxTablesOpen, setTaxTablesOpen] = useState(false);
   const [taxEditorStatus, setTaxEditorStatus] = useState("");
   useEffect(() => {
     setFederalBrackets(JSON.stringify(taxConfig.federalBrackets, null, 2));
@@ -500,12 +497,13 @@ export function WorkspacePage() {
           summary={
             <WorkspaceSummaryPanel
               currentRow={currentRow}
+              monthlyCashFlow={monthlyCashFlow}
               projection={projection}
+              projectionResults={projectionResults}
               projectionState={projectionState}
               selectedYearLabel={selectedYearLabel}
               topLevelSummaryRows={topLevelSummaryRows}
               matchRate={income.matchRate}
-              assetOptions={assetOptions}
               freeCashFlowOptions={freeCashFlowOptions}
               onUpdateIncomeField={(field, value) => updateIncomeField(field, value)}
               onUpdateProjectionState={updateProjectionState}
@@ -526,10 +524,12 @@ export function WorkspacePage() {
           />
 
           <MortgageSection
+            assetOptions={assetOptions}
             currentYear={projection.currentYear}
             expandedLoanId={expandedLoanId}
             mortgage={mortgage}
             mortgageScenario={mortgageScenario}
+            mortgageFundingBucketId={projectionState.mortgageFundingBucketId}
             mortgageState={mortgageState}
             mortgageSummaryItems={mortgageSummaryItems}
             scenariosById={scenariosById}
@@ -541,6 +541,9 @@ export function WorkspacePage() {
             onUpdateLoanField={updateLoanField}
             onUpdateLoanKind={updateLoanKind}
             onUpdateLoanName={updateLoanName}
+            onUpdateMortgageFundingBucketId={(mortgageFundingBucketId) =>
+              updateProjectionState({ mortgageFundingBucketId })
+            }
             onUpdateMortgageState={updateMortgageState}
           />
 
@@ -553,14 +556,10 @@ export function WorkspacePage() {
             stateBrackets={stateBrackets}
             taxConfig={taxConfig}
             taxEditorStatus={taxEditorStatus}
-            taxLimitsOpen={taxLimitsOpen}
-            taxTablesOpen={taxTablesOpen}
             onApplyTaxTables={applyTaxTables}
             onSetFederalBrackets={setFederalBrackets}
             onSetLongTermCapitalGains={setLongTermCapitalGains}
             onSetStateBrackets={setStateBrackets}
-            onSetTaxLimitsOpen={setTaxLimitsOpen}
-            onSetTaxTablesOpen={setTaxTablesOpen}
             onUpdateMortgageState={updateMortgageState}
             onUpdateTaxConfig={updateTaxConfig}
           />
@@ -589,12 +588,6 @@ export function WorkspacePage() {
             onRemoveAssetBucket={removeAssetBucket}
             onUpdateAssetBucket={updateAssetBucket}
             onUpdateAssetOverride={updateAssetOverride}
-          />
-
-          <ProjectionSection
-            monthlyCashFlow={monthlyCashFlow}
-            projection={projection}
-            projectionResults={projectionResults}
           />
         </WorkspaceLayout>
       </main>

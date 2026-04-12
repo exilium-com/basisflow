@@ -1,7 +1,8 @@
 import React from "react";
 import clsx from "clsx";
+import { labelTextClass } from "../lib/text";
 
-export const fieldLabelClass = "text-sm text-(--ink-soft)";
+export const fieldLabelClass = labelTextClass;
 
 const inputBaseClassName =
   "w-full min-w-0 border-0 bg-transparent p-0 text-base font-semibold text-(--ink) outline-none";
@@ -15,7 +16,7 @@ const textAreaClassName =
 const inputFrameClassName =
   "relative flex min-h-10 items-center border border-(--line) border-l-4 border-l-(--teal-soft) bg-(--white) px-4 transition-colors focus-within:border-(--teal) focus-within:border-l-(--teal)";
 const invalidInputFrameClassName = "border-(--danger) border-l-(--danger)";
-const affixClassName = "flex-none text-sm font-extrabold text-(--ink-soft)";
+const affixClassName = `flex-none ${labelTextClass}`;
 const checkboxLabelClassName = "flex min-h-8 w-full items-center gap-2 text-base font-semibold text-(--ink)";
 
 type FieldProps = {
@@ -77,6 +78,14 @@ type CheckboxFieldProps = BaseFieldProps &
 
 type TextAreaFieldProps = BaseFieldProps &
   Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "className" | "label">;
+
+type SliderFieldProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "className" | "type"> & {
+  id?: string;
+  label: React.ReactNode;
+  valueLabel: React.ReactNode;
+  className?: string;
+  labelClassName?: string;
+};
 
 export function Field({ label, htmlFor, className = "", labelClassName = "", children }: FieldProps) {
   return (
@@ -228,7 +237,7 @@ export function SelectField({
         <select id={inputId} className={selectClassName} {...inputProps}>
           {children}
         </select>
-        <span aria-hidden="true" className="pointer-events-none absolute right-4 text-sm font-bold text-(--ink-soft)">
+        <span aria-hidden="true" className={`pointer-events-none absolute right-4 ${labelTextClass}`}>
           ▾
         </span>
       </InputFrame>
@@ -283,6 +292,36 @@ export function TextAreaField({
   return (
     <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
       <textarea id={inputId} className={clsx(textAreaClassName, inputClassName)} {...props} />
+    </Field>
+  );
+}
+
+export function SliderField({
+  id,
+  label,
+  valueLabel,
+  className = "",
+  labelClassName = "",
+  ...inputProps
+}: SliderFieldProps) {
+  const resolvedId = React.useId();
+  const inputId = id ?? resolvedId;
+
+  return (
+    <Field
+      label={
+        <>
+          <span>{label}</span>
+          <span className="whitespace-nowrap text-(--ink)">{valueLabel}</span>
+        </>
+      }
+      htmlFor={inputId}
+      className={className}
+      labelClassName={clsx("flex items-center justify-between gap-4", labelClassName)}
+    >
+      <InputFrame className="px-4">
+        <input id={inputId} className="slider-input w-full" type="range" {...inputProps} />
+      </InputFrame>
     </Field>
   );
 }

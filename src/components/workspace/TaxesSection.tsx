@@ -9,6 +9,7 @@ import { usd } from "../../lib/format";
 import { type IncomeResults, type ResolvedIncome } from "../../lib/incomeModel";
 import { type MortgageState } from "../../lib/mortgageConfig";
 import { type TaxConfig } from "../../lib/taxConfig";
+import { labelTextClass } from "../../lib/text";
 
 type TaxesSectionProps = {
   federalBrackets: string;
@@ -19,14 +20,10 @@ type TaxesSectionProps = {
   stateBrackets: string;
   taxConfig: TaxConfig;
   taxEditorStatus: string;
-  taxLimitsOpen: boolean;
-  taxTablesOpen: boolean;
   onApplyTaxTables: () => void;
   onSetFederalBrackets: (value: string) => void;
   onSetLongTermCapitalGains: (value: string) => void;
   onSetStateBrackets: (value: string) => void;
-  onSetTaxLimitsOpen: (open: boolean) => void;
-  onSetTaxTablesOpen: (open: boolean) => void;
   onUpdateMortgageState: (patch: Partial<MortgageState>) => void;
   onUpdateTaxConfig: (patch: Partial<TaxConfig>) => void;
 };
@@ -40,14 +37,10 @@ export function TaxesSection({
   stateBrackets,
   taxConfig,
   taxEditorStatus,
-  taxLimitsOpen,
-  taxTablesOpen,
   onApplyTaxTables,
   onSetFederalBrackets,
   onSetLongTermCapitalGains,
   onSetStateBrackets,
-  onSetTaxLimitsOpen,
-  onSetTaxTablesOpen,
   onUpdateMortgageState,
   onUpdateTaxConfig,
 }: TaxesSectionProps) {
@@ -66,7 +59,7 @@ export function TaxesSection({
               { value: "itemized", label: "Itemized" },
             ]}
           />
-          <AdvancedPanel id="taxLimits" title="Tax parameters" open={taxLimitsOpen} onToggle={onSetTaxLimitsOpen}>
+          <AdvancedPanel id="taxLimits" title="Tax parameters">
             <div className="grid grid-cols-2 gap-4">
               <NumberField
                 label="CA SDI rate"
@@ -118,7 +111,7 @@ export function TaxesSection({
             </div>
           </AdvancedPanel>
 
-          <AdvancedPanel id="taxTables" title="Bracket tables" open={taxTablesOpen} onToggle={onSetTaxTablesOpen}>
+          <AdvancedPanel id="taxTables" title="Bracket tables">
             <div className="grid gap-4">
               <TextAreaField
                 label="Federal brackets"
@@ -141,7 +134,7 @@ export function TaxesSection({
             </div>
             <div className="mt-4 flex items-center gap-4">
               <ActionButton onClick={onApplyTaxTables}>Apply tax tables</ActionButton>
-              <div className="min-h-6 text-sm text-(--ink-soft)">{taxEditorStatus}</div>
+              <div className={`min-h-6 ${labelTextClass}`}>{taxEditorStatus}</div>
             </div>
           </AdvancedPanel>
         </div>
