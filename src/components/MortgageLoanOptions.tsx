@@ -68,13 +68,13 @@ function MortgageLoanOptionCard({
       bodyClassName="grid gap-4"
       selected={selected}
       onSelect={() => onSelectLoan(loan.id)}
-      removeLabel={optionCount > 1 ? `Remove ${loanState.name || "mortgage option"}` : undefined}
+      removeLabel={optionCount > 1 ? `Remove ${loanState.name || "scenario"}` : undefined}
       onRemove={optionCount > 1 ? () => onRemoveLoan(loan.id) : undefined}
       details={
         <>
           <SegmentedToggle
             label="Type"
-            ariaLabel={`Loan type for ${loanState.name || "mortgage option"}`}
+            ariaLabel={`Loan type for ${loanState.name || "scenario"}`}
             className="w-fit"
             value={loanState.kind}
             onChange={(kind) => onUpdateLoanKind(loan.id, kind)}
@@ -112,7 +112,7 @@ function MortgageLoanOptionCard({
           ) : null}
         </>
       }
-      detailsTitle="Option details"
+      detailsTitle="Scenario details"
       detailsSummary={detailsSummary}
       detailsOpen={expandedLoanId === loan.id}
       onToggleDetails={(open) => onSetExpandedLoanId(open ? loan.id : null)}
@@ -120,7 +120,7 @@ function MortgageLoanOptionCard({
       <div className="flex items-end gap-4">
         <TextField
           className="flex-1"
-          label="Option name"
+          label="Scenario name"
           value={loanState.name}
           onChange={(event) => onUpdateLoanName(loan.id, event.target.value)}
         />

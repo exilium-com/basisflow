@@ -7,6 +7,7 @@ import { SegmentedToggle } from "../SegmentedToggle";
 import { WorkspaceSection } from "./WorkspaceSection";
 import { usd } from "../../lib/format";
 import { getMortgageMonthlyPaymentForYear } from "../../lib/mortgagePage";
+import { labelTextClass } from "../../lib/text";
 import {
   type Mortgage,
   type MortgageDownPaymentMode,
@@ -69,7 +70,7 @@ export function MortgageSection({
       index="02"
       title="Home & Mortgage"
       summary="Housing Cost"
-      actions={<ActionButton onClick={onAddMortgageOption}>Add housing option</ActionButton>}
+      actions={<ActionButton onClick={onAddMortgageOption}>Add scenario</ActionButton>}
     >
       <div className="grid grid-cols-5 gap-4">
         <div className="col-span-3 grid gap-4">
@@ -158,7 +159,12 @@ export function MortgageSection({
           <div className="sticky top-4">
             <MetricGrid
               primaryItem={{
-                label: isRentScenario ? "Estimated monthly rent" : "Estimated monthly payment",
+                label: (
+                  <span className="grid gap-1">
+                    <span>{isRentScenario ? "Estimated monthly rent for" : "Estimated monthly payment for"}</span>
+                    <span className={labelTextClass}>{mortgageScenario.typeLabel}</span>
+                  </span>
+                ),
                 value: usd(getMortgageMonthlyPaymentForYear(mortgageScenario, currentYear)),
               }}
               items={mortgageSummaryItems}
