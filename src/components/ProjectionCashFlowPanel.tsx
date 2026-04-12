@@ -1,5 +1,7 @@
 import React from "react";
+import clsx from "clsx";
 import { usd } from "../lib/format";
+import { labelTextClass } from "../lib/text";
 
 type MonthlyCashFlowItem = {
   label: string;
@@ -51,8 +53,8 @@ export function MonthlyCashFlowPanel({ items, total, netFlow }: MonthlyCashFlowP
   let currentAngle = -Math.PI / 2;
 
   return (
-    <div className="cashflow-chart-grid px-4 pt-2 pb-4">
-      <div className="flex justify-center">
+    <div className="flex items-center gap-4 p-4">
+      <div className="flex w-60 shrink-0 justify-center">
         <svg viewBox="0 0 224 224" role="img" aria-label="Monthly cash flow breakdown">
           <circle cx={cx} cy={cy} r={outerRadius} fill="var(--white)" stroke="var(--line-soft)" />
           {total > 0
@@ -89,12 +91,18 @@ export function MonthlyCashFlowPanel({ items, total, netFlow }: MonthlyCashFlowP
           </text>
         </svg>
       </div>
-      <div className="grid gap-2">
-        {items.map((item: MonthlyCashFlowItem) => (
-          <div key={item.label} className="flex items-center justify-between gap-4 border-b border-(--line) py-2">
-            <div className="inline-flex items-center gap-3">
-              <i className="inline-block h-3 w-3" style={{ background: item.color }} />
-              <span className="text-(--ink-soft)">{item.label}</span>
+      <div className="grid flex-1 gap-2">
+        {items.map((item: MonthlyCashFlowItem, index: number) => (
+          <div
+            key={item.label}
+            className={clsx(
+              "flex items-center justify-between gap-4 py-2",
+              index < items.length - 1 && "border-b border-(--line)",
+            )}
+          >
+            <div className="flex items-center gap-4">
+              <i className="size-4" style={{ background: item.color }} />
+              <span className={labelTextClass}>{item.label}</span>
             </div>
             <strong>{usd(item.value)}</strong>
           </div>

@@ -26,7 +26,6 @@ type ProjectionSettings = {
 };
 
 export type ProjectionState = ProjectionSettings & {
-  advancedOpen: boolean;
   assetOverrides: Record<string, ProjectionAssetOverride>;
   expenseOverrides: Record<string, ProjectionExpenseOverride>;
 };
@@ -55,7 +54,6 @@ export const DEFAULT_PROJECTION_STATE: ProjectionState = {
   homeAppreciationRate: 3,
   displayMode: "nominal",
   includeVestedRsusInNetWorth: false,
-  advancedOpen: false,
   mortgageFundingBucketId: "",
   freeCashFlowBucketId: "",
   assetOverrides: {},
@@ -105,7 +103,6 @@ export function normalizeProjectionState(parsed: unknown, fallback: ProjectionSt
     ...numericState,
     displayMode: state.displayMode === "real" ? "real" : "nominal",
     includeVestedRsusInNetWorth: Boolean(state.includeVestedRsusInNetWorth),
-    advancedOpen: Boolean(state.advancedOpen),
     mortgageFundingBucketId:
       typeof state.mortgageFundingBucketId === "string" ? state.mortgageFundingBucketId : fallback.mortgageFundingBucketId,
     freeCashFlowBucketId:

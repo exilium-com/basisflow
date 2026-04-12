@@ -7,31 +7,24 @@ const TOOL_AREAS = [
   {
     title: "Income",
     description: "Salary, RSUs, taxes, and take-home pay in one place.",
-    accent: "var(--teal)",
     border: "rgba(13,106,115,0.18)",
   },
   {
     title: "Assets",
     description: "Balances, basis, and tax treatment without spreadsheet sprawl.",
-    accent: "var(--clay)",
     border: "rgba(197,107,61,0.22)",
   },
   {
     title: "Housing",
     description: "Mortgage cost, down payment, and home equity impact.",
-    accent: "var(--teal)",
     border: "rgba(13,106,115,0.18)",
   },
   {
     title: "Projection",
     description: "A long-run view of how cash flow compounds into net worth.",
-    accent: "var(--clay)",
     border: "rgba(197,107,61,0.22)",
   },
 ];
-
-const mutedText = { color: "var(--ink-soft)" };
-const sectionBorder = { borderColor: "var(--line-soft)" };
 
 export function HomePage() {
   return (
@@ -47,7 +40,7 @@ export function HomePage() {
               }}
             />
             <div
-              className="absolute h-72 w-72 rounded-full"
+              className="absolute h-64 w-64 rounded-full"
               style={{
                 right: "-8%",
                 bottom: "-18%",
@@ -57,43 +50,35 @@ export function HomePage() {
           </div>
 
           <div className={`${pageSectionClass} relative flex flex-1`}>
-            <div className="home-reveal mx-auto grid max-w-5xl flex-1 content-center gap-8 py-6 md:py-8">
+            <div className="home-reveal mx-auto grid max-w-4xl flex-1 content-center gap-8 py-8">
               <div className="grid gap-4">
-                <h1 className="max-w-4xl leading-none" style={{ fontSize: "clamp(3rem, 8vw, 6rem)" }}>
+                <h1 className="max-w-4xl text-4xl leading-none">
                   See how income turns to net worth.
                 </h1>
-                <p className="home-reveal home-delay-1 max-w-2xl text-base leading-7 md:text-lg" style={mutedText}>
+                <p className="home-reveal home-delay-1 max-w-2xl text-base leading-6 text-(--ink-soft)">
                   Basisflow combines income, assets, mortgage, expenses, and projection into one working model so you
                   can understand how today&apos;s cash flow compounds into long-run outcomes.
                 </p>
-                <div className="home-reveal home-delay-2 pt-2">
-                  <ActionButton
-                    to="/workspace"
-                    className="h-14 px-6 text-base font-extrabold uppercase"
-                    style={{
-                      backgroundColor: "var(--teal)",
-                      borderColor: "var(--teal)",
-                      color: "var(--white)",
-                      letterSpacing: "0.08em",
-                    }}
-                  >
-                    Get started
-                  </ActionButton>
-                </div>
+                <ActionButton
+                  to="/workspace"
+                  className="home-reveal home-delay-2 border-(--teal) bg-(--teal) text-base font-extrabold
+                    text-(--white) uppercase tracking-wide"
+                >
+                  Get started
+                </ActionButton>
               </div>
 
-              <div className="grid gap-2 border-t pt-5" style={sectionBorder}>
+              <div className="grid gap-2 border-t border-(--line-soft) pt-4">
                 {TOOL_AREAS.map((item) => (
                   <article
                     key={item.title}
-                    className="home-reveal home-delay-2 border-b py-3 transition duration-200 hover:translate-x-1"
-                    style={sectionBorder}
+                    className="home-reveal home-delay-2 border-b border-(--line-soft) py-4 transition hover:translate-x-1"
                   >
                     <div className="grid gap-1 border-l pl-4" style={{ borderColor: item.border }}>
-                      <h2 className="leading-none" style={{ fontSize: "clamp(1.5rem, 2.4vw, 2.4rem)" }}>
+                      <h2 className="text-2xl leading-none">
                         {item.title}
                       </h2>
-                      <p className="max-w-xl leading-6" style={mutedText}>
+                      <p className="max-w-xl text-base leading-6 text-(--ink-soft)">
                         {item.description}
                       </p>
                     </div>

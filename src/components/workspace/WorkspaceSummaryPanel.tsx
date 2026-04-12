@@ -1,11 +1,16 @@
 import React, { useState } from "react";
 import { AdvancedPanel } from "../AdvancedPanel";
+import { ChartPanel } from "../ChartPanel";
 import { CheckboxField, NumberField, SelectField } from "../Field";
+import { MonthlyCashFlowPanel } from "../ProjectionCashFlowPanel";
+import { NetWorthChart } from "../ProjectionLineCharts";
 import { SegmentedToggle } from "../SegmentedToggle";
-import { SliderField } from "../SliderField";
+import { SliderField } from "../Field";
 import { usd } from "../../lib/format";
+import { type ProjectionResults } from "../../lib/projectionCalculation";
 import { toDisplayValue, type Projection, type ProjectionState } from "../../lib/projectionState";
-import { type ProjectionRow } from "../../lib/projectionUtils";
+import { type MonthlyCashFlow, type ProjectionRow } from "../../lib/projectionUtils";
+import { labelTextClass, primaryNumberTextClass, smallCapsTextClass } from "../../lib/text";
 
 type SummaryRow = {
   href: string;
@@ -15,12 +20,13 @@ type SummaryRow = {
 
 type WorkspaceSummaryPanelProps = {
   currentRow: ProjectionRow;
+  monthlyCashFlow: MonthlyCashFlow;
   projection: Projection;
+  projectionResults: ProjectionResults;
   projectionState: ProjectionState;
   selectedYearLabel: string;
   topLevelSummaryRows: SummaryRow[];
   matchRate: number;
-  assetOptions: Array<{ id: string; name: string }>;
   freeCashFlowOptions: Array<{ id: string; name: string }>;
   onUpdateIncomeField: (field: "matchRate", value: number) => void;
   onUpdateProjectionState: (patch: Partial<ProjectionState>) => void;
@@ -31,64 +37,61 @@ function SummaryLinkRow({ href, label, annualValue }: SummaryRow) {
   const value = usd(period === "monthly" ? annualValue / 12 : annualValue);
 
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-(--line) py-3">
-      <a href={href} className="min-w-0 flex-1 text-sm text-(--ink-soft) no-underline transition hover:text-(--ink)">
+    <div className="flex gap-2 border-t border-(--line) py-4">
+      <a href={href} className={`flex-1 ${labelTextClass} hover:text-(--ink)`}>
         {label}
       </a>
-      <div className="flex items-baseline gap-1.5">
-        <a href={href} className="text-right text-(--ink) no-underline">
-          <strong>{value}</strong>
-        </a>
-        <button
-          type="button"
-          className="text-xs font-extrabold tracking-wide text-(--ink-soft) transition hover:text-(--ink)"
-          onClick={() => setPeriod(period === "annual" ? "monthly" : "annual")}
-        >
-          {period === "monthly" ? "/ month" : "/ year"}
-        </button>
-      </div>
+      <a href={href} className="font-bold">
+        {value}
+      </a>
+      <button
+        type="button"
+        className={`${labelTextClass} transition hover:text-(--ink)`}
+        onClick={() => setPeriod(period === "annual" ? "monthly" : "annual")}
+      >
+        {period === "monthly" ? "/ month" : "/ year"}
+      </button>
     </div>
   );
 }
 
 export function WorkspaceSummaryPanel({
   currentRow,
+  monthlyCashFlow,
   projection,
+  projectionResults,
   projectionState,
   selectedYearLabel,
   topLevelSummaryRows,
   matchRate,
-  assetOptions,
   freeCashFlowOptions,
   onUpdateIncomeField,
   onUpdateProjectionState,
 }: WorkspaceSummaryPanelProps) {
   return (
     <>
-      <div className="grid gap-4 border-b border-(--line) pb-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="grid gap-1">
-            <div className="text-xs font-extrabold tracking-widest text-(--ink-soft) uppercase">
+      <div className="grid gap-4 pb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className={smallCapsTextClass}>
               {`Net Worth ${selectedYearLabel === "Today" ? "Today" : `In ${selectedYearLabel}`}`}
             </div>
-            <strong className="font-serif text-5xl leading-none tracking-tight text-(--teal)">
+            <strong className={primaryNumberTextClass}>
               {usd(toDisplayValue(currentRow.netWorth, projection.currentYear, projection))}
             </strong>
           </div>
-          <div className="grid gap-1">
-            <SegmentedToggle
-              ariaLabel="Display mode"
-              value={projectionState.displayMode}
-              onChange={(displayMode) => onUpdateProjectionState({ displayMode })}
-              options={[
-                { value: "nominal", label: "Nominal" },
-                { value: "real", label: "Real" },
-              ]}
-            />
-          </div>
+          <SegmentedToggle
+            ariaLabel="Display mode"
+            value={projectionState.displayMode}
+            onChange={(displayMode) => onUpdateProjectionState({ displayMode })}
+            options={[
+              { value: "nominal", label: "Nominal" },
+              { value: "real", label: "Real" },
+            ]}
+          />
         </div>
 
-        <div className="summary-year-grid">
+        <div className="flex justify-between gap-4">
           <SliderField
             label="Selected year"
             valueLabel={selectedYearLabel}
@@ -97,6 +100,7 @@ export function WorkspaceSummaryPanel({
             step="1"
             value={projection.currentYear}
             onChange={(event) => onUpdateProjectionState({ currentYear: Number(event.target.value) })}
+            className="flex-1"
           />
           <NumberField
             label="Horizon"
@@ -110,19 +114,48 @@ export function WorkspaceSummaryPanel({
         </div>
       </div>
 
-      <div className="mt-4">
-        {topLevelSummaryRows.map((row) => (
-          <SummaryLinkRow key={row.href} {...row} />
-        ))}
+      {topLevelSummaryRows.map((row) => (
+        <SummaryLinkRow key={row.href} {...row} />
+      ))}
+
+      <div className="grid gap-4 pt-4 pb-4">
+        <ChartPanel
+          title={
+            projection.currentYear === 0
+              ? "Monthly Cash Flow Today"
+              : `Monthly Cash Flow in Year ${projection.currentYear}`
+          }
+        >
+          <MonthlyCashFlowPanel
+            items={monthlyCashFlow.items}
+            netFlow={monthlyCashFlow.netFlow}
+            total={monthlyCashFlow.total}
+          />
+        </ChartPanel>
+
+        <ChartPanel
+          title="Net Worth Curve"
+          legend={[
+            { label: "Net worth", color: "#0a4a53" },
+            { label: "Assets", color: "#0d6a73" },
+            { label: "Home equity", color: "#c56b3d" },
+            { label: "Reserve cash", color: "#566773" },
+          ]}
+        >
+          <NetWorthChart
+            projection={projection}
+            results={projectionResults}
+            currentYear={projection.currentYear}
+          />
+        </ChartPanel>
       </div>
 
       <AdvancedPanel
         id="workspaceParameters"
         title="Parameters"
-        open={projectionState.advancedOpen}
-        onToggle={(advancedOpen) => onUpdateProjectionState({ advancedOpen })}
+        defaultOpen={false}
       >
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-2 gap-4">
           <NumberField
             label="Match rate"
             suffix="%"
@@ -136,7 +169,7 @@ export function WorkspaceSummaryPanel({
             label="Inflation"
             suffix="%"
             min="0"
-            step="0.1"
+            step="0.5"
             value={projectionState.inflationRate}
             onValueChange={(value) => onUpdateProjectionState({ inflationRate: value ?? 0 })}
           />
@@ -144,7 +177,7 @@ export function WorkspaceSummaryPanel({
             label="Baseline asset growth"
             suffix="%"
             min="0"
-            step="0.1"
+            step="0.5"
             value={projectionState.assetGrowthRate}
             onValueChange={(value) => onUpdateProjectionState({ assetGrowthRate: value ?? 0 })}
           />
@@ -152,7 +185,7 @@ export function WorkspaceSummaryPanel({
             label="Gross income growth"
             suffix="%"
             min="-10"
-            step="0.1"
+            step="0.5"
             value={projectionState.incomeGrowthRate}
             onValueChange={(value) => onUpdateProjectionState({ incomeGrowthRate: value ?? 0 })}
           />
@@ -160,7 +193,7 @@ export function WorkspaceSummaryPanel({
             label="Baseline expense growth"
             suffix="%"
             min="-20"
-            step="0.1"
+            step="0.5"
             value={projectionState.expenseGrowthRate}
             onValueChange={(value) => onUpdateProjectionState({ expenseGrowthRate: value ?? 0 })}
           />
@@ -168,7 +201,7 @@ export function WorkspaceSummaryPanel({
             label="RSU stock growth"
             suffix="%"
             min="-50"
-            step="0.1"
+            step="0.5"
             value={projectionState.rsuStockGrowthRate}
             onValueChange={(value) => onUpdateProjectionState({ rsuStockGrowthRate: value ?? 0 })}
           />
@@ -176,30 +209,16 @@ export function WorkspaceSummaryPanel({
             label="Home appreciation"
             suffix="%"
             min="-10"
-            step="0.1"
+            step="0.5"
             value={projectionState.homeAppreciationRate}
             onValueChange={(value) => onUpdateProjectionState({ homeAppreciationRate: value ?? 0 })}
           />
           <CheckboxField
-            className="md:col-span-2"
+            className="col-span-2"
             label="Include vested RSUs"
             checked={projectionState.includeVestedRsusInNetWorth}
-            onChange={(event) =>
-              onUpdateProjectionState({ includeVestedRsusInNetWorth: event.target.checked })
-            }
+            onChange={(event) => onUpdateProjectionState({ includeVestedRsusInNetWorth: event.target.checked })}
           />
-          <SelectField
-            label="Down payment funded by"
-            value={projectionState.mortgageFundingBucketId}
-            onChange={(event) => onUpdateProjectionState({ mortgageFundingBucketId: event.target.value })}
-          >
-            <option value="">None</option>
-            {assetOptions.map((bucket) => (
-              <option key={bucket.id} value={bucket.id}>
-                {bucket.name}
-              </option>
-            ))}
-          </SelectField>
           <SelectField
             label="Free cash goes to"
             value={projectionState.freeCashFlowBucketId}

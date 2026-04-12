@@ -1,9 +1,9 @@
 import React from "react";
 import clsx from "clsx";
+import { labelTextClass, smallCapsTextClass } from "../lib/text";
 
 type RowItemProps = {
-  header: React.ReactNode;
-  headerClassName?: string;
+  bodyClassName?: string;
   action?: React.ReactNode;
   pinned?: boolean;
   selected?: boolean;
@@ -14,13 +14,13 @@ type RowItemProps = {
   detailsSummary?: React.ReactNode;
   detailsOpen?: boolean;
   onToggleDetails?: (open: boolean) => void;
-  detailsContentClassName?: string;
-  children?: React.ReactNode;
+  detailsClassName?: string;
+  details?: React.ReactNode;
+  children: React.ReactNode;
 };
 
 export function RowItem({
-  header,
-  headerClassName = "",
+  bodyClassName = "",
   action = null,
   pinned = false,
   selected = false,
@@ -31,17 +31,18 @@ export function RowItem({
   detailsSummary = null,
   detailsOpen = false,
   onToggleDetails,
-  detailsContentClassName = "",
+  detailsClassName = "",
+  details = null,
   children,
 }: RowItemProps) {
   const detailsId = React.useId();
-  const headerPadding = "px-4 pt-3 pb-3 pr-12";
+  const headerPadding = "p-4 pr-12";
 
   return (
     <article
       className={clsx(
         "relative border border-(--line) bg-(--white-soft)",
-        pinned && "!border-(--teal-soft) !bg-(--teal-tint)",
+        pinned && "border-(--teal-soft)! bg-(--teal-tint)!",
         selected && "border-(--teal) bg-(--white)",
         onSelect && "cursor-pointer",
       )}
@@ -49,20 +50,20 @@ export function RowItem({
     >
       {onRemove ? (
         <button
-          className="absolute top-2 right-3 z-10 border-0 bg-transparent p-0 text-xs leading-none font-extrabold
-            text-(--ink-soft) transition hover:text-(--ink) focus-visible:outline-none"
+          className="absolute top-4 right-4 z-10 border-0 bg-transparent p-0 leading-none transition hover:text-(--ink)
+            focus-visible:outline-none"
           type="button"
           aria-label={removeLabel}
           onClick={onRemove}
         >
-          X
+          <span className={smallCapsTextClass}>X</span>
         </button>
       ) : null}
 
-        <div className={headerPadding}>
-        <div className="flex items-start justify-between gap-3">
-          <div className={clsx("min-w-0 flex-1", headerClassName)}>
-            {header}
+      <div className={headerPadding}>
+        <div className="flex items-start justify-between gap-4">
+          <div className={clsx("min-w-0 flex-1", bodyClassName || "grid grid-cols-3 gap-4")}>
+            {children}
             {detailsTitle ? (
               <button
                 className="inline-flex items-center gap-2 text-xs text-(--ink) focus-visible:outline-none"
@@ -78,25 +79,22 @@ export function RowItem({
                   {detailsOpen ? "−" : "+"}
                 </span>
                 <span>{detailsTitle}</span>
-                {detailsSummary ? <span className="text-(--ink-soft)">{detailsSummary}</span> : null}
+                {detailsSummary ? <span className={labelTextClass}>{detailsSummary}</span> : null}
               </button>
             ) : null}
           </div>
           {action ? (
-            <div
-              className="flex-none"
-              onClick={(event: React.MouseEvent<HTMLDivElement>) => event.stopPropagation()}
-            >
+            <div className="flex-none" onClick={(event: React.MouseEvent<HTMLDivElement>) => event.stopPropagation()}>
               {action}
             </div>
           ) : null}
         </div>
       </div>
 
-      {detailsTitle && detailsOpen ? (
+      {detailsTitle && detailsOpen && details ? (
         <div id={detailsId}>
-          <div aria-hidden="true" className="mx-6 border-t border-(--line-soft)" />
-          <div className={clsx("px-4 pt-2 pb-4", detailsContentClassName)}>{children}</div>
+          <div aria-hidden="true" className="mx-4 border-t border-(--line-soft)" />
+          <div className={clsx("p-4", detailsClassName)}>{details}</div>
         </div>
       ) : null}
     </article>

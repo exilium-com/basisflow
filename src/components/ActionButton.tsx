@@ -1,6 +1,7 @@
 import React from "react";
 import clsx from "clsx";
 import { Link } from "react-router-dom";
+import { buttonTextClass } from "../lib/text";
 
 type SharedActionButtonProps = {
   className?: string;
@@ -27,10 +28,7 @@ function isLinkProps(props: ActionButtonProps): props is LinkProps {
 
 export function ActionButton(props: ActionButtonProps) {
   const { className = "", style, children } = props;
-  const buttonClassName = clsx(
-    "inline-flex h-10 items-center justify-center gap-2 border border-(--line) bg-(--white-soft) px-4 text-sm font-bold text-(--ink) transition duration-150 hover:-translate-y-px hover:bg-(--white) focus-visible:-translate-y-px focus-visible:bg-(--white) focus-visible:outline-none",
-    className,
-  );
+  const buttonClassName = clsx("action-button", buttonTextClass, className);
 
   if (isLinkProps(props)) {
     const { to, className: _className, style: _style, children: _children, ...linkProps } = props;

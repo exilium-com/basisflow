@@ -2,6 +2,7 @@ import React from "react";
 import { ActionButton } from "./ActionButton";
 import { TextField } from "./Field";
 import { ProfileDialog } from "./ProfileDialog";
+import { buttonTextClass } from "../lib/text";
 
 type ProfileSaveDialogProps = {
   onClose: () => void;
@@ -27,17 +28,12 @@ export function ProfileSaveDialog({
         onChange={(event) => onProfileNameChange(event.target.value)}
       />
       <div className="flex justify-end gap-2">
-        <ActionButton className="px-4 text-xs tracking-wide uppercase" onClick={onClose}>
+        <ActionButton onClick={onClose}>
           Cancel
         </ActionButton>
         <ActionButton
-          className="px-4 text-xs tracking-wide uppercase"
+          className={`${buttonTextClass} border-(--teal) bg-(--teal) text-(--white)`}
           onClick={onSave}
-          style={{
-            backgroundColor: "var(--teal)",
-            borderColor: "var(--teal)",
-            color: "var(--white)",
-          }}
         >
           Save
         </ActionButton>

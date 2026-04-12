@@ -1,5 +1,6 @@
 import React from "react";
 import { ProfileDialog } from "./ProfileDialog";
+import { labelTextClass } from "../lib/text";
 
 type ProfileLoadDialogProps = {
   names: string[];
@@ -16,34 +17,32 @@ export function ProfileLoadDialog({ names, onClose, onDelete, onLoad }: ProfileL
           {names.map((name: string) => (
             <div key={name} className="flex items-stretch">
               <button
-                className="min-h-12 flex-1 border border-(--line) bg-(--white-soft) px-4 py-3 text-left transition duration-150
+                className="flex flex-1 items-center border border-(--line) bg-(--white-soft) p-4 text-base font-semibold text-(--ink)
+                  transition
                   hover:-translate-y-px hover:bg-(--white)"
                 onClick={() => onLoad(name)}
                 type="button"
               >
-                <span className="font-semibold text-(--ink)">{name}</span>
+                {name}
               </button>
               <button
                 aria-label={`Delete ${name}`}
-                className="inline-flex min-h-12 w-12 items-center justify-center border border-l-0 bg-(--white) text-sm font-extrabold
-                  transition duration-150 hover:-translate-y-px hover:bg-(--destructive-soft)"
-                style={{
-                  borderColor: "var(--destructive-soft)",
-                  color: "var(--destructive)",
-                }}
+                className="flex w-10 items-center justify-center border border-l-0 border-(--destructive-soft)
+                  bg-(--white) transition
+                  hover:-translate-y-px hover:bg-(--destructive-soft)"
                 onClick={(event) => {
                   event.stopPropagation();
                   onDelete(name);
                 }}
                 type="button"
               >
-                X
+                <span className="text-sm font-extrabold text-(--destructive)">X</span>
               </button>
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-sm text-(--ink-soft)">No saved profiles.</p>
+        <p className={labelTextClass}>No saved profiles.</p>
       )}
     </ProfileDialog>
   );

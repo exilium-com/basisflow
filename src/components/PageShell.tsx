@@ -7,6 +7,7 @@ import { ActionButton } from "./ActionButton";
 import { ProfileLoadDialog } from "./ProfileLoadDialog";
 import { ProfileSaveDialog } from "./ProfileSaveDialog";
 import { ToastMessage } from "./ToastMessage";
+import { buttonTextClass } from "../lib/text";
 
 const PROFILE_NAME_OPTIONS = [
   "Golden Path",
@@ -45,8 +46,8 @@ function ToolNavLinks() {
       key={item.key}
       className={({ isActive }) =>
         clsx(
-          `inline-flex h-10 items-center gap-2 border border-(--line) bg-(--white-soft) px-3 text-xs font-extrabold
-          tracking-wide text-(--ink) uppercase no-underline transition duration-150 hover:-translate-y-px
+          `inline-flex h-10 items-center gap-2 border border-(--line) bg-(--white-soft) px-4 ${buttonTextClass}
+          text-(--ink) no-underline transition hover:-translate-y-px
           hover:bg-(--white) focus-visible:-translate-y-px focus-visible:bg-(--white) focus-visible:outline-none`,
           isActive && "!border-(--teal) !bg-(--teal-tint) !text-(--teal)",
         )
@@ -54,7 +55,7 @@ function ToolNavLinks() {
       to={item.to}
       end={item.to === "/"}
     >
-      <span className="text-xs opacity-70">{item.index}</span>
+      <span className="opacity-70">{item.index}</span>
       <span>{item.label}</span>
     </NavLink>
   ));
@@ -69,19 +70,19 @@ function ShellActions({
   statusMessage,
 }: ShellActionsProps) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex items-center gap-2">
       {statusMessage ? <ToastMessage message={statusMessage} /> : null}
-      <ActionButton className="px-3 text-xs tracking-wide uppercase" onClick={onOpenSaveDialog}>
+      <ActionButton onClick={onOpenSaveDialog}>
         Save
       </ActionButton>
       <ActionButton
-        className="px-3 text-xs tracking-wide uppercase disabled:cursor-not-allowed disabled:opacity-50"
+        className="disabled:cursor-not-allowed disabled:opacity-50"
         onClick={onOpenLoadDialog}
         disabled={!profileAvailable}
       >
         Load
       </ActionButton>
-      <ActionButton className="px-3 text-xs tracking-wide uppercase" onClick={onResetAll}>
+      <ActionButton onClick={onResetAll}>
         Reset
       </ActionButton>
       {actions}
@@ -200,28 +201,14 @@ export function PageShell({ actions = null, showToolNav = true, title = "BasisFl
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-screen-2xl flex-col px-3 sm:px-4">
+    <div className="mx-auto flex min-h-screen w-full max-w-screen-2xl flex-col px-4">
       {showToolNav ? (
-        <nav className="mt-3 mb-3 border-b border-(--line) pb-3" aria-label="Tools">
-          <div className="hidden sm:flex sm:flex-wrap sm:items-center sm:gap-2">
-            <ToolNavLinks />
-            <div className="ml-auto">
-              <ShellActions
-                actions={actions}
-                onOpenLoadDialog={openLoadDialog}
-                onOpenSaveDialog={openSaveDialog}
-                onResetAll={handleResetAll}
-                profileAvailable={profileAvailable}
-                statusMessage={statusMessage}
-              />
-            </div>
-          </div>
-
-          <div className="sm:hidden">
-            <div className="flex gap-2 overflow-x-auto pb-2 whitespace-nowrap">
+        <nav className="my-4 border-b border-(--line) pb-4" aria-label="Tools">
+          <div className="flex items-center gap-4">
+            <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-2 whitespace-nowrap">
               <ToolNavLinks />
             </div>
-            <div className="mt-2 flex justify-end">
+            <div className="shrink-0">
               <ShellActions
                 actions={actions}
                 onOpenLoadDialog={openLoadDialog}
@@ -234,7 +221,7 @@ export function PageShell({ actions = null, showToolNav = true, title = "BasisFl
           </div>
         </nav>
       ) : (
-        <header className="mt-3 mb-3 flex items-end justify-between gap-4 border-b border-(--line) pb-3">
+        <header className="my-4 flex items-end justify-between gap-4 border-b border-(--line) pb-4">
           <Link to="/" className="no-underline">
             <h1 className="font-serif text-4xl leading-none tracking-tight text-(--ink)">{title}</h1>
           </Link>
@@ -249,7 +236,7 @@ export function PageShell({ actions = null, showToolNav = true, title = "BasisFl
         </header>
       )}
 
-      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+      <div className="flex flex-1 flex-col">{children}</div>
 
       {saveDialogOpen ? (
         <ProfileSaveDialog

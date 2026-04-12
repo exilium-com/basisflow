@@ -1,5 +1,6 @@
 import React from "react";
 import { NumberField, TextField } from "./Field";
+import { ProjectedValueDisplay } from "./ProjectedValueDisplay";
 import { RowItem } from "./RowItem";
 import { SegmentedToggle } from "./SegmentedToggle";
 import { usd } from "../lib/format";
@@ -57,106 +58,108 @@ function MortgageLoanOptionCard({
 }: MortgageLoanOptionCardProps) {
   const detailsSummary =
     loanState.kind === "rent"
-      ? `Grows ${(loanState.rentGrowthRate ?? 0).toFixed(1)}% / year`
+      ? `Yearly increase ${(loanState.rentGrowthRate ?? 0).toFixed(1)}%`
       : loanState.kind === "arm"
         ? `Fixed ${loanState.fixedYears ?? 0} years, resets to ${(loanState.adjustedRate ?? 0).toFixed(3)}%`
         : null;
 
   return (
     <RowItem
+      bodyClassName="grid gap-4"
       selected={selected}
       onSelect={() => onSelectLoan(loan.id)}
       removeLabel={optionCount > 1 ? `Remove ${loanState.name || "mortgage option"}` : undefined}
       onRemove={optionCount > 1 ? () => onRemoveLoan(loan.id) : undefined}
-      header={
-        <div className="grid gap-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <TextField
-              className="flex-1"
-              label="Option name"
-              value={loanState.name}
-              onChange={(event) => onUpdateLoanName(loan.id, event.target.value)}
-            />
-            {loan.kind === "rent" ? (
+      details={
+        <>
+          <SegmentedToggle
+            label="Type"
+            ariaLabel={`Loan type for ${loanState.name || "mortgage option"}`}
+            className="w-fit"
+            value={loanState.kind}
+            onChange={(kind) => onUpdateLoanKind(loan.id, kind)}
+            options={[
+              { value: "conventional", label: "Conv" },
+              { value: "arm", label: "ARM" },
+              { value: "rent", label: "Rent" },
+            ]}
+          />
+          {loan.kind === "arm" ? (
+            <>
               <NumberField
-                className="min-w-0 sm:w-min sm:min-w-40"
-                label="Rent"
-                prefix="$"
-                suffix="/ month"
-                value={loanState.rentPerMonth}
-                step="1"
-                onValueChange={(value) => onUpdateLoanField(loan.id, "rentPerMonth", value)}
-              />
-            ) : (
-              <div className="text-base font-semibold text-(--ink-soft) sm:pb-2 sm:text-lg">
-                {usd(getMortgageMonthlyPaymentForYear(scenario, currentYear))} / month
-              </div>
-            )}
-          </div>
-          {loan.kind !== "rent" ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <NumberField
-                label={loan.kind === "arm" ? "Initial rate" : "Interest rate"}
+                label="Reset rate"
                 suffix="%"
-                value={loan.kind === "arm" ? loanState.initialRate : loanState.rate}
-                step="0.001"
-                onValueChange={(value) =>
-                  onUpdateLoanField(loan.id, loan.kind === "arm" ? "initialRate" : "rate", value)
-                }
+                value={loanState.adjustedRate}
+                step="0.125"
+                onValueChange={(value) => onUpdateLoanField(loan.id, "adjustedRate", value)}
               />
               <NumberField
-                label="Loan term"
+                label="Fixed years"
                 suffix="years"
-                value={loanState.term}
+                value={loanState.fixedYears}
                 step="1"
-                onValueChange={(value) => onUpdateLoanField(loan.id, "term", value)}
+                onValueChange={(value) => onUpdateLoanField(loan.id, "fixedYears", value)}
               />
-            </div>
+            </>
+          ) : loan.kind === "rent" ? (
+            <NumberField
+              label="Yearly increase"
+              suffix="%"
+              value={loanState.rentGrowthRate}
+              step="0.5"
+              onValueChange={(value) => onUpdateLoanField(loan.id, "rentGrowthRate", value)}
+            />
           ) : null}
-        </div>
+        </>
       }
       detailsTitle="Option details"
       detailsSummary={detailsSummary}
       detailsOpen={expandedLoanId === loan.id}
       onToggleDetails={(open) => onSetExpandedLoanId(open ? loan.id : null)}
     >
-      <SegmentedToggle
-        label="Type"
-        ariaLabel={`Loan type for ${loanState.name || "mortgage option"}`}
-        className="w-fit"
-        value={loanState.kind}
-        onChange={(kind) => onUpdateLoanKind(loan.id, kind)}
-        options={[
-          { value: "conventional", label: "Conv" },
-          { value: "arm", label: "ARM" },
-          { value: "rent", label: "Rent" },
-        ]}
-      />
-      {loan.kind === "arm" ? (
-        <>
-          <NumberField
-            label="Reset rate"
-            suffix="%"
-            value={loanState.adjustedRate}
-            step="0.001"
-            onValueChange={(value) => onUpdateLoanField(loan.id, "adjustedRate", value)}
-          />
-          <NumberField
-            label="Fixed years"
-            suffix="years"
-            value={loanState.fixedYears}
-            step="1"
-            onValueChange={(value) => onUpdateLoanField(loan.id, "fixedYears", value)}
-          />
-        </>
-      ) : loan.kind === "rent" ? (
-        <NumberField
-          label="Growth"
-          suffix="%"
-          value={loanState.rentGrowthRate}
-          step="0.1"
-          onValueChange={(value) => onUpdateLoanField(loan.id, "rentGrowthRate", value)}
+      <div className="flex items-end gap-4">
+        <TextField
+          className="flex-1"
+          label="Option name"
+          value={loanState.name}
+          onChange={(event) => onUpdateLoanName(loan.id, event.target.value)}
         />
+        {loan.kind === "rent" ? (
+          <NumberField
+            className="w-48"
+            label="Rent"
+            prefix="$"
+            suffix="/ month"
+            value={loanState.rentPerMonth}
+            step="1"
+            onValueChange={(value) => onUpdateLoanField(loan.id, "rentPerMonth", value)}
+          />
+        ) : (
+          <div className="w-40">
+            <ProjectedValueDisplay
+              label={currentYear === 0 ? "Today" : `Year ${currentYear}`}
+              value={`${usd(getMortgageMonthlyPaymentForYear(scenario, currentYear))} / month`}
+            />
+          </div>
+        )}
+      </div>
+      {loan.kind !== "rent" ? (
+        <div className="grid grid-cols-2 gap-4">
+          <NumberField
+            label={loan.kind === "arm" ? "Initial rate" : "Interest rate"}
+            suffix="%"
+            value={loan.kind === "arm" ? loanState.initialRate : loanState.rate}
+            step="0.125"
+            onValueChange={(value) => onUpdateLoanField(loan.id, loan.kind === "arm" ? "initialRate" : "rate", value)}
+          />
+          <NumberField
+            label="Loan term"
+            suffix="years"
+            value={loanState.term}
+            step="1"
+            onValueChange={(value) => onUpdateLoanField(loan.id, "term", value)}
+          />
+        </div>
       ) : null}
     </RowItem>
   );
@@ -166,7 +169,7 @@ export function MortgageLoanOptionList(props: MortgageLoanOptionListProps) {
   const optionCount = props.state.options.length;
 
   return (
-    <div className="grid gap-2.5" role="list">
+    <div className="grid gap-2" role="list">
       {props.state.options.map((loanState) => {
         const loan = props.mortgage.options.find((entry) => entry.id === loanState.id);
         const scenario = props.scenariosById[loanState.id];
