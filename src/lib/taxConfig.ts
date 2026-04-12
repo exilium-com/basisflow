@@ -17,6 +17,8 @@ export type TaxConfig = {
   federalStandardDeduction: number;
   stateStandardDeduction: number;
   federalSaltCap: number;
+  federalMortgageInterestDebtCap: number;
+  stateMortgageInterestDebtCap: number;
   caSdiRate: number;
   federalBrackets: TaxBracket[];
   stateBrackets: TaxBracket[];
@@ -29,6 +31,8 @@ export const DEFAULT_CONFIG = {
   federalStandardDeduction: 16100,
   stateStandardDeduction: 5706,
   federalSaltCap: 40400,
+  federalMortgageInterestDebtCap: 750000,
+  stateMortgageInterestDebtCap: 1000000,
   caSdiRate: 1.3,
   federalBrackets: [
     { top: 12400, rate: 10 },
@@ -64,6 +68,17 @@ function cloneDefaultConfig(): TaxConfig {
 
 function readNonNegativeConfigNumber(value: unknown, fallback: number) {
   return Math.max(0, readNumber(value, fallback));
+}
+
+function getDeductibleMortgageInterest(interest: number, averageBalance: number, debtCap: number) {
+  if (interest <= 0 || debtCap <= 0) {
+    return 0;
+  }
+  if (averageBalance <= 0 || averageBalance <= debtCap) {
+    return interest;
+  }
+
+  return roundTo(interest * (debtCap / averageBalance), 2);
 }
 
 function normalizeBracketList(list: unknown, fallback: TaxBracket[]): TaxBracket[] {
@@ -126,6 +141,14 @@ export function normalizeConfig(rawConfig: unknown): TaxConfig {
       (config as { federalSaltCap?: unknown }).federalSaltCap,
       fallback.federalSaltCap,
     ),
+    federalMortgageInterestDebtCap: readNonNegativeConfigNumber(
+      (config as { federalMortgageInterestDebtCap?: unknown }).federalMortgageInterestDebtCap,
+      fallback.federalMortgageInterestDebtCap,
+    ),
+    stateMortgageInterestDebtCap: readNonNegativeConfigNumber(
+      (config as { stateMortgageInterestDebtCap?: unknown }).stateMortgageInterestDebtCap,
+      fallback.stateMortgageInterestDebtCap,
+    ),
     caSdiRate: readNonNegativeConfigNumber((config as { caSdiRate?: unknown }).caSdiRate, fallback.caSdiRate),
     federalBrackets: normalizeBracketList((config as { federalBrackets?: unknown }).federalBrackets, fallback.federalBrackets),
     stateBrackets: normalizeBracketList((config as { stateBrackets?: unknown }).stateBrackets, fallback.stateBrackets),
@@ -159,11 +182,22 @@ export function getTaxDeductions(
 ) {
   if (config.deductionMode === "itemized") {
     const mortgageInterest = income?.mortgageInterest ?? 0;
+    const mortgageAverageBalance = income?.mortgageAverageBalance ?? 0;
     const propertyTax = income?.propertyTax ?? 0;
+    const federalMortgageInterest = getDeductibleMortgageInterest(
+      mortgageInterest,
+      mortgageAverageBalance,
+      config.federalMortgageInterestDebtCap,
+    );
+    const stateMortgageInterest = getDeductibleMortgageInterest(
+      mortgageInterest,
+      mortgageAverageBalance,
+      config.stateMortgageInterestDebtCap,
+    );
 
     return {
-      federalDeduction: mortgageInterest + Math.min(propertyTax + stateIncomeTax, config.federalSaltCap),
-      stateDeduction: mortgageInterest + propertyTax,
+      federalDeduction: federalMortgageInterest + Math.min(propertyTax + stateIncomeTax, config.federalSaltCap),
+      stateDeduction: stateMortgageInterest + propertyTax,
     };
   }
 

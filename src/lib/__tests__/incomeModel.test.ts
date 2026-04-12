@@ -132,6 +132,38 @@ describe("calculateIncome", () => {
     expect(highSalt).toBe(lowSalt);
   });
 
+  it("caps federal and California mortgage interest deductions separately", () => {
+    const lowerBalance = runIncomeScenario({
+      salary: 250000,
+      taxConfig: {
+        deductionMode: "itemized",
+        federalMortgageInterestDebtCap: 750000,
+        stateMortgageInterestDebtCap: 1000000,
+      },
+      income: {
+        mortgageInterest: 60000,
+        mortgageAverageBalance: 750000,
+      },
+    }).taxes;
+
+    const higherBalance = runIncomeScenario({
+      salary: 250000,
+      taxConfig: {
+        deductionMode: "itemized",
+        federalMortgageInterestDebtCap: 750000,
+        stateMortgageInterestDebtCap: 1000000,
+      },
+      income: {
+        mortgageInterest: 60000,
+        mortgageAverageBalance: 1500000,
+      },
+    }).taxes;
+
+    expect(higherBalance.federalTax).toBeGreaterThan(lowerBalance.federalTax);
+    expect(higherBalance.californiaTax).toBeGreaterThan(lowerBalance.californiaTax);
+    expect(higherBalance.federalTax).toBeGreaterThan(higherBalance.californiaTax);
+  });
+
   it("reports total tax across salary and RSU income", () => {
     const scenario = runIncomeScenario({
       salary: 250000,

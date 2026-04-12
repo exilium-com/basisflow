@@ -1,6 +1,12 @@
 import { buildIncomeSummary, calculateIncome, DEFAULT_INCOME, normalizeIncome, resolveIncome } from "./incomeModel";
 import { createMortgage, DEFAULT_MORTGAGE_STATE, normalizeMortgageState } from "./mortgageConfig";
-import { getMortgageYearInterest, getMortgageYearPropertyTax, serializeMortgageSummary, type MortgageSummary } from "./mortgagePage";
+import {
+  getMortgageYearAverageBalance,
+  getMortgageYearInterest,
+  getMortgageYearPropertyTax,
+  serializeMortgageSummary,
+  type MortgageSummary,
+} from "./mortgagePage";
 import { buildMortgageScenario } from "./mortgageSchedule";
 import { INCOME_STATE_KEY, INCOME_SUMMARY_KEY, MORTGAGE_STATE_KEY, MORTGAGE_SUMMARY_KEY } from "./storageKeys";
 import { normalizeConfig, STORAGE_KEY as TAX_CONFIG_KEY } from "./taxConfig";
@@ -71,6 +77,7 @@ function rebuildStoredSummaries(documentValue: StorageDocument) {
         ? (documentValue[MORTGAGE_SUMMARY_KEY] as MortgageSummary)
         : buildStoredMortgageSummary(documentValue);
     const income = resolveIncome(normalizeIncome(documentValue[INCOME_STATE_KEY], DEFAULT_INCOME), {
+      mortgageAverageBalance: getMortgageYearAverageBalance(mortgageSummary, 0),
       mortgageInterest: getMortgageYearInterest(mortgageSummary, 0),
       propertyTax: getMortgageYearPropertyTax(mortgageSummary),
     });

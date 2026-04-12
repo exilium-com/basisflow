@@ -154,14 +154,16 @@ export function MortgageSection({
           />
         </div>
 
-        <div className="col-span-2">
-          <MetricGrid
-            primaryItem={{
-              label: isRentScenario ? "Estimated monthly rent" : "Estimated monthly payment",
-              value: usd(getMortgageMonthlyPaymentForYear(mortgageScenario, currentYear)),
-            }}
-            items={mortgageSummaryItems}
-          />
+        <div className="col-span-2 h-full">
+          <div className="sticky top-4">
+            <MetricGrid
+              primaryItem={{
+                label: isRentScenario ? "Estimated monthly rent" : "Estimated monthly payment",
+                value: usd(getMortgageMonthlyPaymentForYear(mortgageScenario, currentYear)),
+              }}
+              items={mortgageSummaryItems}
+            />
+          </div>
         </div>
       </div>
     </WorkspaceSection>
