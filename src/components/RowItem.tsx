@@ -35,7 +35,7 @@ export function RowItem({
   children,
 }: RowItemProps) {
   const detailsId = React.useId();
-  const headerPadding = "px-4 py-4 pr-12";
+  const headerPadding = "p-4 pr-12";
 
   return (
     <article
@@ -96,7 +96,7 @@ export function RowItem({
       {detailsTitle && detailsOpen ? (
         <div id={detailsId}>
           <div aria-hidden="true" className="mx-4 border-t border-(--line-soft)" />
-          <div className={clsx("px-4 py-4", detailsContentClassName)}>{children}</div>
+          <div className={clsx("p-4", detailsContentClassName)}>{children}</div>
         </div>
       ) : null}
     </article>

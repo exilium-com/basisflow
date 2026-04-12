@@ -83,7 +83,7 @@ export function MortgageSection({
               <SegmentedToggle
                 label="Down payment"
                 ariaLabel="Down payment mode"
-                className="w-fit shrink-0"
+                className="w-fit"
                 value={mortgageState.downPaymentMode}
                 disabled={isRentScenario}
                 onChange={onHandleDownPaymentMode}

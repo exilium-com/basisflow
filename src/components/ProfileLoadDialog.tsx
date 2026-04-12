@@ -16,8 +16,8 @@ export function ProfileLoadDialog({ names, onClose, onDelete, onLoad }: ProfileL
           {names.map((name: string) => (
             <div key={name} className="flex items-stretch">
               <button
-                className="min-h-10 flex-1 border border-(--line) bg-(--white-soft) px-4 py-4 text-left font-semibold text-(--ink)
-                  transition duration-150
+                className="flex flex-1 items-center border border-(--line) bg-(--white-soft) p-4 font-semibold text-(--ink)
+                  transition
                   hover:-translate-y-px hover:bg-(--white)"
                 onClick={() => onLoad(name)}
                 type="button"
@@ -26,8 +26,8 @@ export function ProfileLoadDialog({ names, onClose, onDelete, onLoad }: ProfileL
               </button>
               <button
                 aria-label={`Delete ${name}`}
-                className="inline-flex min-h-10 w-10 items-center justify-center border border-l-0 border-(--destructive-soft)
-                  bg-(--white) text-sm font-extrabold text-(--destructive) transition duration-150
+                className="flex w-10 items-center justify-center border border-l-0 border-(--destructive-soft)
+                  bg-(--white) text-sm font-extrabold text-(--destructive) transition
                   hover:-translate-y-px hover:bg-(--destructive-soft)"
                 onClick={(event) => {
                   event.stopPropagation();

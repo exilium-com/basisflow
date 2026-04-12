@@ -14,15 +14,15 @@ type ChartPanelProps = {
 export function ChartPanel({ title, legend = [], children }: ChartPanelProps) {
   return (
     <div className="border border-(--line-soft) bg-(--white-soft)">
-      <div className="px-4 pt-4">
+      <div className="p-4 pb-0">
         <h3 className="text-lg font-bold">{title}</h3>
       </div>
       {children}
       {legend.length ? (
         <div className="mt-4 flex flex-wrap gap-4 px-4 pb-4 text-sm text-(--ink-soft)">
           {legend.map((item: ChartLegendItem) => (
-            <span key={item.label} className="inline-flex items-center gap-2">
-              <i className="inline-block h-4 w-4" style={{ background: item.color }}></i>
+            <span key={item.label} className="flex items-center gap-2">
+              <i className="size-4" style={{ background: item.color }}></i>
               {item.label}
             </span>
           ))}

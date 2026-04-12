@@ -61,7 +61,7 @@ export function HomePage() {
                 </p>
                 <ActionButton
                   to="/workspace"
-                  className="home-reveal home-delay-2 h-10 border-(--teal) bg-(--teal) px-4 text-base font-extrabold
+                  className="home-reveal home-delay-2 border-(--teal) bg-(--teal) text-base font-extrabold
                     text-(--white) uppercase tracking-wide"
                 >
                   Get started
@@ -72,7 +72,7 @@ export function HomePage() {
                 {TOOL_AREAS.map((item) => (
                   <article
                     key={item.title}
-                    className="home-reveal home-delay-2 border-b border-(--line-soft) py-4 transition duration-200 hover:translate-x-1"
+                    className="home-reveal home-delay-2 border-b border-(--line-soft) py-4 transition hover:translate-x-1"
                   >
                     <div className="grid gap-1 border-l pl-4" style={{ borderColor: item.border }}>
                       <h2 className="text-2xl leading-none">

@@ -10,13 +10,13 @@ const selectClassName =
   "w-full min-w-0 appearance-none border-0 bg-transparent p-0 pr-4 text-base font-semibold text-(--ink) outline-none";
 
 const textAreaClassName =
-  "min-h-48 w-full resize-y border border-(--line) bg-(--white) px-4 py-4 font-mono text-sm font-semibold leading-6 text-(--ink) outline-none";
+  "min-h-48 w-full resize-y border border-(--line) bg-(--white) p-4 font-mono text-sm font-semibold leading-6 text-(--ink) outline-none";
 
 const inputFrameClassName =
   "relative flex min-h-10 items-center border border-(--line) border-l-4 border-l-(--teal-soft) bg-(--white) px-4 transition-colors focus-within:border-(--teal) focus-within:border-l-(--teal)";
 const invalidInputFrameClassName = "border-(--danger) border-l-(--danger)";
 const affixClassName = "flex-none text-sm font-extrabold text-(--ink-soft)";
-const checkboxLabelClassName = "flex min-h-8 w-full min-w-0 items-center gap-2 text-base font-semibold text-(--ink)";
+const checkboxLabelClassName = "flex min-h-8 w-full items-center gap-2 text-base font-semibold text-(--ink)";
 
 type FieldProps = {
   label?: React.ReactNode;

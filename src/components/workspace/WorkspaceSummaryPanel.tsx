@@ -31,7 +31,7 @@ function SummaryLinkRow({ href, label, annualValue }: SummaryRow) {
   const value = usd(period === "monthly" ? annualValue / 12 : annualValue);
 
   return (
-    <div className="flex border-t border-(--line) py-4">
+    <div className="flex gap-2 border-t border-(--line) py-4">
       <a href={href} className="flex-1 text-sm text-(--ink-soft) hover:text-(--ink)">
         {label}
       </a>
@@ -40,7 +40,7 @@ function SummaryLinkRow({ href, label, annualValue }: SummaryRow) {
       </a>
       <button
         type="button"
-        className="ml-2 text-sm text-(--ink-soft) transition hover:text-(--ink)"
+        className="text-sm text-(--ink-soft) transition hover:text-(--ink)"
         onClick={() => setPeriod(period === "annual" ? "monthly" : "annual")}
       >
         {period === "monthly" ? "/ month" : "/ year"}

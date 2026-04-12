@@ -46,7 +46,7 @@ function ToolNavLinks() {
       className={({ isActive }) =>
         clsx(
           `inline-flex h-10 items-center gap-2 border border-(--line) bg-(--white-soft) px-4 text-xs font-extrabold
-          tracking-wide text-(--ink) uppercase no-underline transition duration-150 hover:-translate-y-px
+          tracking-wide text-(--ink) uppercase no-underline transition hover:-translate-y-px
           hover:bg-(--white) focus-visible:-translate-y-px focus-visible:bg-(--white) focus-visible:outline-none`,
           isActive && "!border-(--teal) !bg-(--teal-tint) !text-(--teal)",
         )
@@ -54,7 +54,7 @@ function ToolNavLinks() {
       to={item.to}
       end={item.to === "/"}
     >
-      <span className="text-xs opacity-70">{item.index}</span>
+      <span className="opacity-70">{item.index}</span>
       <span>{item.label}</span>
     </NavLink>
   ));
@@ -71,17 +71,17 @@ function ShellActions({
   return (
     <div className="flex items-center gap-2">
       {statusMessage ? <ToastMessage message={statusMessage} /> : null}
-      <ActionButton className="px-4 text-xs tracking-wide uppercase" onClick={onOpenSaveDialog}>
+      <ActionButton className="text-xs tracking-wide uppercase" onClick={onOpenSaveDialog}>
         Save
       </ActionButton>
       <ActionButton
-        className="px-4 text-xs tracking-wide uppercase disabled:cursor-not-allowed disabled:opacity-50"
+        className="text-xs tracking-wide uppercase disabled:cursor-not-allowed disabled:opacity-50"
         onClick={onOpenLoadDialog}
         disabled={!profileAvailable}
       >
         Load
       </ActionButton>
-      <ActionButton className="px-4 text-xs tracking-wide uppercase" onClick={onResetAll}>
+      <ActionButton className="text-xs tracking-wide uppercase" onClick={onResetAll}>
         Reset
       </ActionButton>
       {actions}
@@ -235,7 +235,7 @@ export function PageShell({ actions = null, showToolNav = true, title = "BasisFl
         </header>
       )}
 
-      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+      <div className="flex flex-1 flex-col">{children}</div>
 
       {saveDialogOpen ? (
         <ProfileSaveDialog
