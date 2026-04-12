@@ -3,8 +3,11 @@ import { type MortgageScenario } from "./mortgageSchedule";
 
 export function serializeMortgageSummary(scenario: MortgageScenario) {
   const yearlyLoan = scenario.yearlyBreakdown.map((row) => {
+    const startMonthIndex = (row.year - 1) * 12;
     const monthIndex = Math.min(row.year * 12, scenario.schedule.length) - 1;
     const scheduleRow = monthIndex >= 0 ? scenario.schedule[monthIndex] : null;
+    const startingBalance =
+      startMonthIndex > 0 ? (scenario.schedule[startMonthIndex - 1]?.balance ?? 0) : scenario.loanAmount;
     const endingBalance = scheduleRow ? scheduleRow.balance : scenario.loanAmount;
 
     return {
@@ -12,6 +15,7 @@ export function serializeMortgageSummary(scenario: MortgageScenario) {
       payment: scheduleRow?.payment ?? 0,
       principal: row.principal,
       interest: row.interest,
+      averageBalance: (startingBalance + endingBalance) / 2,
       endingBalance,
     };
   });
@@ -66,6 +70,10 @@ export function getMortgageAnnualHousingCost(summary: MortgageSummary, year = 0)
 
 export function getMortgageYearInterest(summary: MortgageSummary, year = 0) {
   return findMortgageLoanYear(summary, year)?.interest ?? 0;
+}
+
+export function getMortgageYearAverageBalance(summary: MortgageSummary, year = 0) {
+  return findMortgageLoanYear(summary, year)?.averageBalance ?? 0;
 }
 
 export function getMortgageYearPropertyTax(summary: MortgageSummary) {

@@ -231,13 +231,21 @@ function createMortgageSummary({
   rentGrowthRate?: number;
   homePrice?: number;
   currentEquity?: number;
-  yearlyLoan?: Array<{ year: number; payment?: number; principal?: number; interest: number; endingBalance?: number }>;
+  yearlyLoan?: Array<{
+    year: number;
+    payment?: number;
+    principal?: number;
+    interest: number;
+    averageBalance?: number;
+    endingBalance?: number;
+  }>;
 }) {
   const defaultYearlyLoan: Array<{
     year: number;
     payment?: number;
     principal?: number;
     interest: number;
+    averageBalance?: number;
     endingBalance?: number;
   }> = Array.from({ length: 60 }, (_, index) => ({
     year: index + 1,
@@ -251,6 +259,7 @@ function createMortgageSummary({
           payment: row.payment ?? roundTo(annualMortgage / 12, 2),
           principal: row.principal ?? 0,
           interest: row.interest,
+          averageBalance: row.averageBalance ?? row.endingBalance ?? 0,
           endingBalance: row.endingBalance ?? 0,
         }));
 

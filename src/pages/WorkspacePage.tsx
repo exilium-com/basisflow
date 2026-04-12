@@ -47,6 +47,7 @@ import {
 } from "../lib/mortgageConfig";
 import {
   buildMortgageSummaryItems,
+  getMortgageYearAverageBalance,
   getMortgageYearInterest,
   getMortgageYearPropertyTax,
   serializeMortgageSummary,
@@ -119,6 +120,7 @@ export function WorkspacePage() {
   const mortgageSummaryItems = buildMortgageSummaryItems(mortgageScenario, projectionState.currentYear);
 
   const resolvedIncome = resolveIncome(income, {
+    mortgageAverageBalance: getMortgageYearAverageBalance(mortgageSummary, 0),
     mortgageInterest: getMortgageYearInterest(mortgageSummary, 0),
     propertyTax: getMortgageYearPropertyTax(mortgageSummary),
   });

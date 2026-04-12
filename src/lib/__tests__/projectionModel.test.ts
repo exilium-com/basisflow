@@ -176,7 +176,7 @@ describe("calculateProjection", () => {
         monthlyInsurance: 100,
         monthlyHoa: 50,
         totalInterest: 100000,
-        yearlyLoan: [{ year: 1, payment: 2500, principal: 1000, interest: 950, endingBalance: 0 }],
+        yearlyLoan: [{ year: 1, payment: 2500, principal: 1000, interest: 950, averageBalance: 250000, endingBalance: 0 }],
       }, 2),
     ).toBe(6600);
   });
@@ -198,8 +198,8 @@ describe("calculateProjection", () => {
       monthlyHoa: 50,
       totalInterest: 100000,
       yearlyLoan: [
-        { year: 1, payment: 3250, principal: 1800, interest: 900, endingBalance: 500000 },
-        { year: 2, payment: 3150, principal: 1900, interest: 800, endingBalance: 480000 },
+        { year: 1, payment: 3250, principal: 1800, interest: 900, averageBalance: 510000, endingBalance: 500000 },
+        { year: 2, payment: 3150, principal: 1900, interest: 800, averageBalance: 490000, endingBalance: 480000 },
       ],
     };
 
@@ -226,7 +226,7 @@ describe("calculateProjection", () => {
         monthlyInsurance: 100,
         monthlyHoa: 50,
         totalInterest: 100000,
-        yearlyLoan: [{ year: 1, payment: 3250, principal: 1800, interest: 900, endingBalance: 500000 }],
+        yearlyLoan: [{ year: 1, payment: 3250, principal: 1800, interest: 900, averageBalance: 510000, endingBalance: 500000 }],
       }, 0),
     ).toBe(39000);
   });

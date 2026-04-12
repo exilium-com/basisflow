@@ -57,6 +57,7 @@ export type ResolvedIncome = {
   megaBackdoor: number;
   hsaContribution: number;
   mortgageInterest: number;
+  mortgageAverageBalance: number;
   propertyTax: number;
   rsuItems: RsuInputItem[];
 };
@@ -84,6 +85,7 @@ export const DEFAULT_RESOLVED_INCOME: ResolvedIncome = {
   megaBackdoor: 0,
   hsaContribution: 0,
   mortgageInterest: 0,
+  mortgageAverageBalance: 0,
   propertyTax: 0,
   rsuItems: [],
 };
@@ -252,7 +254,7 @@ export function toRsuInputs(items: IncomeItem[]): RsuInputItem[] {
 
 export function resolveIncome(
   income: Income,
-  overrides: Partial<Pick<ResolvedIncome, "mortgageInterest" | "propertyTax" | "rsuGrossNextYear">> = {},
+  overrides: Partial<Pick<ResolvedIncome, "mortgageInterest" | "mortgageAverageBalance" | "propertyTax" | "rsuGrossNextYear">> = {},
 ) {
   const salaryItems = toSalaryInputs(income.incomeItems);
   const rsuItems = toRsuInputs(income.incomeItems);
@@ -266,6 +268,7 @@ export function resolveIncome(
     megaBackdoor: income.megaBackdoor,
     hsaContribution: income.hsaContribution,
     mortgageInterest: overrides.mortgageInterest ?? 0,
+    mortgageAverageBalance: overrides.mortgageAverageBalance ?? 0,
     propertyTax: overrides.propertyTax ?? 0,
     rsuItems,
   });

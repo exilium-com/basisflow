@@ -20,6 +20,7 @@ import {
 } from "./incomeModel";
 import {
   getMortgageAnnualHousingCost,
+  getMortgageYearAverageBalance,
   getMortgageYearInterest,
   getMortgageYearPropertyTax,
   type MortgageSummary,
@@ -241,6 +242,7 @@ function createProjectionSimulation({
   const reserveCashBucketId = PINNED_BUCKETS.reserveCashBucketId.id;
   const income = createResolvedIncome({
     ...incomeSummary,
+    mortgageAverageBalance: getMortgageYearAverageBalance(mortgageSummary, 0),
     mortgageInterest: getMortgageYearInterest(mortgageSummary, 0),
     propertyTax: getMortgageYearPropertyTax(mortgageSummary),
   });
@@ -399,6 +401,7 @@ function buildProjectionYearContext(base: ProjectionBase, year: number): Project
   const income: ResolvedIncome = {
     ...base.income,
     grossSalary: base.income.grossSalary * growthFactor,
+    mortgageAverageBalance: getMortgageYearAverageBalance(base.mortgageSummary, year),
     mortgageInterest: getMortgageYearInterest(base.mortgageSummary, year),
   };
   const rsuGross = computeRsuGrossForItems(

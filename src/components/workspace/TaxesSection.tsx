@@ -108,6 +108,22 @@ export function TaxesSection({
                 value={taxConfig.federalSaltCap}
                 onValueChange={(value) => onUpdateTaxConfig({ federalSaltCap: value ?? 0 })}
               />
+              <NumberField
+                label="Federal mortgage debt cap"
+                prefix="$"
+                min="0"
+                step="1000"
+                value={taxConfig.federalMortgageInterestDebtCap}
+                onValueChange={(value) => onUpdateTaxConfig({ federalMortgageInterestDebtCap: value ?? 0 })}
+              />
+              <NumberField
+                label="California mortgage debt cap"
+                prefix="$"
+                min="0"
+                step="1000"
+                value={taxConfig.stateMortgageInterestDebtCap}
+                onValueChange={(value) => onUpdateTaxConfig({ stateMortgageInterestDebtCap: value ?? 0 })}
+              />
             </div>
           </AdvancedPanel>
 
@@ -139,16 +155,18 @@ export function TaxesSection({
           </AdvancedPanel>
         </div>
 
-        <div className="col-span-2">
-          <MetricGrid
-            primaryItem={{ label: "Total tax", value: usd(incomeResults.totalTaxes) }}
-            items={[
-              { label: "Federal tax", value: usd(incomeResults.federalTax) },
-              { label: "California tax", value: usd(incomeResults.californiaTax) },
-              { label: "FICA + CA SDI", value: usd(incomeResults.fica.total + incomeResults.caSdi) },
-              { label: "Property tax", value: usd(income.propertyTax) },
-            ]}
-          />
+        <div className="col-span-2 h-full">
+          <div className="sticky top-4">
+            <MetricGrid
+              primaryItem={{ label: "Total tax", value: usd(incomeResults.totalTaxes) }}
+              items={[
+                { label: "Federal tax", value: usd(incomeResults.federalTax) },
+                { label: "California tax", value: usd(incomeResults.californiaTax) },
+                { label: "FICA + CA SDI", value: usd(incomeResults.fica.total + incomeResults.caSdi) },
+                { label: "Property tax", value: usd(income.propertyTax) },
+              ]}
+            />
+          </div>
         </div>
       </div>
     </WorkspaceSection>
