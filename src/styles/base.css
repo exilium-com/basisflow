@@ -22,6 +22,17 @@
   --destructive: #9d4a3d;
   --destructive-soft: #9d4a3d22;
   --danger: #b03e2e80;
+  --chart-net-worth: var(--ink);
+  --chart-retirement: var(--teal-soft);
+  --chart-cash: #d7dde2;
+  --chart-rsus: #d9ede4;
+  --chart-other-assets: #9cadb5;
+  --chart-home-equity: var(--clay-soft);
+  --chart-taxes: #d18a5b;
+  --chart-retirement-savings: var(--teal);
+  --chart-housing: #7c8e97;
+  --chart-expenses: #9cadb5;
+  --chart-excess: var(--teal-soft);
 }
 
 @layer base {
@@ -180,7 +191,7 @@
     height: 16px;
     border-radius: 9999px;
     border: 2px solid var(--teal);
-    background: #fff;
+    background: var(--white);
     cursor: pointer;
   }
 
@@ -189,7 +200,7 @@
     height: 16px;
     border-radius: 9999px;
     border: 2px solid var(--teal);
-    background: #fff;
+    background: var(--white);
     cursor: pointer;
   }
 

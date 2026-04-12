@@ -6,6 +6,7 @@ import { MonthlyCashFlowPanel } from "../ProjectionCashFlowPanel";
 import { NetWorthChart } from "../ProjectionLineCharts";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { SliderField } from "../Field";
+import { netWorthChartLegend } from "../../lib/colors";
 import { usd } from "../../lib/format";
 import { type ProjectionResults } from "../../lib/projectionCalculation";
 import { toDisplayValue, type Projection, type ProjectionState } from "../../lib/projectionState";
@@ -70,7 +71,7 @@ export function WorkspaceSummaryPanel({
 }: WorkspaceSummaryPanelProps) {
   return (
     <>
-      <div className="grid gap-4 pb-4">
+      <div className="sticky top-0 z-10 grid gap-4 border-b border-(--line) bg-(--white) pt-4 pb-4">
         <div className="flex items-center justify-between">
           <div>
             <div className={smallCapsTextClass}>
@@ -134,13 +135,10 @@ export function WorkspaceSummaryPanel({
         </ChartPanel>
 
         <ChartPanel
-          title="Net Worth Curve"
-          legend={[
-            { label: "Net worth", color: "#0a4a53" },
-            { label: "Assets", color: "#0d6a73" },
-            { label: "Home equity", color: "#c56b3d" },
-            { label: "Reserve cash", color: "#566773" },
-          ]}
+          title="Net worth"
+          legend={netWorthChartLegend.filter(
+            (item) => item.label !== "RSUs" || projection.includeVestedRsusInNetWorth,
+          )}
         >
           <NetWorthChart
             projection={projection}
@@ -198,20 +196,20 @@ export function WorkspaceSummaryPanel({
             onValueChange={(value) => onUpdateProjectionState({ expenseGrowthRate: value ?? 0 })}
           />
           <NumberField
-            label="RSU stock growth"
-            suffix="%"
-            min="-50"
-            step="0.5"
-            value={projectionState.rsuStockGrowthRate}
-            onValueChange={(value) => onUpdateProjectionState({ rsuStockGrowthRate: value ?? 0 })}
-          />
-          <NumberField
             label="Home appreciation"
             suffix="%"
             min="-10"
             step="0.5"
             value={projectionState.homeAppreciationRate}
             onValueChange={(value) => onUpdateProjectionState({ homeAppreciationRate: value ?? 0 })}
+          />
+          <NumberField
+            label="Minimum cash"
+            prefix="$"
+            min="0"
+            step="1000"
+            value={projectionState.minimumCash}
+            onValueChange={(value) => onUpdateProjectionState({ minimumCash: value ?? 0 })}
           />
           <CheckboxField
             className="col-span-2"

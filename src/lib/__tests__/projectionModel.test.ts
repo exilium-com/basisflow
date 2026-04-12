@@ -159,6 +159,72 @@ describe("calculateProjection", () => {
     expect(computeRsuGrossForProjectionYear(rsuItems, 4)).toBe(0);
   });
 
+  it("tracks vested RSU balances by grant instead of using unvested grant value", () => {
+    const projection = runProjectionScenario({
+      salary: 150000,
+      rsuValue: 100000,
+    });
+    const today = projection.getYear(0);
+    const yearOne = projection.getYear(1);
+
+    expect(today.vestedRsuBalanceById["rsu-1"]).toBeUndefined();
+    expect(yearOne.vestedRsuBalanceById["rsu-1"]).toBe(today.rsuNet);
+    expect(yearOne.vestedRsuBalanceById["rsu-1"]).not.toBe(100000);
+  });
+
+  it("sells custom assets to restore minimum cash before drawing from retirement accounts", () => {
+    const yearOne = runProjectionScenario({
+      salary: 0,
+      annualExpenses: 5000,
+      minimumCash: 1000,
+      accounts: [
+        {
+          id: "brokerage",
+          name: "Brokerage",
+          balance: 3000,
+          basis: 3000,
+        },
+        {
+          id: "ira-bucket",
+          name: "IRA",
+          taxTreatment: "taxDeferred",
+          balance: 10000,
+        },
+      ],
+    }).getYear(1);
+
+    expect(yearOne.residualCash).toBe(1000);
+    expect(yearOne.bucketSnapshotsById.brokerage?.balance).toBe(0);
+    expect(yearOne.bucketSnapshotsById["ira-bucket"]?.balance).toBe(7000);
+  });
+
+  it("does not sell illiquid assets when restoring minimum cash", () => {
+    const yearOne = runProjectionScenario({
+      salary: 0,
+      annualExpenses: 5000,
+      minimumCash: 1000,
+      accounts: [
+        {
+          id: "brokerage",
+          name: "Brokerage",
+          balance: 10000,
+          basis: 10000,
+          illiquid: true,
+        },
+        {
+          id: "ira-bucket",
+          name: "IRA",
+          taxTreatment: "taxDeferred",
+          balance: 10000,
+        },
+      ],
+    }).getYear(1);
+
+    expect(yearOne.residualCash).toBe(1000);
+    expect(yearOne.bucketSnapshotsById.brokerage?.balance).toBe(10000);
+    expect(yearOne.bucketSnapshotsById["ira-bucket"]?.balance).toBe(4000);
+  });
+
   it("keeps ownership costs after the mortgage payoff year", () => {
     expect(
       getMortgageAnnualHousingCost({

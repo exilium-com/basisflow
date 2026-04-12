@@ -1,3 +1,4 @@
+import { colorVars } from "./colors";
 import { type ProjectedBucketValues } from "./assetsModel";
 import { type ExpenseSnapshot } from "./expensesModel";
 import { type IncomeSummary } from "./incomeModel";
@@ -14,6 +15,7 @@ export type ProjectionRow = {
   bucketSnapshotsById: Record<string, ProjectedBucketValues>;
   expenseSnapshotsById: Record<string, ExpenseSnapshot>;
   vestedRsuBalance: number;
+  vestedRsuBalanceById: Record<string, number>;
   assetsGross: number;
   capitalGainsTax: number;
   totalCapitalGains: number;
@@ -61,33 +63,33 @@ export function buildMonthlyCashFlow({
     {
       label: "Taxes",
       value: taxes,
-      color: "#d18a5b",
+      color: colorVars.chartTaxes,
     },
     {
       label: "Retirement savings",
       value: retirementSaving,
-      color: "#0d6a73",
+      color: colorVars.chartRetirementSavings,
     },
     {
       label: "Housing",
       value: mortgage,
-      color: "#7c8e97",
+      color: colorVars.chartHousing,
     },
     {
       label: "Expenses",
       value: expenses,
-      color: "#9cadb5",
+      color: colorVars.chartExpenses,
     },
     netFlow > 0
       ? {
           label: "Excess",
           value: netFlow,
-          color: "#b8d8d9",
+          color: colorVars.chartExcess,
         }
       : {
           label: "Shortfall",
           value: -netFlow,
-          color: "var(--danger)",
+          color: colorVars.danger,
         },
   ].filter((item) => item.value !== 0);
 

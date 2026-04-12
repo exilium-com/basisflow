@@ -128,9 +128,9 @@ export function WorkspacePage() {
   const incomeSummary = buildIncomeSummary(resolvedIncome, incomeResults);
   const incomeDirectedContributions = buildIncomeDirectedContributions(incomeSummary);
 
-  const assetsView = deriveAssetsState(assetState, undefined, incomeDirectedContributions);
+  const assetsView = deriveAssetsState(assetState, undefined, incomeDirectedContributions, incomeSummary.rsuItems);
 
-  const pinnedAssets = resolvePinnedBuckets(assetState, incomeDirectedContributions);
+  const pinnedAssets = resolvePinnedBuckets(assetState, incomeDirectedContributions, incomeSummary.rsuItems);
   const reserveCashBucketId = PINNED_BUCKETS.reserveCashBucketId.id;
   const projectionAssetState = structuredClone(pinnedAssets.state);
   projectionAssetState.buckets.forEach((bucket) => {
@@ -143,6 +143,11 @@ export function WorkspacePage() {
 
     bucket.growth = projectionState.assetOverrides?.[bucket.id]?.growth ?? null;
   });
+  const rsuGrowthRateById = Object.fromEntries(
+    projectionAssetState.buckets
+      .filter((bucket) => bucket.linkedRsuId)
+      .map((bucket) => [bucket.linkedRsuId as string, (bucket.growth ?? projectionState.assetGrowthRate) / 100]),
+  ) as Record<string, number>;
 
   const projectionExpenseState = structuredClone(expenseState);
   projectionExpenseState.expenses.forEach((expense) => {
@@ -158,6 +163,7 @@ export function WorkspacePage() {
     assets: projectionAssets,
     expenses: projectionExpenses,
     projection,
+    rsuGrowthRateById,
     taxConfig,
   });
   const currentRow =
@@ -397,7 +403,7 @@ export function WorkspacePage() {
         return;
       }
 
-      const derivedBucket = resolvePinnedBuckets(draft, incomeDirectedContributions).state.buckets.find(
+      const derivedBucket = resolvePinnedBuckets(draft, incomeDirectedContributions, incomeSummary.rsuItems).state.buckets.find(
         (entry) => entry.id === bucketId,
       );
       if (derivedBucket) {
@@ -516,6 +522,7 @@ export function WorkspacePage() {
             income={income}
             incomeResults={incomeResults}
             projection={projection}
+            rsuGrowthRateById={rsuGrowthRateById}
             selectedYearLabel={selectedYearLabel}
             retirementSavingTotal={retirementSavingTotal}
             onAddSalaryItem={addSalaryItem}

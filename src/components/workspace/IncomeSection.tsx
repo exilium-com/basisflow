@@ -23,6 +23,7 @@ type IncomeSectionProps = {
   income: Income;
   incomeResults: IncomeResults;
   projection: Projection;
+  rsuGrowthRateById: Record<string, number>;
   selectedYearLabel: string;
   retirementSavingTotal: number;
   onAddSalaryItem: () => void;
@@ -38,6 +39,7 @@ type IncomeSectionProps = {
 type IncomeRowProps<T extends IncomeItem> = {
   item: T;
   projection: Projection;
+  rsuGrowthRateById: Record<string, number>;
   selectedYearLabel: string;
   onRemoveIncomeItem: (itemId: string) => void;
   onUpdateIncomeItem: (itemId: string, patch: Partial<IncomeItem>) => void;
@@ -52,7 +54,7 @@ function renderIncomeSummary(item: IncomeItem, annualizedSalary: number) {
   return `${vestYears} year vest`;
 }
 
-function projectedIncomeValue(item: IncomeItem, projection: Projection) {
+function projectedIncomeValue(item: IncomeItem, projection: Projection, rsuGrowthRateById: Record<string, number>) {
   if (item.type === "salary") {
     const annualizedSalary = getAnnualSalaryTotal([{ amount: item.amount ?? 0, frequency: item.frequency }]);
     return toDisplayValue(
@@ -74,7 +76,7 @@ function projectedIncomeValue(item: IncomeItem, projection: Projection) {
         },
       ],
       projection.currentYear,
-      projection.rsuStockGrowthRate,
+      rsuGrowthRateById[item.id] ?? projection.assetGrowthRate,
       projection.incomeGrowthRate,
     ),
     projection.currentYear,
@@ -85,6 +87,7 @@ function projectedIncomeValue(item: IncomeItem, projection: Projection) {
 function SalaryRowItem({
   item,
   projection,
+  rsuGrowthRateById,
   selectedYearLabel,
   onRemoveIncomeItem,
   onUpdateIncomeItem,
@@ -131,7 +134,7 @@ function SalaryRowItem({
       />
       <ProjectedValueDisplay
         label={selectedYearLabel}
-        value={usd(projectedIncomeValue(item, projection))}
+        value={usd(projectedIncomeValue(item, projection, rsuGrowthRateById))}
       />
     </RowItem>
   );
@@ -140,6 +143,7 @@ function SalaryRowItem({
 function RsuRowItem({
   item,
   projection,
+  rsuGrowthRateById,
   selectedYearLabel,
   onRemoveIncomeItem,
   onUpdateIncomeItem,
@@ -190,7 +194,7 @@ function RsuRowItem({
       />
       <ProjectedValueDisplay
         label={selectedYearLabel}
-        value={usd(projectedIncomeValue(item, projection))}
+        value={usd(projectedIncomeValue(item, projection, rsuGrowthRateById))}
       />
     </RowItem>
   );
@@ -200,6 +204,7 @@ export function IncomeSection({
   income,
   incomeResults,
   projection,
+  rsuGrowthRateById,
   selectedYearLabel,
   retirementSavingTotal,
   onAddSalaryItem,
@@ -228,6 +233,7 @@ export function IncomeSection({
               key={item.id}
               item={item}
               projection={projection}
+              rsuGrowthRateById={rsuGrowthRateById}
               selectedYearLabel={selectedYearLabel}
               onRemoveIncomeItem={onRemoveIncomeItem}
               onUpdateIncomeItem={onUpdateIncomeItem}
@@ -237,6 +243,7 @@ export function IncomeSection({
               key={item.id}
               item={item}
               projection={projection}
+              rsuGrowthRateById={rsuGrowthRateById}
               selectedYearLabel={selectedYearLabel}
               onRemoveIncomeItem={onRemoveIncomeItem}
               onUpdateIncomeItem={onUpdateIncomeItem}
