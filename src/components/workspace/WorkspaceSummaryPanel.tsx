@@ -130,7 +130,6 @@ export function WorkspaceSummaryPanel({
           <MonthlyCashFlowPanel
             items={monthlyCashFlow.items}
             netFlow={monthlyCashFlow.netFlow}
-            total={monthlyCashFlow.total}
           />
         </ChartPanel>
 

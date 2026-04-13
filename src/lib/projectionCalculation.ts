@@ -514,6 +514,7 @@ function buildProjectionYearContext(base: ProjectionBase, year: number): Project
   const income: ResolvedIncome = {
     ...base.income,
     grossSalary: base.income.grossSalary * growthFactor,
+    passiveIncome: base.income.passiveIncome * growthFactor,
     mortgageAverageBalance: getMortgageYearAverageBalance(base.mortgageSummary, year),
     mortgageInterest: getMortgageYearInterest(base.mortgageSummary, year),
   };
@@ -532,7 +533,7 @@ function buildProjectionYearContext(base: ProjectionBase, year: number): Project
   const rsuNet = roundTo(computeIncrementalTakeHome(income, base.taxConfig, rsuGross), 2);
   const takeHome = calculateIncome(income, base.taxConfig).annualTakeHome;
   const nonHousingExpenses = roundTo(getAnnualNonHousingExpenses(base.expenses.expenses, year), 2);
-  const ordinaryIncome = income.grossSalary;
+  const ordinaryIncome = income.grossSalary + income.passiveIncome;
   const taxBases = getTaxBases(income, rsuGross, base.taxConfig);
   const deductionTaxSavings = computeDeductionTaxSavings(
     ordinaryIncome,

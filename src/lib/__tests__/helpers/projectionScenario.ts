@@ -152,7 +152,6 @@ function createAccount({
     growth,
     basis: taxTreatment === "none" ? roundTo(effectiveBasis, 2) : null,
     illiquid,
-    detailsOpen: false,
   };
 }
 
@@ -298,7 +297,6 @@ function createExpensesState(annualExpenses = 0) {
             frequency: "annual",
             oneOffYear: null,
             growthRate: null,
-            detailsOpen: false,
           },
         ],
         advancedOpen: false,

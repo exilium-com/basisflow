@@ -132,6 +132,72 @@ describe("calculateIncome", () => {
     expect(highSalt).toBe(lowSalt);
   });
 
+  it("phases down the federal SALT cap above the MAGI threshold", () => {
+    const belowThreshold = runIncomeScenario({
+      salary: 500000,
+      taxConfig: {
+        deductionMode: "itemized",
+        federalSaltCap: 40400,
+        federalSaltCapFloor: 10000,
+        federalSaltPhaseoutThreshold: 500000,
+        federalSaltPhaseoutRate: 30,
+      },
+      income: {
+        mortgageInterest: 0,
+        propertyTax: 25000,
+      },
+    }).taxes.federalTax;
+    const aboveThreshold = runIncomeScenario({
+      salary: 550000,
+      taxConfig: {
+        deductionMode: "itemized",
+        federalSaltCap: 40400,
+        federalSaltCapFloor: 10000,
+        federalSaltPhaseoutThreshold: 500000,
+        federalSaltPhaseoutRate: 30,
+      },
+      income: {
+        mortgageInterest: 0,
+        propertyTax: 25000,
+      },
+    }).taxes.federalTax;
+
+    expect(aboveThreshold).toBeGreaterThan(belowThreshold);
+  });
+
+  it("does not phase the federal SALT cap below its floor", () => {
+    const lowerSalt = runIncomeScenario({
+      salary: 700000,
+      taxConfig: {
+        deductionMode: "itemized",
+        federalSaltCap: 40400,
+        federalSaltCapFloor: 10000,
+        federalSaltPhaseoutThreshold: 500000,
+        federalSaltPhaseoutRate: 30,
+      },
+      income: {
+        mortgageInterest: 0,
+        propertyTax: 10000,
+      },
+    }).taxes.federalTax;
+    const higherSalt = runIncomeScenario({
+      salary: 700000,
+      taxConfig: {
+        deductionMode: "itemized",
+        federalSaltCap: 40400,
+        federalSaltCapFloor: 10000,
+        federalSaltPhaseoutThreshold: 500000,
+        federalSaltPhaseoutRate: 30,
+      },
+      income: {
+        mortgageInterest: 0,
+        propertyTax: 20000,
+      },
+    }).taxes.federalTax;
+
+    expect(higherSalt).toBe(lowerSalt);
+  });
+
   it("caps federal and California mortgage interest deductions separately", () => {
     const lowerBalance = runIncomeScenario({
       salary: 250000,
@@ -178,6 +244,20 @@ describe("calculateIncome", () => {
         rsuValue: 0,
       }).results.totalTaxes,
     );
+  });
+
+  it("does not apply FICA to passive income", () => {
+    const salaryOnly = runIncomeScenario({
+      salary: 250000,
+    }).taxes;
+    const withPassiveIncome = runIncomeScenario({
+      salary: 250000,
+      passiveIncome: 50000,
+    }).taxes;
+
+    expect(withPassiveIncome.fica).toEqual(salaryOnly.fica);
+    expect(withPassiveIncome.caSdi).toBe(salaryOnly.caSdi);
+    expect(withPassiveIncome.totalTaxes).toBeGreaterThan(salaryOnly.totalTaxes);
   });
 
   it.each(incomeGoldens)("$name", (testCase) => {

@@ -16,7 +16,6 @@ describe("deriveAssetsState", () => {
             growth: null,
             basis: 5000,
             illiquid: false,
-            detailsOpen: false,
           },
         ],
       },

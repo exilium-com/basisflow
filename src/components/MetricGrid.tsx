@@ -2,12 +2,12 @@ import React from "react";
 import clsx from "clsx";
 import { labelTextClass, numberTextClass, primaryNumberTextClass, smallCapsTextClass } from "../lib/text";
 
-type MetricGridItem = {
+export type MetricGridItem = {
   label: React.ReactNode;
   value: React.ReactNode;
 };
 
-type MetricGridProps = {
+export type MetricGridProps = {
   items: MetricGridItem[];
   primaryItem?: MetricGridItem;
 };

@@ -14,7 +14,6 @@ export type AssetBucketState = {
   growth: number | null;
   basis: number | null;
   illiquid: boolean;
-  detailsOpen: boolean;
 };
 
 export type AssetsState = {
@@ -148,7 +147,6 @@ export function createAssetBucket(overrides: Partial<AssetBucketState> = {}): As
     growth: overrides.growth ?? null,
     basis: overrides.basis ?? null,
     illiquid: overrides.illiquid ?? false,
-    detailsOpen: overrides.detailsOpen ?? false,
   };
 }
 
@@ -168,7 +166,6 @@ export function normalizeBucket(rawBucket: Partial<AssetBucketState> | null | un
     growth: readNumber(rawBucket?.growth, null),
     basis: readNumber(rawBucket?.basis, null),
     illiquid: Boolean(rawBucket?.illiquid),
-    detailsOpen: Boolean(rawBucket?.detailsOpen),
   });
 }
 

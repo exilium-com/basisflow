@@ -65,8 +65,6 @@ export function AssetsSection({
               onRemove={isPinnedBucket || isLinkedRsuBucket ? undefined : () => onRemoveAssetBucket(bucket.id)}
               detailsTitle="Asset details"
               detailsSummary={detailsSummary || null}
-              detailsOpen={bucket.detailsOpen}
-              onToggleDetails={(detailsOpen) => onUpdateAssetBucket(bucket.id, { detailsOpen })}
               detailsClassName="grid grid-cols-2 gap-4"
               details={
                 <>

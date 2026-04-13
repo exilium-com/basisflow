@@ -66,8 +66,6 @@ export function ExpensesSection({
                   ? `Annual increase ${override.growthRate}%`
                   : null
               }
-              detailsOpen={expense.detailsOpen}
-              onToggleDetails={(detailsOpen) => onUpdateExpense(expense.id, { detailsOpen })}
               detailsClassName="flex flex-wrap items-end gap-4"
               details={
                 <>

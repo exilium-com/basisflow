@@ -1,10 +1,10 @@
 import React from "react";
-import { ActionButton } from "../ActionButton";
-import { MetricGrid } from "../MetricGrid";
+import { AddMenu } from "../AddMenu";
 import { ProjectedValueDisplay } from "../ProjectedValueDisplay";
 import { RowItem } from "../RowItem";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { NumberField, SliderField, TextField } from "../Field";
+import { WorkspaceMetricSplit } from "./WorkspaceMetricSplit";
 import { WorkspaceSection } from "./WorkspaceSection";
 import { usd } from "../../lib/format";
 import {
@@ -13,11 +13,13 @@ import {
   type Income,
   type IncomeItem,
   type IncomeResults,
+  type PassiveIncomeItem,
   type RsuItem,
   type SalaryItem,
 } from "../../lib/incomeModel";
 import { toDisplayValue, type Projection } from "../../lib/projectionState";
 import { smallCapsTextClass } from "../../lib/text";
+import clsx from "clsx";
 
 type IncomeSectionProps = {
   income: Income;
@@ -27,6 +29,7 @@ type IncomeSectionProps = {
   selectedYearLabel: string;
   retirementSavingTotal: number;
   onAddSalaryItem: () => void;
+  onAddPassiveIncomeItem: () => void;
   onAddRsuItem: () => void;
   onRemoveIncomeItem: (itemId: string) => void;
   onUpdateIncomeField: (
@@ -46,7 +49,7 @@ type IncomeRowProps<T extends IncomeItem> = {
 };
 
 function renderIncomeSummary(item: IncomeItem, annualizedSalary: number) {
-  if (item.type === "salary") {
+  if (item.type === "salary" || item.type === "passive") {
     return item.frequency === "monthly" ? `${usd(annualizedSalary)} / year` : "Annual";
   }
 
@@ -55,7 +58,7 @@ function renderIncomeSummary(item: IncomeItem, annualizedSalary: number) {
 }
 
 function projectedIncomeValue(item: IncomeItem, projection: Projection, rsuGrowthRateById: Record<string, number>) {
-  if (item.type === "salary") {
+  if (item.type === "salary" || item.type === "passive") {
     const annualizedSalary = getAnnualSalaryTotal([{ amount: item.amount ?? 0, frequency: item.frequency }]);
     return toDisplayValue(
       annualizedSalary * Math.pow(1 + projection.incomeGrowthRate, projection.currentYear),
@@ -84,31 +87,29 @@ function projectedIncomeValue(item: IncomeItem, projection: Projection, rsuGrowt
   );
 }
 
-function SalaryRowItem({
+function RecurringIncomeRowItem({
   item,
   projection,
   rsuGrowthRateById,
   selectedYearLabel,
   onRemoveIncomeItem,
   onUpdateIncomeItem,
-}: IncomeRowProps<SalaryItem>) {
+}: IncomeRowProps<SalaryItem | PassiveIncomeItem>) {
   const annualizedSalary = getAnnualSalaryTotal([{ amount: item.amount ?? 0, frequency: item.frequency }]);
+  const isPassive = item.type === "passive";
 
   return (
     <RowItem
-      removeLabel={`Remove ${item.name || "salary"}`}
       onRemove={(event) => {
         event.stopPropagation();
         onRemoveIncomeItem(item.id);
       }}
-      detailsTitle="Salary details"
+      detailsTitle="Income details"
       detailsSummary={renderIncomeSummary(item, annualizedSalary)}
-      detailsOpen={Boolean(item.detailsOpen)}
-      onToggleDetails={(detailsOpen) => onUpdateIncomeItem(item.id, { detailsOpen })}
       details={
         <SegmentedToggle
           label="Frequency"
-          ariaLabel={`${item.name || "Salary"} frequency`}
+          ariaLabel={`${item.name || (isPassive ? "Passive income" : "Salary")} frequency`}
           className="w-fit"
           value={item.frequency}
           onChange={(frequency) => onUpdateIncomeItem(item.id, { frequency })}
@@ -150,14 +151,11 @@ function RsuRowItem({
 }: IncomeRowProps<RsuItem>) {
   return (
     <RowItem
-      removeLabel={`Remove ${item.name || "RSU grant"}`}
       onRemove={(event) => {
         event.stopPropagation();
         onRemoveIncomeItem(item.id);
       }}
       detailsTitle="RSU details"
-      detailsOpen={Boolean(item.detailsOpen)}
-      onToggleDetails={(detailsOpen) => onUpdateIncomeItem(item.id, { detailsOpen })}
       details={
         <div className="grid grid-cols-2 gap-4">
           <NumberField
@@ -208,6 +206,7 @@ export function IncomeSection({
   selectedYearLabel,
   retirementSavingTotal,
   onAddSalaryItem,
+  onAddPassiveIncomeItem,
   onAddRsuItem,
   onRemoveIncomeItem,
   onUpdateIncomeField,
@@ -220,16 +219,20 @@ export function IncomeSection({
       title="Income"
       summary="Cash In"
       actions={
-        <div className="flex flex-wrap gap-4">
-          <ActionButton onClick={onAddSalaryItem}>Add salary</ActionButton>
-          <ActionButton onClick={onAddRsuItem}>Add RSU</ActionButton>
-        </div>
+        <AddMenu
+          label="Add income"
+          options={[
+            { id: "salary", label: "Salary", onSelect: onAddSalaryItem },
+            { id: "passive", label: "Passive income", onSelect: onAddPassiveIncomeItem },
+            { id: "rsu", label: "RSU", onSelect: onAddRsuItem },
+          ]}
+        />
       }
     >
       <div className="grid gap-4">
         {income.incomeItems.map((item) =>
-          item.type === "salary" ? (
-            <SalaryRowItem
+          item.type === "salary" || item.type === "passive" ? (
+            <RecurringIncomeRowItem
               key={item.id}
               item={item}
               projection={projection}
@@ -252,12 +255,21 @@ export function IncomeSection({
         )}
       </div>
 
-      <div className="mt-8 grid grid-cols-5 gap-4">
-        <div className="col-span-3">
-          <div className={`mb-4 ${smallCapsTextClass}`}>
-            Retirement saving
-          </div>
-          <div className="grid gap-4 divide-y divide-(--line-soft) pb-4">
+      <div className="mt-8">
+        <WorkspaceMetricSplit
+          metrics={
+            {
+              primaryItem: { label: "Monthly take-home", value: usd(incomeResults.monthlyTakeHome, 2) },
+              items: [
+                { label: "Annual income", value: usd(incomeResults.grossSalary + incomeResults.passiveIncome, 2) },
+                { label: "Total taxes", value: usd(incomeResults.totalTaxes, 2) },
+                { label: "Retirement saving", value: usd(retirementSavingTotal, 2) },
+              ],
+            }
+          }
+        >
+          <div className={clsx(smallCapsTextClass, "mb-4")}>Retirement saving</div>
+          <div className="grid gap-4">
             <SliderField
               id="employee401k"
               label="Traditional 401(k)"
@@ -299,20 +311,7 @@ export function IncomeSection({
               onChange={(event) => onUpdateIncomeField("hsaContribution", Number(event.target.value))}
             />
           </div>
-        </div>
-
-        <div className="col-span-2 h-full">
-          <div className="sticky top-4">
-            <MetricGrid
-              primaryItem={{ label: "Monthly take-home", value: usd(incomeResults.monthlyTakeHome, 2) }}
-              items={[
-                { label: "Annual salary", value: usd(incomeResults.grossSalary, 2) },
-                { label: "Total taxes", value: usd(incomeResults.totalTaxes, 2) },
-                { label: "Retirement saving", value: usd(retirementSavingTotal, 2) },
-              ]}
-            />
-          </div>
-        </div>
+        </WorkspaceMetricSplit>
       </div>
     </WorkspaceSection>
   );
