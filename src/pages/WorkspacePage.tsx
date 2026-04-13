@@ -476,7 +476,7 @@ export function WorkspacePage() {
   ];
 
   return (
-    <PageShell showToolNav={false} title="Basisflow">
+    <PageShell title="Basisflow">
       <main className={surfaceClass}>
         <WorkspaceLayout
           summary={
