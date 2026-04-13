@@ -17,6 +17,9 @@ export type TaxConfig = {
   federalStandardDeduction: number;
   stateStandardDeduction: number;
   federalSaltCap: number;
+  federalSaltCapFloor: number;
+  federalSaltPhaseoutThreshold: number;
+  federalSaltPhaseoutRate: number;
   federalMortgageInterestDebtCap: number;
   stateMortgageInterestDebtCap: number;
   caSdiRate: number;
@@ -31,6 +34,9 @@ export const DEFAULT_CONFIG = {
   federalStandardDeduction: 16100,
   stateStandardDeduction: 5706,
   federalSaltCap: 40400,
+  federalSaltCapFloor: 10000,
+  federalSaltPhaseoutThreshold: 500000,
+  federalSaltPhaseoutRate: 30,
   federalMortgageInterestDebtCap: 750000,
   stateMortgageInterestDebtCap: 1000000,
   caSdiRate: 1.3,
@@ -79,6 +85,25 @@ function getDeductibleMortgageInterest(interest: number, averageBalance: number,
   }
 
   return roundTo(interest * (debtCap / averageBalance), 2);
+}
+
+function getFederalSaltCap(config: TaxConfig, income?: ResolvedIncome, extraOrdinaryIncome = 0) {
+  const maxCap = config.federalSaltCap;
+  const floorCap = Math.min(config.federalSaltCapFloor, maxCap);
+  const threshold = config.federalSaltPhaseoutThreshold;
+  const phaseoutRate = config.federalSaltPhaseoutRate / 100;
+
+  if (!income) {
+    return maxCap;
+  }
+
+  const modifiedAdjustedGrossIncome = Math.max(
+    0,
+    income.grossSalary + income.passiveIncome + extraOrdinaryIncome - income.employee401k - income.hsaContribution,
+  );
+  const excessMagi = Math.max(0, modifiedAdjustedGrossIncome - threshold);
+
+  return roundTo(Math.max(floorCap, maxCap - excessMagi * phaseoutRate), 2);
 }
 
 function normalizeBracketList(list: unknown, fallback: TaxBracket[]): TaxBracket[] {
@@ -141,6 +166,18 @@ export function normalizeConfig(rawConfig: unknown): TaxConfig {
       (config as { federalSaltCap?: unknown }).federalSaltCap,
       fallback.federalSaltCap,
     ),
+    federalSaltCapFloor: readNonNegativeConfigNumber(
+      (config as { federalSaltCapFloor?: unknown }).federalSaltCapFloor,
+      fallback.federalSaltCapFloor,
+    ),
+    federalSaltPhaseoutThreshold: readNonNegativeConfigNumber(
+      (config as { federalSaltPhaseoutThreshold?: unknown }).federalSaltPhaseoutThreshold,
+      fallback.federalSaltPhaseoutThreshold,
+    ),
+    federalSaltPhaseoutRate: readNonNegativeConfigNumber(
+      (config as { federalSaltPhaseoutRate?: unknown }).federalSaltPhaseoutRate,
+      fallback.federalSaltPhaseoutRate,
+    ),
     federalMortgageInterestDebtCap: readNonNegativeConfigNumber(
       (config as { federalMortgageInterestDebtCap?: unknown }).federalMortgageInterestDebtCap,
       fallback.federalMortgageInterestDebtCap,
@@ -179,6 +216,7 @@ export function getTaxDeductions(
   config: TaxConfig,
   income?: ResolvedIncome,
   stateIncomeTax = 0,
+  extraOrdinaryIncome = 0,
 ) {
   if (config.deductionMode === "itemized") {
     const mortgageInterest = income?.mortgageInterest ?? 0;
@@ -195,8 +233,10 @@ export function getTaxDeductions(
       config.stateMortgageInterestDebtCap,
     );
 
+    const federalSaltCap = getFederalSaltCap(config, income, extraOrdinaryIncome);
+
     return {
-      federalDeduction: federalMortgageInterest + Math.min(propertyTax + stateIncomeTax, config.federalSaltCap),
+      federalDeduction: federalMortgageInterest + Math.min(propertyTax + stateIncomeTax, federalSaltCap),
       stateDeduction: stateMortgageInterest + propertyTax,
     };
   }

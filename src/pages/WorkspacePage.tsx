@@ -97,7 +97,6 @@ export function WorkspacePage() {
       normalize: normalizeProjectionState,
     },
   );
-  const [expandedLoanId, setExpandedLoanId] = useState<string | null>(null);
   const [taxConfig, setTaxConfig] = useState(loadTaxConfig);
   const [federalBrackets, setFederalBrackets] = useState(() => JSON.stringify(taxConfig.federalBrackets, null, 2));
   const [stateBrackets, setStateBrackets] = useState(() => JSON.stringify(taxConfig.stateBrackets, null, 2));
@@ -128,9 +127,9 @@ export function WorkspacePage() {
   const incomeSummary = buildIncomeSummary(resolvedIncome, incomeResults);
   const incomeDirectedContributions = buildIncomeDirectedContributions(incomeSummary);
 
-  const assetsView = deriveAssetsState(assetState, undefined, incomeDirectedContributions);
+  const assetsView = deriveAssetsState(assetState, undefined, incomeDirectedContributions, incomeSummary.rsuItems);
 
-  const pinnedAssets = resolvePinnedBuckets(assetState, incomeDirectedContributions);
+  const pinnedAssets = resolvePinnedBuckets(assetState, incomeDirectedContributions, incomeSummary.rsuItems);
   const reserveCashBucketId = PINNED_BUCKETS.reserveCashBucketId.id;
   const projectionAssetState = structuredClone(pinnedAssets.state);
   projectionAssetState.buckets.forEach((bucket) => {
@@ -143,6 +142,11 @@ export function WorkspacePage() {
 
     bucket.growth = projectionState.assetOverrides?.[bucket.id]?.growth ?? null;
   });
+  const rsuGrowthRateById = Object.fromEntries(
+    projectionAssetState.buckets
+      .filter((bucket) => bucket.linkedRsuId)
+      .map((bucket) => [bucket.linkedRsuId as string, (bucket.growth ?? projectionState.assetGrowthRate) / 100]),
+  ) as Record<string, number>;
 
   const projectionExpenseState = structuredClone(expenseState);
   projectionExpenseState.expenses.forEach((expense) => {
@@ -158,6 +162,7 @@ export function WorkspacePage() {
     assets: projectionAssets,
     expenses: projectionExpenses,
     projection,
+    rsuGrowthRateById,
     taxConfig,
   });
   const currentRow =
@@ -180,7 +185,9 @@ export function WorkspacePage() {
     incomeResults.megaBackdoor +
     resolvedIncome.hsaContribution;
   const projectedAnnualGrossIncome =
-    incomeResults.grossSalary * Math.pow(1 + projection.incomeGrowthRate, projection.currentYear) + currentRow.rsuGross;
+    (resolvedIncome.grossSalary + resolvedIncome.passiveIncome) *
+      Math.pow(1 + projection.incomeGrowthRate, projection.currentYear) +
+    currentRow.rsuGross;
   const projectedAnnualTax =
     projectedAnnualGrossIncome - annualRetirementContributions - currentRow.takeHome - currentRow.rsuNet;
   const assetOptions = projectionAssets.buckets.map((bucket) => ({
@@ -257,7 +264,6 @@ export function WorkspacePage() {
         name: "Salary",
         amount: null,
         frequency: "annual",
-        detailsOpen: false,
       });
     });
   }
@@ -271,7 +277,18 @@ export function WorkspacePage() {
         grantAmount: 0,
         refresherAmount: 0,
         vestingYears: 4,
-        detailsOpen: false,
+      });
+    });
+  }
+
+  function addPassiveIncomeItem() {
+    setIncome((draft) => {
+      draft.incomeItems.push({
+        id: crypto.randomUUID(),
+        type: "passive",
+        name: "Passive income",
+        amount: null,
+        frequency: "annual",
       });
     });
   }
@@ -300,34 +317,6 @@ export function WorkspacePage() {
     });
   }
 
-  function updateLoanKind(optionId: string, kind: MortgageOptionKind) {
-    setMortgageState((draft) => {
-      const option = draft.options.find((entry) => entry.id === optionId);
-      if (!option) {
-        return;
-      }
-
-      option.kind = kind;
-      if (kind === "rent") {
-        option.rentPerMonth ??= 3500;
-        option.rentGrowthRate ??= 3;
-        return;
-      }
-
-      if (kind === "arm") {
-        option.rate = null;
-        option.initialRate ??= 5.635;
-        option.adjustedRate ??= 7.135;
-        option.fixedYears ??= 7;
-        option.term ??= 30;
-        return;
-      }
-
-      option.rate ??= 6.475;
-      option.term ??= 30;
-    });
-  }
-
   function handleDownPaymentMode(mode: MortgageDownPaymentMode) {
     setMortgageState((draft) => {
       if (draft.downPaymentMode === mode) {
@@ -352,18 +341,17 @@ export function WorkspacePage() {
   }
 
   function selectLoan(optionId: string) {
-    if (mortgageState.activeLoanId !== optionId && expandedLoanId === mortgageState.activeLoanId) {
-      setExpandedLoanId(null);
-    }
-
     setMortgageState((draft) => {
       draft.activeLoanId = optionId;
     });
   }
 
-  function addMortgageOption() {
+  function addMortgageOption(kind: MortgageOptionKind) {
     setMortgageState((draft) => {
-      const nextOption = createMortgageOption({ name: `Mortgage option ${draft.options.length + 1}` });
+      const nextOption = createMortgageOption({
+        kind,
+        name: `Scenario ${draft.options.length + 1}`,
+      });
       draft.options.push(nextOption);
     });
   }
@@ -379,10 +367,6 @@ export function WorkspacePage() {
     const nextActiveLoanId =
       mortgageState.activeLoanId === optionId ? remainingOptionIds[0] : mortgageState.activeLoanId;
 
-    if (expandedLoanId === optionId) {
-      setExpandedLoanId(null);
-    }
-
     setMortgageState((draft) => {
       draft.options = draft.options.filter((option) => option.id !== optionId);
       draft.activeLoanId = nextActiveLoanId;
@@ -397,7 +381,7 @@ export function WorkspacePage() {
         return;
       }
 
-      const derivedBucket = resolvePinnedBuckets(draft, incomeDirectedContributions).state.buckets.find(
+      const derivedBucket = resolvePinnedBuckets(draft, incomeDirectedContributions, incomeSummary.rsuItems).state.buckets.find(
         (entry) => entry.id === bucketId,
       );
       if (derivedBucket) {
@@ -440,7 +424,6 @@ export function WorkspacePage() {
         frequency: "monthly",
         oneOffYear: null,
         growthRate: null,
-        detailsOpen: false,
       });
     });
   }
@@ -493,7 +476,7 @@ export function WorkspacePage() {
   ];
 
   return (
-    <PageShell showToolNav={false} title="Basisflow">
+    <PageShell title="Basisflow">
       <main className={surfaceClass}>
         <WorkspaceLayout
           summary={
@@ -516,9 +499,11 @@ export function WorkspacePage() {
             income={income}
             incomeResults={incomeResults}
             projection={projection}
+            rsuGrowthRateById={rsuGrowthRateById}
             selectedYearLabel={selectedYearLabel}
             retirementSavingTotal={retirementSavingTotal}
             onAddSalaryItem={addSalaryItem}
+            onAddPassiveIncomeItem={addPassiveIncomeItem}
             onAddRsuItem={addRsuItem}
             onRemoveIncomeItem={removeIncomeItem}
             onUpdateIncomeField={updateIncomeField}
@@ -528,7 +513,6 @@ export function WorkspacePage() {
           <MortgageSection
             assetOptions={assetOptions}
             currentYear={projection.currentYear}
-            expandedLoanId={expandedLoanId}
             mortgage={mortgage}
             mortgageScenario={mortgageScenario}
             mortgageFundingBucketId={projectionState.mortgageFundingBucketId}
@@ -539,9 +523,7 @@ export function WorkspacePage() {
             onHandleDownPaymentMode={handleDownPaymentMode}
             onRemoveLoan={removeMortgageOption}
             onSelectLoan={selectLoan}
-            onSetExpandedLoanId={setExpandedLoanId}
             onUpdateLoanField={updateLoanField}
-            onUpdateLoanKind={updateLoanKind}
             onUpdateLoanName={updateLoanName}
             onUpdateMortgageFundingBucketId={(mortgageFundingBucketId) =>
               updateProjectionState({ mortgageFundingBucketId })

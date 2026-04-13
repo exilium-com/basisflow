@@ -11,7 +11,6 @@ type MonthlyCashFlowItem = {
 
 type MonthlyCashFlowPanelProps = {
   items: MonthlyCashFlowItem[];
-  total: number;
   netFlow: number;
 };
 
@@ -45,11 +44,12 @@ function describeDonutSlice(
   ].join(" ");
 }
 
-export function MonthlyCashFlowPanel({ items, total, netFlow }: MonthlyCashFlowPanelProps) {
+export function MonthlyCashFlowPanel({ items, netFlow }: MonthlyCashFlowPanelProps) {
   const cx = 112;
   const cy = 112;
   const outerRadius = 82;
   const innerRadius = 50;
+  const sliceTotal = items.reduce((sum, item) => sum + item.value, 0);
   let currentAngle = -Math.PI / 2;
 
   return (
@@ -57,9 +57,9 @@ export function MonthlyCashFlowPanel({ items, total, netFlow }: MonthlyCashFlowP
       <div className="flex w-60 shrink-0 justify-center">
         <svg viewBox="0 0 224 224" role="img" aria-label="Monthly cash flow breakdown">
           <circle cx={cx} cy={cy} r={outerRadius} fill="var(--white)" stroke="var(--line-soft)" />
-          {total > 0
+          {sliceTotal > 0
             ? items.map((item: MonthlyCashFlowItem) => {
-                const sliceAngle = (item.value / total) * Math.PI * 2;
+                const sliceAngle = (item.value / sliceTotal) * Math.PI * 2;
                 const startAngle = currentAngle;
                 const endAngle = currentAngle + sliceAngle;
                 currentAngle = endAngle;

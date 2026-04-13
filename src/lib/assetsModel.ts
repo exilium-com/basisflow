@@ -1,5 +1,5 @@
 import { clamp, readNumber, roundTo } from "./format";
-import { DEFAULT_INCOME_SUMMARY, type IncomeSummary } from "./incomeModel";
+import { DEFAULT_INCOME_SUMMARY, type IncomeSummary, type RsuInputItem } from "./incomeModel";
 import { computeAdditionalTax, type TaxConfig } from "./taxConfig";
 
 export type AssetTaxTreatment = "none" | "taxDeductible" | "taxDeferred";
@@ -8,11 +8,12 @@ export type AssetBucketState = {
   id: string;
   taxTreatment: AssetTaxTreatment;
   name: string;
+  linkedRsuId: string | null;
   current: number | null;
   contribution: number | null;
   growth: number | null;
   basis: number | null;
-  detailsOpen: boolean;
+  illiquid: boolean;
 };
 
 export type AssetsState = {
@@ -99,6 +100,8 @@ type PinnedBucketConfig = {
   name: string;
   taxTreatment: AssetTaxTreatment;
   reserveCash?: boolean;
+  linkedRsuId?: string;
+  current?: number;
 };
 
 export const PINNED_BUCKETS: Record<
@@ -138,11 +141,12 @@ export function createAssetBucket(overrides: Partial<AssetBucketState> = {}): As
     id: overrides.id ?? crypto.randomUUID(),
     taxTreatment: overrides.taxTreatment ?? "none",
     name: overrides.name ?? "",
+    linkedRsuId: overrides.linkedRsuId ?? null,
     current: overrides.current ?? null,
     contribution: overrides.contribution ?? null,
     growth: overrides.growth ?? null,
     basis: overrides.basis ?? null,
-    detailsOpen: overrides.detailsOpen ?? false,
+    illiquid: overrides.illiquid ?? false,
   };
 }
 
@@ -156,11 +160,12 @@ export function normalizeBucket(rawBucket: Partial<AssetBucketState> | null | un
           ? "taxDeferred"
           : "none",
     name: typeof rawBucket?.name === "string" ? rawBucket.name : "",
+    linkedRsuId: typeof rawBucket?.linkedRsuId === "string" ? rawBucket.linkedRsuId : null,
     current: readNumber(rawBucket?.current, null),
     contribution: readNumber(rawBucket?.contribution, null),
     growth: readNumber(rawBucket?.growth, null),
     basis: readNumber(rawBucket?.basis, null),
-    detailsOpen: Boolean(rawBucket?.detailsOpen),
+    illiquid: Boolean(rawBucket?.illiquid),
   });
 }
 
@@ -199,14 +204,28 @@ function hasMeaningfulBucketValues(bucket: Partial<AssetBucketState>) {
   );
 }
 
+function buildPinnedBucketConfigs(rsuItems: RsuInputItem[] = []): PinnedBucketConfig[] {
+  return [
+    ...Object.values(PINNED_BUCKETS),
+    ...rsuItems.map((rsuItem) => ({
+      id: `rsu-bucket-${rsuItem.id ?? crypto.randomUUID()}`,
+      name: rsuItem.name || "RSU grant",
+      taxTreatment: "none" as const,
+      linkedRsuId: rsuItem.id ?? "",
+      current: Math.max(0, rsuItem.grantAmount),
+    })),
+  ];
+}
+
 export function resolvePinnedBuckets(
   state: AssetsState,
   incomeDirectedContributions: Record<string, number> = {},
+  rsuItems: RsuInputItem[] = [],
 ): ResolvedPinnedBuckets {
-  const pinnedConfigs = Object.values(PINNED_BUCKETS);
+  const pinnedConfigs = buildPinnedBucketConfigs(rsuItems);
   const allPinnedBucketIds = new Set(pinnedConfigs.map((config) => config.id));
   const pinnedBucketIds = new Set(
-    pinnedConfigs.filter((config) => config.reserveCash).map((config) => config.id),
+    pinnedConfigs.filter((config) => config.reserveCash || config.linkedRsuId).map((config) => config.id),
   );
 
   state.buckets.forEach((bucket) => {
@@ -243,6 +262,10 @@ export function resolvePinnedBuckets(
           id: config.id,
           name: config.name,
           taxTreatment: config.taxTreatment,
+          linkedRsuId: config.linkedRsuId ?? null,
+          current: config.current ?? null,
+          basis: config.taxTreatment === "none" ? (config.current ?? null) : null,
+          illiquid: config.linkedRsuId ? true : undefined,
         }),
       );
       return;
@@ -253,14 +276,20 @@ export function resolvePinnedBuckets(
       id: config.id,
       name: config.name,
       taxTreatment: config.taxTreatment,
-      basis: config.taxTreatment === "none" ? buckets[existingIndex].basis : null,
+      linkedRsuId: config.linkedRsuId ?? null,
+      current: config.current ?? buckets[existingIndex].current,
+      basis: config.taxTreatment === "none" ? (config.current ?? buckets[existingIndex].basis) : null,
+      illiquid: config.linkedRsuId ? true : buckets[existingIndex].illiquid,
     };
     changed =
       changed ||
       nextBucket.id !== buckets[existingIndex].id ||
       nextBucket.name !== buckets[existingIndex].name ||
+      nextBucket.linkedRsuId !== buckets[existingIndex].linkedRsuId ||
+      nextBucket.current !== buckets[existingIndex].current ||
       nextBucket.taxTreatment !== buckets[existingIndex].taxTreatment ||
-      nextBucket.basis !== buckets[existingIndex].basis;
+      nextBucket.basis !== buckets[existingIndex].basis ||
+      nextBucket.illiquid !== buckets[existingIndex].illiquid;
     buckets[existingIndex] = nextBucket;
   });
 
@@ -295,7 +324,7 @@ export function createAssets(
 ): Assets {
   return {
     baselineGrowthRate: baselineGrowthRate / 100,
-    buckets: state.buckets.map((bucket) => {
+    buckets: state.buckets.filter((bucket) => !bucket.linkedRsuId).map((bucket) => {
       const current = Math.max(0, bucket.current ?? 0);
       const contribution = Math.max(0, bucket.contribution ?? 0);
       const growth = (bucket.growth ?? baselineGrowthRate) / 100;
@@ -334,8 +363,9 @@ export function deriveAssetsState(
   state: AssetsState,
   baselineGrowthRate = TYPE_DEFAULTS.none.growth,
   incomeDirectedContributions: Record<string, number> = {},
+  rsuItems: RsuInputItem[] = [],
 ): DerivedAssetsState {
-  const pinnedBuckets = resolvePinnedBuckets(state, incomeDirectedContributions);
+  const pinnedBuckets = resolvePinnedBuckets(state, incomeDirectedContributions, rsuItems);
   const assets = createAssets(pinnedBuckets.state, baselineGrowthRate);
 
   return {

@@ -32,6 +32,7 @@ type AccountInput = {
   annualContribution?: number;
   growth?: number;
   basis?: number;
+  illiquid?: boolean;
 };
 
 export type ProjectionScenarioOptions = {
@@ -53,9 +54,9 @@ export type ProjectionScenarioOptions = {
   expenseGrowthRate?: number;
   incomeGrowthRate?: number;
   homeAppreciationRate?: number;
-  rsuStockGrowthRate?: number;
   includeVestedRsusInNetWorth?: boolean;
   mortgageFundingBucketId?: string;
+  minimumCash?: number;
   taxConfig?: Partial<TaxConfig>;
 };
 
@@ -127,6 +128,7 @@ function createAccount({
   annualContribution = 0,
   growth = 0,
   basis,
+  illiquid = false,
 }: {
   id: string;
   name: string;
@@ -135,6 +137,7 @@ function createAccount({
   annualContribution?: number;
   growth?: number;
   basis?: number;
+  illiquid?: boolean;
 }): AssetBucketState {
   const startingBalance = roundTo(balance, 2);
   const effectiveBasis = basis ?? (taxTreatment === "none" ? startingBalance : 0);
@@ -143,11 +146,12 @@ function createAccount({
     id,
     taxTreatment,
     name,
+    linkedRsuId: null,
     current: startingBalance,
     contribution: roundTo(annualContribution, 2),
     growth,
     basis: taxTreatment === "none" ? roundTo(effectiveBasis, 2) : null,
-    detailsOpen: false,
+    illiquid,
   };
 }
 
@@ -293,7 +297,6 @@ function createExpensesState(annualExpenses = 0) {
             frequency: "annual",
             oneOffYear: null,
             growthRate: null,
-            detailsOpen: false,
           },
         ],
         advancedOpen: false,
@@ -311,10 +314,10 @@ function createProjectionState({
   expenseGrowthRate = 0,
   incomeGrowthRate = 0,
   homeAppreciationRate = 0,
-  rsuStockGrowthRate = 0,
   includeVestedRsusInNetWorth = false,
   freeCashFlowBucketId = "",
   mortgageFundingBucketId = "",
+  minimumCash = 0,
 }: ProjectionScenarioOptions) {
   return {
     ...DEFAULT_PROJECTION_STATE,
@@ -324,10 +327,10 @@ function createProjectionState({
     expenseGrowthRate,
     incomeGrowthRate,
     homeAppreciationRate,
-    rsuStockGrowthRate,
     includeVestedRsusInNetWorth,
     freeCashFlowBucketId,
     mortgageFundingBucketId,
+    minimumCash,
   };
 }
 
@@ -372,9 +375,9 @@ export function runProjectionScenario({
   expenseGrowthRate = 0,
   incomeGrowthRate = 0,
   homeAppreciationRate = 0,
-  rsuStockGrowthRate = 0,
   includeVestedRsusInNetWorth = false,
   mortgageFundingBucketId = "",
+  minimumCash = 0,
   taxConfig = DEFAULT_CONFIG,
 }: ProjectionScenarioOptions = {}): ProjectionScenarioRun {
   const normalizedRetirement = {
@@ -410,10 +413,10 @@ export function runProjectionScenario({
       expenseGrowthRate,
       incomeGrowthRate,
       homeAppreciationRate,
-      rsuStockGrowthRate,
       includeVestedRsusInNetWorth,
       freeCashFlowBucketId,
       mortgageFundingBucketId,
+      minimumCash,
     }),
     taxConfig: normalizeConfig(clone(taxConfig)),
   };
@@ -429,12 +432,18 @@ export function runProjectionScenario({
   const assets = createAssets(assetsState, projectionState.assetGrowthRate);
   const expenses = createExpenses(expensesState, projectionState.expenseGrowthRate);
   const projection = createProjection(projectionState);
+  const rsuGrowthRateById = Object.fromEntries(
+    assetsState.buckets
+      .filter((bucket) => bucket.linkedRsuId)
+      .map((bucket) => [bucket.linkedRsuId as string, ((bucket.growth ?? projectionState.assetGrowthRate) / 100)]),
+  ) as Record<string, number>;
   const results = calculateProjection({
     incomeSummary: scenario.incomeSummary,
     mortgageSummary: scenario.mortgageSummary as MortgageSummary,
     assets,
     expenses,
     projection,
+    rsuGrowthRateById,
     taxConfig: scenario.taxConfig,
   });
 

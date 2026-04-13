@@ -9,7 +9,6 @@ export type ExpenseStateItem = {
   frequency: ExpenseFrequency;
   oneOffYear: number | null;
   growthRate: number | null;
-  detailsOpen: boolean;
 };
 
 export type ExpensesState = {
@@ -58,7 +57,6 @@ function normalizeExpense(
     frequency,
     oneOffYear: readNumber(rawExpense.oneOffYear, null),
     growthRate: readNumber(rawExpense.growthRate, null),
-    detailsOpen: Boolean(rawExpense.detailsOpen),
   };
 }
 
