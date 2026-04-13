@@ -3,7 +3,7 @@ import { computeProgressiveTax, getTaxDeductions, type TaxConfig } from "./taxCo
 
 export type SalaryFrequency = "annual" | "monthly";
 
-export type RecurringIncomeInputItem = {
+export type SalaryInputItem = {
   id?: string;
   name?: string;
   amount: number;
@@ -24,14 +24,7 @@ export type SalaryItem = {
   name: string;
   amount: number | null;
   frequency: SalaryFrequency;
-};
-
-export type PassiveIncomeItem = {
-  id: string;
-  type: "passive";
-  name: string;
-  amount: number | null;
-  frequency: SalaryFrequency;
+  detailsOpen: boolean;
 };
 
 export type RsuItem = {
@@ -41,9 +34,10 @@ export type RsuItem = {
   grantAmount: number | null;
   refresherAmount: number | null;
   vestingYears: number | null;
+  detailsOpen: boolean;
 };
 
-export type IncomeItem = SalaryItem | PassiveIncomeItem | RsuItem;
+export type IncomeItem = SalaryItem | RsuItem;
 
 export type Income = {
   incomeItems: IncomeItem[];
@@ -56,7 +50,6 @@ export type Income = {
 
 export type ResolvedIncome = {
   grossSalary: number;
-  passiveIncome: number;
   rsuGrossNextYear: number;
   employee401k: number;
   matchRate: number;
@@ -85,7 +78,6 @@ export type IncomeSummary = ResolvedIncome & {
 
 export const DEFAULT_RESOLVED_INCOME: ResolvedIncome = {
   grossSalary: 0,
-  passiveIncome: 0,
   rsuGrossNextYear: 0,
   employee401k: 0,
   matchRate: 50,
@@ -114,6 +106,7 @@ export const DEFAULT_INCOME: Income = {
       name: "Salary",
       amount: 150000,
       frequency: "annual",
+      detailsOpen: false,
     },
   ],
   employee401k: 0,
@@ -173,16 +166,7 @@ export function normalizeIncomeItem(item: unknown): IncomeItem {
       grantAmount: readNumber(candidate.grantAmount, null),
       refresherAmount: readNumber(candidate.refresherAmount, null),
       vestingYears: readNumber(candidate.vestingYears, null) ?? 4,
-    };
-  }
-
-  if (candidate.type === "passive") {
-    return {
-      id: typeof candidate.id === "string" ? candidate.id : crypto.randomUUID(),
-      type: "passive",
-      name: typeof candidate.name === "string" ? candidate.name : "Passive income",
-      amount: readNumber(candidate.amount, null),
-      frequency: candidate.frequency === "monthly" ? "monthly" : "annual",
+      detailsOpen: Boolean(candidate.detailsOpen),
     };
   }
 
@@ -192,6 +176,7 @@ export function normalizeIncomeItem(item: unknown): IncomeItem {
     name: typeof candidate.name === "string" ? candidate.name : "Salary",
     amount: readNumber(candidate.amount, null),
     frequency: candidate.frequency === "monthly" ? "monthly" : "annual",
+    detailsOpen: Boolean(candidate.detailsOpen),
   };
 }
 
@@ -240,24 +225,13 @@ export function computeFica(grossSalary: number) {
   };
 }
 
-export function getAnnualSalaryTotal(salaryItems: RecurringIncomeInputItem[] = []) {
+export function getAnnualSalaryTotal(salaryItems: SalaryInputItem[] = []) {
   return salaryItems.reduce((sum, item) => sum + annualizeSalary(item.amount, item.frequency), 0);
 }
 
-export function toSalaryInputs(items: IncomeItem[]): RecurringIncomeInputItem[] {
+export function toSalaryInputs(items: IncomeItem[]): SalaryInputItem[] {
   return items
     .filter((item): item is SalaryItem => item.type === "salary")
-    .map((item) => ({
-      id: item.id,
-      name: item.name,
-      amount: item.amount ?? 0,
-      frequency: item.frequency,
-    }));
-}
-
-export function toPassiveIncomeInputs(items: IncomeItem[]): RecurringIncomeInputItem[] {
-  return items
-    .filter((item): item is PassiveIncomeItem => item.type === "passive")
     .map((item) => ({
       id: item.id,
       name: item.name,
@@ -283,12 +257,10 @@ export function resolveIncome(
   overrides: Partial<Pick<ResolvedIncome, "mortgageInterest" | "mortgageAverageBalance" | "propertyTax" | "rsuGrossNextYear">> = {},
 ) {
   const salaryItems = toSalaryInputs(income.incomeItems);
-  const passiveIncomeItems = toPassiveIncomeInputs(income.incomeItems);
   const rsuItems = toRsuInputs(income.incomeItems);
 
   return createResolvedIncome({
     grossSalary: getAnnualSalaryTotal(salaryItems),
-    passiveIncome: getAnnualSalaryTotal(passiveIncomeItems),
     rsuGrossNextYear: overrides.rsuGrossNextYear ?? computeRsuGrossForItems(rsuItems, 0),
     employee401k: income.employee401k,
     matchRate: income.matchRate,
@@ -320,20 +292,19 @@ export function computeSavings(income: ResolvedIncome, taxConfig: TaxConfig) {
 }
 
 export function computeAnnualTaxes(income: ResolvedIncome, taxConfig: TaxConfig, extraOrdinaryIncome = 0) {
-  const grossIncome = Math.max(0, income.grossSalary + income.passiveIncome + extraOrdinaryIncome);
-  const ficaWages = Math.max(0, income.grossSalary + extraOrdinaryIncome);
+  const grossIncome = Math.max(0, income.grossSalary + extraOrdinaryIncome);
   const californiaAdjustedGross = Math.max(0, grossIncome - income.employee401k);
-  const stateDeductions = getTaxDeductions(taxConfig, income, 0, extraOrdinaryIncome);
+  const stateDeductions = getTaxDeductions(taxConfig, income);
   const californiaTaxableIncome = Math.max(0, californiaAdjustedGross - stateDeductions.stateDeduction);
   const californiaTax = computeProgressiveTax(californiaTaxableIncome, taxConfig.stateBrackets);
 
   const federalAdjustedGross = Math.max(0, grossIncome - income.employee401k - income.hsaContribution);
-  const federalDeductions = getTaxDeductions(taxConfig, income, californiaTax, extraOrdinaryIncome);
+  const federalDeductions = getTaxDeductions(taxConfig, income, californiaTax);
   const federalTaxableIncome = Math.max(0, federalAdjustedGross - federalDeductions.federalDeduction);
   const federalTax = computeProgressiveTax(federalTaxableIncome, taxConfig.federalBrackets);
 
-  const fica = computeFica(ficaWages);
-  const caSdi = roundTo(ficaWages * (taxConfig.caSdiRate / 100), 2);
+  const fica = computeFica(grossIncome);
+  const caSdi = roundTo(grossIncome * (taxConfig.caSdiRate / 100), 2);
 
   return {
     federalTaxableIncome,
@@ -410,20 +381,18 @@ export function computeRsuGrossForProjectionYear(
 
 export function calculateIncome(income: ResolvedIncome, taxConfig: TaxConfig) {
   const grossSalary = Math.max(0, income.grossSalary);
-  const passiveIncome = Math.max(0, income.passiveIncome);
   const rsuGrossNextYear = Math.max(0, income.rsuGrossNextYear);
   const savings = computeSavings(income, taxConfig);
-  const taxableIncome = createResolvedIncome({ ...income, grossSalary, passiveIncome });
-  const baseTaxes = computeAnnualTaxes(taxableIncome, taxConfig, 0);
+  const taxableIncome = createResolvedIncome({ ...income, grossSalary });
+  const salaryTaxes = computeAnnualTaxes(taxableIncome, taxConfig, 0);
   const totalTaxes = computeAnnualTaxes(taxableIncome, taxConfig, rsuGrossNextYear);
   const annualTakeHome = roundTo(
-    grossSalary +
-      passiveIncome -
+    grossSalary -
       taxableIncome.employee401k -
       taxableIncome.hsaContribution -
       savings.iraContribution -
       savings.megaBackdoor -
-      baseTaxes.totalTaxes,
+      salaryTaxes.totalTaxes,
     2,
   );
   const rsuNetNextYear = computeIncrementalTakeHome(taxableIncome, taxConfig, rsuGrossNextYear);
@@ -436,7 +405,6 @@ export function calculateIncome(income: ResolvedIncome, taxConfig: TaxConfig) {
     caSdi: totalTaxes.caSdi,
     totalTaxes: totalTaxes.totalTaxes,
     grossSalary,
-    passiveIncome,
     annualTakeHome,
     monthlyTakeHome: roundTo(annualTakeHome / 12, 2),
     rsuGrossNextYear,

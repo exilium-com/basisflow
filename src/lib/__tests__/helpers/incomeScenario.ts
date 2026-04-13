@@ -9,7 +9,6 @@ import { DEFAULT_CONFIG, normalizeConfig, type TaxConfig } from "../../taxConfig
 
 export type IncomeScenarioOptions = {
   salary?: number;
-  passiveIncome?: number;
   rsuValue?: number;
   income?: Partial<ResolvedIncome>;
   taxConfig?: Partial<TaxConfig>;
@@ -22,13 +21,11 @@ export function money(value: number) {
 
 export function createScenarioIncome({
   salary = 0,
-  passiveIncome = 0,
   rsuValue = 0,
   ...overrides
 }: IncomeScenarioOptions = {}): ResolvedIncome {
   return createResolvedIncome({
     grossSalary: salary,
-    passiveIncome,
     rsuGrossNextYear: rsuValue,
     ...overrides,
   });
@@ -43,7 +40,6 @@ export function createIncomeTaxConfig(overrides: Partial<TaxConfig> = {}) {
 
 export function runIncomeScenario({
   salary = 0,
-  passiveIncome = 0,
   rsuValue = 0,
   income = {},
   taxConfig = {},
@@ -51,7 +47,6 @@ export function runIncomeScenario({
 }: IncomeScenarioOptions = {}) {
   const resolvedIncome = createScenarioIncome({
     salary,
-    passiveIncome,
     rsuValue,
     ...income,
   });

@@ -12,6 +12,8 @@ type RowItemProps = {
   onRemove?: React.MouseEventHandler<HTMLButtonElement>;
   detailsTitle?: React.ReactNode;
   detailsSummary?: React.ReactNode;
+  detailsOpen?: boolean;
+  onToggleDetails?: (open: boolean) => void;
   detailsClassName?: string;
   details?: React.ReactNode;
   children: React.ReactNode;
@@ -23,16 +25,18 @@ export function RowItem({
   pinned = false,
   selected = false,
   onSelect,
+  removeLabel,
   onRemove,
   detailsTitle,
   detailsSummary = null,
+  detailsOpen = false,
+  onToggleDetails,
   detailsClassName = "",
   details = null,
   children,
 }: RowItemProps) {
   const detailsId = React.useId();
-  const hasDetails = Boolean(detailsTitle) && React.Children.count(details) > 0;
-  const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const headerPadding = "p-4 pr-12";
 
   return (
     <article
@@ -49,18 +53,18 @@ export function RowItem({
           className="absolute top-4 right-4 z-10 border-0 bg-transparent p-0 leading-none transition hover:text-(--ink)
             focus-visible:outline-none"
           type="button"
-          aria-label="remove"
+          aria-label={removeLabel}
           onClick={onRemove}
         >
           <span className={smallCapsTextClass}>X</span>
         </button>
       ) : null}
 
-      <div className="p-4 pr-12">
+      <div className={headerPadding}>
         <div className="flex items-start justify-between gap-4">
           <div className={clsx("min-w-0 flex-1", bodyClassName || "grid grid-cols-3 gap-4")}>
             {children}
-            {hasDetails ? (
+            {detailsTitle ? (
               <button
                 className="inline-flex items-center gap-2 text-xs text-(--ink) focus-visible:outline-none"
                 type="button"
@@ -68,7 +72,7 @@ export function RowItem({
                 aria-expanded={detailsOpen}
                 onClick={(event) => {
                   event.stopPropagation();
-                  setDetailsOpen((open) => !open);
+                  onToggleDetails?.(!detailsOpen);
                 }}
               >
                 <span aria-hidden="true" className="text-(--teal)">
@@ -87,7 +91,7 @@ export function RowItem({
         </div>
       </div>
 
-      {hasDetails && detailsOpen ? (
+      {detailsTitle && detailsOpen && details ? (
         <div id={detailsId}>
           <div aria-hidden="true" className="mx-4 border-t border-(--line-soft)" />
           <div className={clsx("p-4", detailsClassName)}>{details}</div>

@@ -28,7 +28,7 @@ const TOOL_AREAS = [
 
 export function HomePage() {
   return (
-    <PageShell title="Basisflow">
+    <PageShell showToolNav={false} title="Basisflow">
       <main className={`${surfaceClass} flex-1 overflow-hidden`}>
         <section className="relative isolate flex flex-1 overflow-hidden">
           <div className="pointer-events-none absolute inset-0 opacity-90" aria-hidden="true">

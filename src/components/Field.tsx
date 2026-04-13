@@ -155,11 +155,10 @@ export function NumberField({
   const inputId = htmlFor ?? resolvedId;
   const usesNumericValue = typeof value === "number" || value == null;
   const [draftValue, setDraftValue] = React.useState(() => (usesNumericValue ? (value == null ? "" : String(value)) : value));
-  const [isFocused, setIsFocused] = React.useState(false);
   const lastNumericValueRef = React.useRef<number | null | undefined>(usesNumericValue ? value : undefined);
 
   React.useEffect(() => {
-    if (!usesNumericValue || isFocused) {
+    if (!usesNumericValue) {
       return;
     }
 
@@ -167,7 +166,7 @@ export function NumberField({
       setDraftValue(value == null ? "" : String(value));
       lastNumericValueRef.current = value;
     }
-  }, [isFocused, usesNumericValue, value]);
+  }, [usesNumericValue, value]);
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     if (usesNumericValue) {
@@ -190,7 +189,6 @@ export function NumberField({
   }
 
   function handleBlur(event: React.FocusEvent<HTMLInputElement>) {
-    setIsFocused(false);
     inputProps.onBlur?.(event);
 
     if (usesNumericValue) {
@@ -212,7 +210,6 @@ export function NumberField({
           className={clsx(inputBaseClassName, compact && "text-sm", inputClassName)}
           {...inputProps}
           value={usesNumericValue ? draftValue : value}
-          onFocus={() => setIsFocused(true)}
           onChange={handleChange}
           onBlur={handleBlur}
         />

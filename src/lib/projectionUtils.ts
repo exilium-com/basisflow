@@ -1,4 +1,3 @@
-import { colorVars } from "./colors";
 import { type ProjectedBucketValues } from "./assetsModel";
 import { type ExpenseSnapshot } from "./expensesModel";
 import { type IncomeSummary } from "./incomeModel";
@@ -15,7 +14,6 @@ export type ProjectionRow = {
   bucketSnapshotsById: Record<string, ProjectedBucketValues>;
   expenseSnapshotsById: Record<string, ExpenseSnapshot>;
   vestedRsuBalance: number;
-  vestedRsuBalanceById: Record<string, number>;
   assetsGross: number;
   capitalGainsTax: number;
   totalCapitalGains: number;
@@ -41,7 +39,7 @@ export function buildMonthlyCashFlow({
 }) {
   const growthFactor = Math.pow(1 + projection.incomeGrowthRate, projection.currentYear);
   const grossIncome = toDisplayValue(
-    ((incomeSummary.grossSalary ?? 0) + (incomeSummary.passiveIncome ?? 0)) * growthFactor / 12,
+    ((incomeSummary.grossSalary ?? 0) * growthFactor) / 12,
     projection.currentYear,
     projection,
   );
@@ -63,39 +61,40 @@ export function buildMonthlyCashFlow({
     {
       label: "Taxes",
       value: taxes,
-      color: colorVars.chartTaxes,
+      color: "#d18a5b",
     },
     {
       label: "Retirement savings",
       value: retirementSaving,
-      color: colorVars.chartRetirementSavings,
+      color: "#0d6a73",
     },
     {
       label: "Housing",
       value: mortgage,
-      color: colorVars.chartHousing,
+      color: "#7c8e97",
     },
     {
       label: "Expenses",
       value: expenses,
-      color: colorVars.chartExpenses,
+      color: "#9cadb5",
     },
     netFlow > 0
       ? {
           label: "Excess",
           value: netFlow,
-          color: colorVars.chartExcess,
+          color: "#b8d8d9",
         }
       : {
           label: "Shortfall",
           value: -netFlow,
-          color: colorVars.danger,
+          color: "var(--danger)",
         },
   ].filter((item) => item.value !== 0);
 
   return {
     items,
     netFlow,
+    total: grossIncome,
   };
 }
 

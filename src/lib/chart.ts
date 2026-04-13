@@ -28,14 +28,3 @@ export function buildLinePath(points: ChartPoint[]) {
     .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
     .join(" ");
 }
-
-export function buildAreaPath(points: ChartPoint[], baselineY: number) {
-  if (!points.length) {
-    return "";
-  }
-
-  const firstPoint = points[0];
-  const lastPoint = points[points.length - 1];
-
-  return `${buildLinePath(points)} L ${lastPoint.x.toFixed(2)} ${baselineY.toFixed(2)} L ${firstPoint.x.toFixed(2)} ${baselineY.toFixed(2)} Z`;
-}

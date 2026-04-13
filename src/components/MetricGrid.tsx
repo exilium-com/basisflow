@@ -2,12 +2,12 @@ import React from "react";
 import clsx from "clsx";
 import { labelTextClass, numberTextClass, primaryNumberTextClass, smallCapsTextClass } from "../lib/text";
 
-export type MetricGridItem = {
-  label: React.ReactNode;
+type MetricGridItem = {
+  label: string;
   value: React.ReactNode;
 };
 
-export type MetricGridProps = {
+type MetricGridProps = {
   items: MetricGridItem[];
   primaryItem?: MetricGridItem;
 };
@@ -26,7 +26,7 @@ export function MetricGrid({ items, primaryItem }: MetricGridProps) {
 
       {items.map((item: MetricGridItem, index: number) => (
         <div
-          key={index}
+          key={item.label}
           className={clsx(
             "flex items-baseline justify-between gap-4",
             index > 0 ? "border-t border-(--line) pt-2" : primaryItem && "pt-2",

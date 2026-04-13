@@ -124,12 +124,14 @@ export function buildMortgageSummaryItems(scenario: MortgageScenario, year = 0) 
     const monthlyRent = getMortgageMonthlyPaymentForYear(scenario, year);
 
     return [
+      { label: "Option", value: scenario.typeLabel },
       { label: "Annual housing cost", value: usd(monthlyRent * 12) },
       { label: "Yearly increase", value: `${scenario.rentGrowthRate.toFixed(1)}%` },
     ];
   }
 
   return [
+    { label: "Option", value: scenario.typeLabel },
     { label: `Monthly principal ${monthlyLabelSuffix}`, value: usd(getMortgagePrincipalForYear(scenario, year)) },
     { label: `Monthly interest ${monthlyLabelSuffix}`, value: usd(getMortgageInterestForYear(scenario, year)) },
     { label: "Monthly property tax", value: usd(scenario.monthlyTax) },

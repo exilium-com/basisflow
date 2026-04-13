@@ -1,5 +1,5 @@
 import React from "react";
-import { numberTextClass } from "../lib/text";
+import { labelTextClass, numberTextClass } from "../lib/text";
 
 type ChartLegendItem = {
   label: string;
@@ -20,11 +20,11 @@ export function ChartPanel({ title, legend = [], children }: ChartPanelProps) {
       </div>
       {children}
       {legend.length ? (
-        <div className={`mt-4 flex items-center justify-between gap-2 overflow-hidden px-4 pb-4 text-xs text-(--ink-soft)`}>
+        <div className={`mt-4 flex flex-wrap gap-4 px-4 pb-4 ${labelTextClass}`}>
           {legend.map((item: ChartLegendItem) => (
-            <span key={item.label} className="flex shrink-0 items-center gap-2 whitespace-nowrap">
-              <i className="size-4 shrink-0" style={{ background: item.color }}></i>
-              <span>{item.label}</span>
+            <span key={item.label} className="flex items-center gap-2">
+              <i className="size-4" style={{ background: item.color }}></i>
+              {item.label}
             </span>
           ))}
         </div>

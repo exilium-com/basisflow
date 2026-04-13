@@ -14,7 +14,7 @@ import {
   createResolvedIncome,
   computeAnnualTaxes,
   computeIncrementalTakeHome,
-  computeRsuGrossForYear,
+  computeRsuGrossForItems,
   type IncomeSummary,
   type ResolvedIncome,
 } from "./incomeModel";
@@ -33,7 +33,6 @@ type ProjectionBase = {
   assets: Assets;
   expenses: Expenses;
   projection: Projection;
-  rsuGrowthRateById: Record<string, number>;
   mortgageSummary: MortgageSummary;
   taxConfig: TaxConfig;
   income: ResolvedIncome;
@@ -54,7 +53,6 @@ type ProjectionSimulation = {
   base: ProjectionBase;
   bucketStates: ProjectedBucketState[];
   vestedRsuBalance: number;
-  vestedRsuBalanceById: Record<string, number>;
   projection: ProjectionRow[];
 };
 
@@ -74,7 +72,6 @@ type ProjectionYearContext = {
   takeHome: number;
   rsuGross: number;
   rsuNet: number;
-  rsuGrossById: Record<string, number>;
   housingCost: number;
   nonHousingExpenses: number;
   ordinaryIncome: number;
@@ -200,107 +197,6 @@ function advanceProjectedBucketWithNetContribution(
   };
 }
 
-function withdrawBucketForNetCash({
-  bucketState,
-  neededNetCash,
-  taxConfig,
-  taxBases,
-}: {
-  bucketState: ProjectedBucketState;
-  neededNetCash: number;
-  taxConfig: TaxConfig;
-  taxBases: { federalTaxableIncome?: number };
-}) {
-  const snapshot = deriveProjectedBucketValues(bucketState, taxConfig, taxBases);
-  const availableNetCash = Math.max(0, snapshot.afterTax);
-
-  if (neededNetCash <= 0 || bucketState.balance <= 0 || availableNetCash <= 0) {
-    return { bucketState, netCash: 0 };
-  }
-
-  const netCash = Math.min(neededNetCash, availableNetCash);
-  const grossWithdrawal = Math.min(bucketState.balance, roundTo(bucketState.balance * (netCash / availableNetCash), 2));
-  const nextBalance = roundTo(bucketState.balance - grossWithdrawal, 2);
-  const nextBasisValue =
-    bucketState.taxTreatment === "none" || bucketState.taxTreatment === "taxDeferred"
-      ? bucketState.balance > 0
-        ? roundTo(bucketState.basisValue * (nextBalance / bucketState.balance), 2)
-        : bucketState.basisValue
-      : 0;
-
-  return {
-    bucketState: {
-      ...bucketState,
-      balance: nextBalance,
-      basisValue: Math.max(0, nextBasisValue),
-    },
-    netCash: roundTo(netCash, 2),
-  };
-}
-
-function restoreMinimumCash(
-  base: ProjectionBase,
-  bucketStates: ProjectedBucketState[],
-  taxBases: { federalTaxableIncome?: number },
-) {
-  if (base.projection.minimumCash <= 0) {
-    return bucketStates;
-  }
-
-  const reserveCashIndex = bucketStates.findIndex((bucketState) => bucketState.id === base.reserveCashBucketId);
-  if (reserveCashIndex === -1) {
-    return bucketStates;
-  }
-
-  const pinnedBucketIds = new Set(Object.values(PINNED_BUCKETS).map((bucket) => bucket.id));
-  const nextBucketStates = [...bucketStates];
-  const liquidationCandidates = nextBucketStates
-    .map((bucketState, index) => ({ bucketState, index }))
-    .filter(
-      ({ bucketState }) =>
-        bucketState.id !== base.reserveCashBucketId &&
-        !bucketState.illiquid &&
-        bucketState.balance > 0,
-    )
-    .sort((left, right) => {
-      const leftIsCustom = !pinnedBucketIds.has(left.bucketState.id);
-      const rightIsCustom = !pinnedBucketIds.has(right.bucketState.id);
-
-      if (leftIsCustom !== rightIsCustom) {
-        return leftIsCustom ? -1 : 1;
-      }
-
-      return left.index - right.index;
-    });
-
-  let reserveCashShortfall = Math.max(0, base.projection.minimumCash - nextBucketStates[reserveCashIndex].balance);
-  for (const { index } of liquidationCandidates) {
-    if (reserveCashShortfall <= 0) {
-      break;
-    }
-
-    const withdrawal = withdrawBucketForNetCash({
-      bucketState: nextBucketStates[index],
-      neededNetCash: reserveCashShortfall,
-      taxConfig: base.taxConfig,
-      taxBases,
-    });
-    if (withdrawal.netCash <= 0) {
-      continue;
-    }
-
-    nextBucketStates[index] = withdrawal.bucketState;
-    nextBucketStates[reserveCashIndex] = {
-      ...nextBucketStates[reserveCashIndex],
-      balance: roundTo(nextBucketStates[reserveCashIndex].balance + withdrawal.netCash, 2),
-      basisValue: roundTo(Math.max(0, nextBucketStates[reserveCashIndex].basisValue) + withdrawal.netCash, 2),
-    };
-    reserveCashShortfall = Math.max(0, base.projection.minimumCash - nextBucketStates[reserveCashIndex].balance);
-  }
-
-  return nextBucketStates;
-}
-
 function advanceProjectionBuckets({
   bucketStates,
   extraContributionByBucket,
@@ -333,7 +229,6 @@ function createProjectionSimulation({
   assets,
   expenses,
   projection,
-  rsuGrowthRateById,
   taxConfig,
 }: {
   incomeSummary: IncomeSummary;
@@ -341,7 +236,6 @@ function createProjectionSimulation({
   assets: Assets;
   expenses: Expenses;
   projection: Projection;
-  rsuGrowthRateById: Record<string, number>;
   taxConfig: TaxConfig;
 }): ProjectionSimulation {
   const incomeDirectedContributions = buildIncomeDirectedContributions(incomeSummary);
@@ -356,7 +250,6 @@ function createProjectionSimulation({
     assets,
     expenses,
     projection,
-    rsuGrowthRateById,
     mortgageSummary,
     taxConfig,
     income,
@@ -391,19 +284,17 @@ function createProjectionSimulation({
     base.mortgage.currentEquity,
   );
   const yearZeroContext = buildProjectionYearContext(base, 0);
-  const initialBucketStates = restoreMinimumCash(base, bucketStates, yearZeroContext.taxBases);
   const currentSnapshot = buildProjectionSnapshot({
     base,
     year: 0,
-    bucketStates: initialBucketStates,
+    bucketStates,
     taxBases: yearZeroContext.taxBases,
   });
 
   return {
     base,
-    bucketStates: initialBucketStates,
+    bucketStates,
     vestedRsuBalance: 0,
-    vestedRsuBalanceById: {},
     projection: [
       buildProjectionRow({
         base,
@@ -416,7 +307,6 @@ function createProjectionSimulation({
         freeCashBeforeAllocation: yearZeroContext.freeCashBeforeAllocation,
         snapshot: currentSnapshot,
         vestedRsuBalance: 0,
-        vestedRsuBalanceById: {},
         homeEquity: base.mortgage.currentEquity,
       }),
     ],
@@ -471,7 +361,6 @@ function buildProjectionRow({
   freeCashBeforeAllocation,
   snapshot,
   vestedRsuBalance,
-  vestedRsuBalanceById,
   homeEquity,
 }: {
   base: ProjectionBase;
@@ -484,7 +373,6 @@ function buildProjectionRow({
   freeCashBeforeAllocation: number;
   snapshot: ProjectionSnapshot;
   vestedRsuBalance: number;
-  vestedRsuBalanceById: Record<string, number>;
   homeEquity: number;
 }): ProjectionRow {
   return {
@@ -498,7 +386,6 @@ function buildProjectionRow({
     bucketSnapshotsById: mapSnapshotsById(snapshot.assetSnapshots),
     expenseSnapshotsById: mapSnapshotsById(snapshot.expenseSnapshots),
     vestedRsuBalance,
-    vestedRsuBalanceById,
     assetsGross: snapshot.assetsGross,
     capitalGainsTax: snapshot.capitalGainsTax,
     totalCapitalGains: snapshot.totalCapitalGains,
@@ -514,26 +401,19 @@ function buildProjectionYearContext(base: ProjectionBase, year: number): Project
   const income: ResolvedIncome = {
     ...base.income,
     grossSalary: base.income.grossSalary * growthFactor,
-    passiveIncome: base.income.passiveIncome * growthFactor,
     mortgageAverageBalance: getMortgageYearAverageBalance(base.mortgageSummary, year),
     mortgageInterest: getMortgageYearInterest(base.mortgageSummary, year),
   };
-  const rsuGrossById = Object.fromEntries(
-    income.rsuItems.map((rsuItem) => [
-      rsuItem.id ?? "",
-      computeRsuGrossForYear(
-        rsuItem,
-        year,
-        base.rsuGrowthRateById[rsuItem.id ?? ""] ?? base.projection.assetGrowthRate,
-        base.projection.incomeGrowthRate,
-      ),
-    ]),
+  const rsuGross = computeRsuGrossForItems(
+    income.rsuItems,
+    year,
+    base.projection.rsuStockGrowthRate,
+    base.projection.incomeGrowthRate,
   );
-  const rsuGross = Object.values(rsuGrossById).reduce((sum, value) => sum + value, 0);
   const rsuNet = roundTo(computeIncrementalTakeHome(income, base.taxConfig, rsuGross), 2);
   const takeHome = calculateIncome(income, base.taxConfig).annualTakeHome;
   const nonHousingExpenses = roundTo(getAnnualNonHousingExpenses(base.expenses.expenses, year), 2);
-  const ordinaryIncome = income.grossSalary + income.passiveIncome;
+  const ordinaryIncome = income.grossSalary;
   const taxBases = getTaxBases(income, rsuGross, base.taxConfig);
   const deductionTaxSavings = computeDeductionTaxSavings(
     ordinaryIncome,
@@ -545,7 +425,6 @@ function buildProjectionYearContext(base: ProjectionBase, year: number): Project
     takeHome,
     rsuGross,
     rsuNet,
-    rsuGrossById,
     housingCost,
     nonHousingExpenses,
     ordinaryIncome,
@@ -557,22 +436,14 @@ function buildProjectionYearContext(base: ProjectionBase, year: number): Project
   };
 }
 
-function allocateFreeCash(
-  base: ProjectionBase,
-  bucketStates: ProjectedBucketState[],
-  yearContext: ProjectionYearContext,
-): FreeCashAllocation {
+function allocateFreeCash(base: ProjectionBase, yearContext: ProjectionYearContext): FreeCashAllocation {
   const extraContributionByBucket: Record<string, number> = {};
   const allocatedCash = Math.max(0, yearContext.freeCashBeforeAllocation);
-  const currentReserveCash =
-    bucketStates.find((bucketState) => bucketState.id === base.reserveCashBucketId)?.balance ?? 0;
-  const reserveCashTopUp = Math.min(allocatedCash, Math.max(0, base.projection.minimumCash - currentReserveCash));
-  const investableCash = allocatedCash - reserveCashTopUp;
   let deductibleContribution = 0;
-  if (base.assetPlan.freeCashFlowBucket && investableCash > 0) {
-    extraContributionByBucket[base.assetPlan.freeCashFlowBucket.id] = investableCash;
+  if (base.assetPlan.freeCashFlowBucket && allocatedCash > 0) {
+    extraContributionByBucket[base.assetPlan.freeCashFlowBucket.id] = allocatedCash;
     if (base.assetPlan.freeCashFlowBucket.taxTreatment === "taxDeductible") {
-      deductibleContribution = investableCash;
+      deductibleContribution = allocatedCash;
     }
   }
 
@@ -586,34 +457,11 @@ function allocateFreeCash(
     extraContributionByBucket,
     reserveCashFlow:
       yearContext.freeCashBeforeAllocation >= 0
-        ? reserveCashTopUp +
-          (base.assetPlan.freeCashFlowBucket ? 0 : investableCash) +
+        ? yearContext.freeCashBeforeAllocation -
+          (base.assetPlan.freeCashFlowBucket ? allocatedCash : 0) +
           extraDeductionTaxSavings
         : yearContext.freeCashBeforeAllocation,
   };
-}
-
-function buildNextVestedRsuBalancesById(
-  currentBalancesById: Record<string, number>,
-  rsuGrossById: Record<string, number>,
-  totalRsuNet: number,
-  rsuGrowthRateById: Record<string, number>,
-  defaultGrowthRate: number,
-) {
-  const nextBalancesById = Object.fromEntries(
-    Object.entries(currentBalancesById).map(([id, balance]) => [
-      id,
-      roundTo(balance * (1 + (rsuGrowthRateById[id] ?? defaultGrowthRate)), 2),
-    ]),
-  ) as Record<string, number>;
-  const totalRsuGross = Object.values(rsuGrossById).reduce((sum, value) => sum + value, 0);
-
-  Object.entries(rsuGrossById).forEach(([id, grossValue]) => {
-    const apportionedNet = totalRsuGross > 0 ? roundTo(totalRsuNet * (grossValue / totalRsuGross), 2) : 0;
-    nextBalancesById[id] = roundTo((nextBalancesById[id] ?? 0) + apportionedNet, 2);
-  });
-
-  return nextBalancesById;
 }
 
 function getMortgageEndingBalance(mortgageSummary: MortgageSummary, year: number) {
@@ -627,24 +475,16 @@ function getMortgageEndingBalance(mortgageSummary: MortgageSummary, year: number
 function advanceProjectionYear(simulation: ProjectionSimulation, year: number) {
   const { base } = simulation;
   const appliedContext = buildProjectionYearContext(base, year - 1);
-  const allocation = allocateFreeCash(base, simulation.bucketStates, appliedContext);
+  const allocation = allocateFreeCash(base, appliedContext);
   const nextBucketStates = advanceProjectionBuckets({
     bucketStates: simulation.bucketStates,
     extraContributionByBucket: allocation.extraContributionByBucket,
     incomeDirectedContributions: base.assetPlan.incomeDirectedContributions,
     reserveCashFlow: allocation.reserveCashFlow,
   });
-  const nextBucketStatesWithMinimumCash = restoreMinimumCash(base, nextBucketStates, appliedContext.taxBases);
   const vestedRsuBalance = roundTo(
-    simulation.vestedRsuBalance * (1 + base.projection.assetGrowthRate) + appliedContext.rsuNet,
+    simulation.vestedRsuBalance * (1 + base.projection.rsuStockGrowthRate) + appliedContext.rsuNet,
     2,
-  );
-  const vestedRsuBalanceById = buildNextVestedRsuBalancesById(
-    simulation.vestedRsuBalanceById,
-    appliedContext.rsuGrossById,
-    appliedContext.rsuNet,
-    base.rsuGrowthRateById,
-    base.projection.assetGrowthRate,
   );
   const homeEquity =
     base.mortgageSummary.kind === "rent"
@@ -655,13 +495,12 @@ function advanceProjectionYear(simulation: ProjectionSimulation, year: number) {
   const snapshot = buildProjectionSnapshot({
     base,
     year,
-    bucketStates: nextBucketStatesWithMinimumCash,
+    bucketStates: nextBucketStates,
     taxBases: yearContext.taxBases,
   });
 
-  simulation.bucketStates = nextBucketStatesWithMinimumCash;
+  simulation.bucketStates = nextBucketStates;
   simulation.vestedRsuBalance = vestedRsuBalance;
-  simulation.vestedRsuBalanceById = vestedRsuBalanceById;
   simulation.projection.push(
     buildProjectionRow({
       base,
@@ -674,7 +513,6 @@ function advanceProjectionYear(simulation: ProjectionSimulation, year: number) {
       freeCashBeforeAllocation: yearContext.freeCashBeforeAllocation,
       snapshot,
       vestedRsuBalance,
-      vestedRsuBalanceById,
       homeEquity,
     }),
   );
@@ -686,7 +524,6 @@ export function calculateProjection({
   assets,
   expenses,
   projection,
-  rsuGrowthRateById,
   taxConfig,
 }: {
   incomeSummary: IncomeSummary;
@@ -694,7 +531,6 @@ export function calculateProjection({
   assets: Assets;
   expenses: Expenses;
   projection: Projection;
-  rsuGrowthRateById: Record<string, number>;
   taxConfig: TaxConfig;
 }): ProjectionResults {
   const simulation = createProjectionSimulation({
@@ -703,7 +539,6 @@ export function calculateProjection({
     assets,
     expenses,
     projection,
-    rsuGrowthRateById,
     taxConfig,
   });
 

@@ -15,6 +15,7 @@ type ProjectionSettings = {
   currentYear: number;
   inflationRate: number;
   assetGrowthRate: number;
+  rsuStockGrowthRate: number;
   expenseGrowthRate: number;
   incomeGrowthRate: number;
   homeAppreciationRate: number;
@@ -22,7 +23,6 @@ type ProjectionSettings = {
   includeVestedRsusInNetWorth: boolean;
   mortgageFundingBucketId: string;
   freeCashFlowBucketId: string;
-  minimumCash: number;
 };
 
 export type ProjectionState = ProjectionSettings & {
@@ -37,10 +37,10 @@ const PROJECTION_NUMBER_FIELDS = [
   "currentYear",
   "inflationRate",
   "assetGrowthRate",
+  "rsuStockGrowthRate",
   "expenseGrowthRate",
   "incomeGrowthRate",
   "homeAppreciationRate",
-  "minimumCash",
 ] as const satisfies ReadonlyArray<keyof ProjectionState>;
 
 export const DEFAULT_PROJECTION_STATE: ProjectionState = {
@@ -48,6 +48,7 @@ export const DEFAULT_PROJECTION_STATE: ProjectionState = {
   currentYear: 20,
   inflationRate: 2.5,
   assetGrowthRate: 7,
+  rsuStockGrowthRate: 7,
   expenseGrowthRate: 2.5,
   incomeGrowthRate: 5,
   homeAppreciationRate: 3,
@@ -55,7 +56,6 @@ export const DEFAULT_PROJECTION_STATE: ProjectionState = {
   includeVestedRsusInNetWorth: false,
   mortgageFundingBucketId: "",
   freeCashFlowBucketId: "",
-  minimumCash: 0,
   assetOverrides: {},
   expenseOverrides: {},
 };
@@ -120,6 +120,7 @@ export function createProjection(state: ProjectionState): Projection {
     currentYear: clamp(Math.round(state.currentYear), 0, horizonYears),
     inflationRate: Math.max(0, state.inflationRate) / 100,
     assetGrowthRate: Math.max(0, state.assetGrowthRate) / 100,
+    rsuStockGrowthRate: state.rsuStockGrowthRate / 100,
     expenseGrowthRate: Math.max(-20, state.expenseGrowthRate) / 100,
     incomeGrowthRate: state.incomeGrowthRate / 100,
     homeAppreciationRate: state.homeAppreciationRate / 100,
@@ -127,7 +128,6 @@ export function createProjection(state: ProjectionState): Projection {
     includeVestedRsusInNetWorth: state.includeVestedRsusInNetWorth,
     mortgageFundingBucketId: state.mortgageFundingBucketId,
     freeCashFlowBucketId: state.freeCashFlowBucketId,
-    minimumCash: Math.max(0, state.minimumCash),
   };
 }
 
