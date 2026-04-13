@@ -12,6 +12,9 @@ export type TaxBracket = {
 export type TaxDeductionMode = "standard" | "itemized";
 
 export type TaxConfig = {
+  employee401kLimit: number;
+  iraContributionLimit: number;
+  hsaContributionLimit: number;
   annualAdditionsLimit: number;
   deductionMode: TaxDeductionMode;
   federalStandardDeduction: number;
@@ -29,6 +32,9 @@ export type TaxConfig = {
 };
 
 export const DEFAULT_CONFIG = {
+  employee401kLimit: 24500,
+  iraContributionLimit: 7000,
+  hsaContributionLimit: 4400,
   annualAdditionsLimit: 72000,
   deductionMode: "standard" as TaxDeductionMode,
   federalStandardDeduction: 16100,
@@ -148,6 +154,18 @@ export function normalizeConfig(rawConfig: unknown): TaxConfig {
   const config = typeof rawConfig === "object" && rawConfig ? rawConfig : {};
 
   return {
+    employee401kLimit: readNonNegativeConfigNumber(
+      (config as { employee401kLimit?: unknown }).employee401kLimit,
+      fallback.employee401kLimit,
+    ),
+    iraContributionLimit: readNonNegativeConfigNumber(
+      (config as { iraContributionLimit?: unknown }).iraContributionLimit,
+      fallback.iraContributionLimit,
+    ),
+    hsaContributionLimit: readNonNegativeConfigNumber(
+      (config as { hsaContributionLimit?: unknown }).hsaContributionLimit,
+      fallback.hsaContributionLimit,
+    ),
     annualAdditionsLimit: readNonNegativeConfigNumber(
       (config as { annualAdditionsLimit?: unknown }).annualAdditionsLimit,
       fallback.annualAdditionsLimit,

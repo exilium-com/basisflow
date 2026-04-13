@@ -16,6 +16,7 @@ export type RsuInputItem = {
   grantAmount: number;
   refresherAmount: number;
   vestingYears: number;
+  illiquid: boolean;
 };
 
 export type SalaryItem = {
@@ -41,6 +42,7 @@ export type RsuItem = {
   grantAmount: number | null;
   refresherAmount: number | null;
   vestingYears: number | null;
+  illiquid: boolean;
 };
 
 export type IncomeItem = SalaryItem | PassiveIncomeItem | RsuItem;
@@ -173,6 +175,7 @@ export function normalizeIncomeItem(item: unknown): IncomeItem {
       grantAmount: readNumber(candidate.grantAmount, null),
       refresherAmount: readNumber(candidate.refresherAmount, null),
       vestingYears: readNumber(candidate.vestingYears, null) ?? 4,
+      illiquid: typeof candidate.illiquid === "boolean" ? candidate.illiquid : true,
     };
   }
 
@@ -275,6 +278,7 @@ export function toRsuInputs(items: IncomeItem[]): RsuInputItem[] {
       grantAmount: item.grantAmount ?? 0,
       refresherAmount: item.refresherAmount ?? 0,
       vestingYears: item.vestingYears ?? 4,
+      illiquid: item.illiquid,
     }));
 }
 

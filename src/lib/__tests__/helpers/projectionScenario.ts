@@ -116,6 +116,7 @@ function createProjectionRsuItems(rsuValue: number): RsuInputItem[] {
       grantAmount: rsuValue,
       refresherAmount: 0,
       vestingYears: 1,
+      illiquid: true,
     },
   ];
 }

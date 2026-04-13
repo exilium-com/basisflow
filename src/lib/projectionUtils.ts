@@ -66,7 +66,7 @@ export function buildMonthlyCashFlow({
       color: colorVars.chartTaxes,
     },
     {
-      label: "Retirement savings",
+      label: "Retirement",
       value: retirementSaving,
       color: colorVars.chartRetirementSavings,
     },
@@ -89,7 +89,7 @@ export function buildMonthlyCashFlow({
       : {
           label: "Shortfall",
           value: -netFlow,
-          color: colorVars.danger,
+          color: colorVars.chartShortfall,
         },
   ].filter((item) => item.value !== 0);
 

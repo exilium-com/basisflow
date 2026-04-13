@@ -9,7 +9,7 @@ import { usd } from "../../lib/format";
 import { type IncomeResults, type ResolvedIncome } from "../../lib/incomeModel";
 import { type MortgageState } from "../../lib/mortgageConfig";
 import { type TaxConfig } from "../../lib/taxConfig";
-import { labelTextClass } from "../../lib/text";
+import { labelTextClass, smallCapsTextClass } from "../../lib/text";
 
 type TaxesSectionProps = {
   federalBrackets: string;
@@ -72,84 +72,130 @@ export function TaxesSection({
           ]}
         />
         <AdvancedPanel id="taxLimits" title="Tax parameters">
-          <div className="grid grid-cols-2 gap-4">
-            <NumberField
-              label="CA SDI rate"
-              suffix="%"
-              step="0.5"
-              value={taxConfig.caSdiRate}
-              onValueChange={(value) => onUpdateTaxConfig({ caSdiRate: value ?? 0 })}
-            />
-            <NumberField
-              label="Property tax rate"
-              suffix="%"
-              value={mortgageState.propertyTaxRate}
-              step="0.1"
-              onValueChange={(value) => onUpdateMortgageState({ propertyTaxRate: value ?? 0 })}
-            />
-            <NumberField
-              label="401(k) total contribution cap"
-              prefix="$"
-              step="100"
-              value={taxConfig.annualAdditionsLimit}
-              onValueChange={(value) => onUpdateTaxConfig({ annualAdditionsLimit: value ?? 0 })}
-            />
-            <NumberField
-              label="Federal standard deduction"
-              prefix="$"
-              step="50"
-              value={taxConfig.federalStandardDeduction}
-              onValueChange={(value) => onUpdateTaxConfig({ federalStandardDeduction: value ?? 0 })}
-            />
-            <NumberField
-              label="California standard deduction"
-              prefix="$"
-              step="50"
-              value={taxConfig.stateStandardDeduction}
-              onValueChange={(value) => onUpdateTaxConfig({ stateStandardDeduction: value ?? 0 })}
-            />
-            <NumberField
-              label="Federal SALT max deduction"
-              prefix="$"
-              step="50"
-              value={taxConfig.federalSaltCap}
-              onValueChange={(value) => onUpdateTaxConfig({ federalSaltCap: value ?? 0 })}
-            />
-            <NumberField
-              label="Federal SALT floor"
-              prefix="$"
-              step="50"
-              value={taxConfig.federalSaltCapFloor}
-              onValueChange={(value) => onUpdateTaxConfig({ federalSaltCapFloor: value ?? 0 })}
-            />
-            <NumberField
-              label="Federal SALT phaseout MAGI"
-              prefix="$"
-              step="1000"
-              value={taxConfig.federalSaltPhaseoutThreshold}
-              onValueChange={(value) => onUpdateTaxConfig({ federalSaltPhaseoutThreshold: value ?? 0 })}
-            />
-            <NumberField
-              label="Federal SALT phaseout rate"
-              suffix="%"
-              step="1"
-              value={taxConfig.federalSaltPhaseoutRate}
-              onValueChange={(value) => onUpdateTaxConfig({ federalSaltPhaseoutRate: value ?? 0 })}
-            />
-            <NumberField
-              label="Federal mortgage debt cap"
-              prefix="$"
-              step="1000"
-              value={taxConfig.federalMortgageInterestDebtCap}
-              onValueChange={(value) => onUpdateTaxConfig({ federalMortgageInterestDebtCap: value ?? 0 })}
-            />
-            <NumberField
-              label="California mortgage debt cap"
-              prefix="$"
-              step="1000"
-              value={taxConfig.stateMortgageInterestDebtCap}
-              onValueChange={(value) => onUpdateTaxConfig({ stateMortgageInterestDebtCap: value ?? 0 })}
-            />
+          <div className="grid gap-4">
+            <div className="grid gap-4">
+              <div className={smallCapsTextClass}>Tax Rates</div>
+              <div className="grid grid-cols-2 gap-4">
+                <NumberField
+                  label="CA SDI"
+                  suffix="%"
+                  step="0.5"
+                  value={taxConfig.caSdiRate}
+                  onValueChange={(value) => onUpdateTaxConfig({ caSdiRate: value ?? 0 })}
+                />
+                <NumberField
+                  label="Property tax"
+                  suffix="%"
+                  value={mortgageState.propertyTaxRate}
+                  step="0.1"
+                  onValueChange={(value) => onUpdateMortgageState({ propertyTaxRate: value ?? 0 })}
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 border-t border-(--line-soft) pt-4">
+              <div className={smallCapsTextClass}>Contribution Limits</div>
+              <div className="grid grid-cols-2 gap-4">
+                <NumberField
+                  label="Employee 401(k)"
+                  prefix="$"
+                  step="100"
+                  value={taxConfig.employee401kLimit}
+                  onValueChange={(value) => onUpdateTaxConfig({ employee401kLimit: value ?? 0 })}
+                />
+                <NumberField
+                  label="HSA"
+                  prefix="$"
+                  step="100"
+                  value={taxConfig.hsaContributionLimit}
+                  onValueChange={(value) => onUpdateTaxConfig({ hsaContributionLimit: value ?? 0 })}
+                />
+                <NumberField
+                  label="IRA"
+                  prefix="$"
+                  step="100"
+                  value={taxConfig.iraContributionLimit}
+                  onValueChange={(value) => onUpdateTaxConfig({ iraContributionLimit: value ?? 0 })}
+                />
+                <NumberField
+                  label="401(k) total"
+                  prefix="$"
+                  step="100"
+                  value={taxConfig.annualAdditionsLimit}
+                  onValueChange={(value) => onUpdateTaxConfig({ annualAdditionsLimit: value ?? 0 })}
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 border-t border-(--line-soft) pt-4">
+              <div className={smallCapsTextClass}>Standard Deductions</div>
+              <div className="grid grid-cols-2 gap-4">
+                <NumberField
+                  label="Federal"
+                  prefix="$"
+                  step="50"
+                  value={taxConfig.federalStandardDeduction}
+                  onValueChange={(value) => onUpdateTaxConfig({ federalStandardDeduction: value ?? 0 })}
+                />
+                <NumberField
+                  label="California"
+                  prefix="$"
+                  step="50"
+                  value={taxConfig.stateStandardDeduction}
+                  onValueChange={(value) => onUpdateTaxConfig({ stateStandardDeduction: value ?? 0 })}
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 border-t border-(--line-soft) pt-4">
+              <div className={smallCapsTextClass}>SALT</div>
+              <div className="grid grid-cols-2 gap-4">
+                <NumberField
+                  label="Max deduction"
+                  prefix="$"
+                  step="50"
+                  value={taxConfig.federalSaltCap}
+                  onValueChange={(value) => onUpdateTaxConfig({ federalSaltCap: value ?? 0 })}
+                />
+                <NumberField
+                  label="Floor"
+                  prefix="$"
+                  step="50"
+                  value={taxConfig.federalSaltCapFloor}
+                  onValueChange={(value) => onUpdateTaxConfig({ federalSaltCapFloor: value ?? 0 })}
+                />
+                <NumberField
+                  label="Phaseout MAGI"
+                  prefix="$"
+                  step="1000"
+                  value={taxConfig.federalSaltPhaseoutThreshold}
+                  onValueChange={(value) => onUpdateTaxConfig({ federalSaltPhaseoutThreshold: value ?? 0 })}
+                />
+                <NumberField
+                  label="Phaseout rate"
+                  suffix="%"
+                  step="1"
+                  value={taxConfig.federalSaltPhaseoutRate}
+                  onValueChange={(value) => onUpdateTaxConfig({ federalSaltPhaseoutRate: value ?? 0 })}
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 border-t border-(--line-soft) pt-4">
+              <div className={smallCapsTextClass}>Mortgage Debt Cap</div>
+              <div className="grid grid-cols-2 gap-4">
+                <NumberField
+                  label="Federal"
+                  prefix="$"
+                  step="1000"
+                  value={taxConfig.federalMortgageInterestDebtCap}
+                  onValueChange={(value) => onUpdateTaxConfig({ federalMortgageInterestDebtCap: value ?? 0 })}
+                />
+                <NumberField
+                  label="California"
+                  prefix="$"
+                  step="1000"
+                  value={taxConfig.stateMortgageInterestDebtCap}
+                  onValueChange={(value) => onUpdateTaxConfig({ stateMortgageInterestDebtCap: value ?? 0 })}
+                />
+              </div>
+            </div>
           </div>
         </AdvancedPanel>
 

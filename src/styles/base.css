@@ -19,20 +19,21 @@
   --teal-tint: #dcebec;
   --clay: #c56b3d;
   --clay-soft: #c56b3d61;
-  --destructive: #9d4a3d;
-  --destructive-soft: #9d4a3d22;
-  --danger: #b03e2e80;
+  --destructive: #8f3b34;
+  --destructive-soft: #8f3b3422;
+  --danger: #8f3b34;
   --chart-net-worth: var(--ink);
-  --chart-retirement: var(--teal-soft);
-  --chart-cash: #d7dde2;
-  --chart-rsus: #d9ede4;
-  --chart-other-assets: #9cadb5;
-  --chart-home-equity: var(--clay-soft);
-  --chart-taxes: #d18a5b;
-  --chart-retirement-savings: var(--teal);
-  --chart-housing: #7c8e97;
-  --chart-expenses: #9cadb5;
-  --chart-excess: var(--teal-soft);
+  --chart-retirement: #72b4a1;
+  --chart-cash: #93aabc;
+  --chart-rsus: #a9cdb2;
+  --chart-other-assets: #d3bea0;
+  --chart-home-equity: #d6956e;
+  --chart-taxes: #bb8698;
+  --chart-retirement-savings: var(--chart-retirement);
+  --chart-housing: var(--chart-home-equity);
+  --chart-expenses: #b9aea1;
+  --chart-excess: var(--chart-cash);
+  --chart-shortfall: var(--destructive);
 }
 
 @layer base {
