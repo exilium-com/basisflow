@@ -102,6 +102,7 @@ type PinnedBucketConfig = {
   reserveCash?: boolean;
   linkedRsuId?: string;
   current?: number;
+  illiquid?: boolean;
 };
 
 export const PINNED_BUCKETS: Record<
@@ -213,6 +214,7 @@ function buildPinnedBucketConfigs(rsuItems: RsuInputItem[] = []): PinnedBucketCo
       taxTreatment: "none" as const,
       linkedRsuId: rsuItem.id ?? "",
       current: Math.max(0, rsuItem.grantAmount),
+      illiquid: rsuItem.illiquid,
     })),
   ];
 }
@@ -265,7 +267,7 @@ export function resolvePinnedBuckets(
           linkedRsuId: config.linkedRsuId ?? null,
           current: config.current ?? null,
           basis: config.taxTreatment === "none" ? (config.current ?? null) : null,
-          illiquid: config.linkedRsuId ? true : undefined,
+          illiquid: config.illiquid,
         }),
       );
       return;
@@ -279,7 +281,7 @@ export function resolvePinnedBuckets(
       linkedRsuId: config.linkedRsuId ?? null,
       current: config.current ?? buckets[existingIndex].current,
       basis: config.taxTreatment === "none" ? (config.current ?? buckets[existingIndex].basis) : null,
-      illiquid: config.linkedRsuId ? true : buckets[existingIndex].illiquid,
+      illiquid: config.illiquid ?? buckets[existingIndex].illiquid,
     };
     changed =
       changed ||

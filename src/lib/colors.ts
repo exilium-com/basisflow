@@ -21,6 +21,7 @@ export const colorVars = {
   chartHousing: "var(--chart-housing)",
   chartExpenses: "var(--chart-expenses)",
   chartExcess: "var(--chart-excess)",
+  chartShortfall: "var(--chart-shortfall)",
 } as const;
 
 export const netWorthChartLegend = [

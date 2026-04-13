@@ -277,6 +277,7 @@ export function WorkspacePage() {
         grantAmount: 0,
         refresherAmount: 0,
         vestingYears: 4,
+        illiquid: true,
       });
     });
   }
@@ -502,6 +503,7 @@ export function WorkspacePage() {
             rsuGrowthRateById={rsuGrowthRateById}
             selectedYearLabel={selectedYearLabel}
             retirementSavingTotal={retirementSavingTotal}
+            taxConfig={taxConfig}
             onAddSalaryItem={addSalaryItem}
             onAddPassiveIncomeItem={addPassiveIncomeItem}
             onAddRsuItem={addRsuItem}

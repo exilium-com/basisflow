@@ -28,6 +28,7 @@ describe("deriveAssetsState", () => {
           grantAmount: 250000,
           refresherAmount: 0,
           vestingYears: 4,
+          illiquid: true,
         },
       ],
     );

@@ -132,6 +132,7 @@ describe("calculateProjection", () => {
         grantAmount: 0,
         refresherAmount: 40000,
         vestingYears: 4,
+        illiquid: true,
       },
     ];
 
@@ -149,6 +150,7 @@ describe("calculateProjection", () => {
         grantAmount: 40000,
         refresherAmount: 0,
         vestingYears: 4,
+        illiquid: true,
       },
     ];
 

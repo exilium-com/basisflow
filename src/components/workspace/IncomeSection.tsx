@@ -19,6 +19,7 @@ import {
 } from "../../lib/incomeModel";
 import { toDisplayValue, type Projection } from "../../lib/projectionState";
 import { smallCapsTextClass } from "../../lib/text";
+import { type TaxConfig } from "../../lib/taxConfig";
 import clsx from "clsx";
 
 type IncomeSectionProps = {
@@ -28,6 +29,7 @@ type IncomeSectionProps = {
   rsuGrowthRateById: Record<string, number>;
   selectedYearLabel: string;
   retirementSavingTotal: number;
+  taxConfig: TaxConfig;
   onAddSalaryItem: () => void;
   onAddPassiveIncomeItem: () => void;
   onAddRsuItem: () => void;
@@ -76,6 +78,7 @@ function projectedIncomeValue(item: IncomeItem, projection: Projection, rsuGrowt
           grantAmount: item.grantAmount ?? 0,
           refresherAmount: item.refresherAmount ?? 0,
           vestingYears: item.vestingYears ?? 4,
+          illiquid: item.illiquid,
         },
       ],
       projection.currentYear,
@@ -156,7 +159,7 @@ function RsuRowItem({
       }}
       detailsTitle="RSU details"
       details={
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <NumberField
             label="Annual refresher"
             prefix="$"
@@ -170,6 +173,17 @@ function RsuRowItem({
             step="1"
             value={item.vestingYears}
             onValueChange={(value) => onUpdateIncomeItem(item.id, { vestingYears: value })}
+          />
+          <SegmentedToggle
+            label="Liquidity"
+            ariaLabel={`${item.name || "RSU grant"} liquidity`}
+            className="w-fit"
+            value={item.illiquid ? "illiquid" : "liquid"}
+            onChange={(value) => onUpdateIncomeItem(item.id, { illiquid: value === "illiquid" })}
+            options={[
+              { value: "liquid", label: "Liquid" },
+              { value: "illiquid", label: "Illiquid" },
+            ]}
           />
         </div>
       }
@@ -201,6 +215,7 @@ export function IncomeSection({
   rsuGrowthRateById,
   selectedYearLabel,
   retirementSavingTotal,
+  taxConfig,
   onAddSalaryItem,
   onAddPassiveIncomeItem,
   onAddRsuItem,
@@ -271,7 +286,7 @@ export function IncomeSection({
               label="Traditional 401(k)"
               valueLabel={usd(income.employee401k)}
               min="0"
-              max="24500"
+              max={taxConfig.employee401kLimit}
               step="50"
               value={income.employee401k}
               onChange={(event) => onUpdateIncomeField("employee401k", Number(event.target.value))}
@@ -291,7 +306,7 @@ export function IncomeSection({
               label="IRA"
               valueLabel={usd(income.iraContribution)}
               min="0"
-              max="7000"
+              max={taxConfig.iraContributionLimit}
               step="50"
               value={income.iraContribution}
               onChange={(event) => onUpdateIncomeField("iraContribution", Number(event.target.value))}
@@ -301,7 +316,7 @@ export function IncomeSection({
               label="HSA"
               valueLabel={usd(income.hsaContribution)}
               min="0"
-              max="4400"
+              max={taxConfig.hsaContributionLimit}
               step="50"
               value={income.hsaContribution}
               onChange={(event) => onUpdateIncomeField("hsaContribution", Number(event.target.value))}
