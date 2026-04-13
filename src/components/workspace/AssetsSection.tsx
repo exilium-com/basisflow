@@ -72,7 +72,6 @@ export function AssetsSection({
                     <NumberField
                       label="Annual increase"
                       suffix="%"
-                      min="0"
                       step="0.5"
                       value={override?.growth ?? null}
                       placeholder={String(assetGrowthRate)}
@@ -97,7 +96,6 @@ export function AssetsSection({
                     <NumberField
                       label="Current basis"
                       prefix="$"
-                      min="0"
                       step="1000"
                       value={bucket.basis}
                       placeholder={String(bucket.current ?? 0)}
@@ -126,7 +124,6 @@ export function AssetsSection({
               <NumberField
                 label="Current value"
                 prefix="$"
-                min="0"
                 step="1000"
                 value={bucket.current}
                 placeholder="0"

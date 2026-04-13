@@ -57,6 +57,7 @@ export function MortgageSection({
   scenariosById,
 }: MortgageSectionProps) {
   const isRentScenario = mortgageScenario.kind === "rent";
+  const allScenariosAreRent = mortgageState.options.every((option) => option.kind === "rent");
 
   return (
     <WorkspaceSection
@@ -92,71 +93,72 @@ export function MortgageSection({
           }
         }
       >
-        <div className="grid grid-cols-2 gap-4">
-          <NumberField
-            label="Home price"
-            prefix="$"
-            value={mortgageState.homePrice}
-            step="50000"
-            disabled={isRentScenario}
-            onValueChange={(value) => onUpdateMortgageState({ homePrice: value ?? 0 })}
-          />
+        {!allScenariosAreRent ? (
+          <div className="grid grid-cols-2 gap-4">
+            <NumberField
+              label="Home price"
+              prefix="$"
+              value={mortgageState.homePrice}
+              step="50000"
+              onValueChange={(value) => onUpdateMortgageState({ homePrice: value ?? 0 })}
+            />
 
-          <div className="flex items-end gap-4">
-            <SegmentedToggle
-              label="Down payment"
-              ariaLabel="Down payment mode"
-              className="w-fit"
-              value={mortgageState.downPaymentMode}
-              disabled={isRentScenario}
-              onChange={onHandleDownPaymentMode}
-              options={[
-                { value: "dollar", label: "$" },
-                { value: "percent", label: "%" },
-              ]}
-            />
-            <NumberField
-              className="min-w-0 flex-1"
-              label={null}
-              value={mortgageState.downPayment}
-              step={mortgageState.downPaymentMode === "dollar" ? "1000" : "0.5"}
-              disabled={isRentScenario}
-              onValueChange={(value) => onUpdateMortgageState({ downPayment: value ?? 0 })}
-            />
+            <div className="flex items-end gap-4">
+              <div className="shrink-0">
+                <SegmentedToggle
+                  label="Down payment"
+                  ariaLabel="Down payment mode"
+                  className="w-fit"
+                  value={mortgageState.downPaymentMode}
+                  onChange={onHandleDownPaymentMode}
+                  options={[
+                    { value: "dollar", label: "$" },
+                    { value: "percent", label: "%" },
+                  ]}
+                />
+              </div>
+              <NumberField
+                className="min-w-0 flex-1"
+                label={null}
+                prefix={mortgageState.downPaymentMode === "dollar" ? "$" : null}
+                suffix={mortgageState.downPaymentMode === "percent" ? "%" : null}
+                value={mortgageState.downPayment}
+                step={mortgageState.downPaymentMode === "dollar" ? "1000" : "0.5"}
+                onValueChange={(value) => onUpdateMortgageState({ downPayment: value ?? 0 })}
+              />
+            </div>
+            <div className="col-span-2 grid grid-cols-3 gap-4">
+              <NumberField
+                label="Home insurance"
+                prefix="$"
+                suffix="/ year"
+                value={mortgageState.insurancePerYear}
+                step="1"
+                onValueChange={(value) => onUpdateMortgageState({ insurancePerYear: value ?? 0 })}
+              />
+              <NumberField
+                label="HOA"
+                prefix="$"
+                suffix="/ month"
+                value={mortgageState.hoaPerMonth}
+                step="1"
+                onValueChange={(value) => onUpdateMortgageState({ hoaPerMonth: value ?? 0 })}
+              />
+              <SelectField
+                label="Down payment funded by"
+                value={mortgageFundingBucketId}
+                onChange={(event) => onUpdateMortgageFundingBucketId(event.target.value)}
+              >
+                <option value="">None</option>
+                {assetOptions.map((bucket) => (
+                  <option key={bucket.id} value={bucket.id}>
+                    {bucket.name}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
           </div>
-          <div className="col-span-2 grid grid-cols-3 gap-4">
-            <NumberField
-              label="Home insurance"
-              prefix="$"
-              suffix="/ year"
-              value={mortgageState.insurancePerYear}
-              step="1"
-              disabled={isRentScenario}
-              onValueChange={(value) => onUpdateMortgageState({ insurancePerYear: value ?? 0 })}
-            />
-            <NumberField
-              label="HOA"
-              prefix="$"
-              suffix="/ month"
-              value={mortgageState.hoaPerMonth}
-              step="1"
-              disabled={isRentScenario}
-              onValueChange={(value) => onUpdateMortgageState({ hoaPerMonth: value ?? 0 })}
-            />
-            <SelectField
-              label="Down payment funded by"
-              value={mortgageFundingBucketId}
-              onChange={(event) => onUpdateMortgageFundingBucketId(event.target.value)}
-            >
-              <option value="">None</option>
-              {assetOptions.map((bucket) => (
-                <option key={bucket.id} value={bucket.id}>
-                  {bucket.name}
-                </option>
-              ))}
-            </SelectField>
-          </div>
-        </div>
+        ) : null}
 
         <MortgageLoanOptionList
           currentYear={currentYear}

@@ -86,7 +86,6 @@ export function ExpensesSection({
                       className="w-32"
                       label="Annual increase"
                       suffix="%"
-                      min="-20"
                       step="0.5"
                       value={override?.growthRate ?? null}
                       placeholder={String(expenseGrowthRate)}
@@ -97,7 +96,6 @@ export function ExpensesSection({
                     <NumberField
                       className="w-24"
                       label="Relative year"
-                      min="1"
                       step="1"
                       value={expense.oneOffYear ?? ""}
                       onValueChange={(value) => onUpdateExpense(expense.id, { oneOffYear: value })}
@@ -118,7 +116,6 @@ export function ExpensesSection({
                 suffix={
                   expense.frequency === "annual" ? "/ year" : expense.frequency === "one_off" ? "" : "/ month"
                 }
-                min="0"
                 step="50"
                 placeholder="0"
                 value={expense.amount}

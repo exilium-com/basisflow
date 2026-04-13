@@ -47,7 +47,7 @@ export function TaxesSection({
   return (
     <WorkspaceSection id="taxes" index="03" title="Taxes" summary="Deduction Logic">
       <WorkspaceMetricSplit
-        mainClassName="grid content-start gap-4"
+        mainClassName="grid gap-4"
         metrics={
           {
             primaryItem: { label: "Total tax", value: usd(incomeResults.totalTaxes) },
@@ -76,7 +76,6 @@ export function TaxesSection({
             <NumberField
               label="CA SDI rate"
               suffix="%"
-              min="0"
               step="0.5"
               value={taxConfig.caSdiRate}
               onValueChange={(value) => onUpdateTaxConfig({ caSdiRate: value ?? 0 })}
@@ -91,7 +90,6 @@ export function TaxesSection({
             <NumberField
               label="401(k) total contribution cap"
               prefix="$"
-              min="0"
               step="100"
               value={taxConfig.annualAdditionsLimit}
               onValueChange={(value) => onUpdateTaxConfig({ annualAdditionsLimit: value ?? 0 })}
@@ -99,7 +97,6 @@ export function TaxesSection({
             <NumberField
               label="Federal standard deduction"
               prefix="$"
-              min="0"
               step="50"
               value={taxConfig.federalStandardDeduction}
               onValueChange={(value) => onUpdateTaxConfig({ federalStandardDeduction: value ?? 0 })}
@@ -107,7 +104,6 @@ export function TaxesSection({
             <NumberField
               label="California standard deduction"
               prefix="$"
-              min="0"
               step="50"
               value={taxConfig.stateStandardDeduction}
               onValueChange={(value) => onUpdateTaxConfig({ stateStandardDeduction: value ?? 0 })}
@@ -115,7 +111,6 @@ export function TaxesSection({
             <NumberField
               label="Federal SALT max deduction"
               prefix="$"
-              min="0"
               step="50"
               value={taxConfig.federalSaltCap}
               onValueChange={(value) => onUpdateTaxConfig({ federalSaltCap: value ?? 0 })}
@@ -123,7 +118,6 @@ export function TaxesSection({
             <NumberField
               label="Federal SALT floor"
               prefix="$"
-              min="0"
               step="50"
               value={taxConfig.federalSaltCapFloor}
               onValueChange={(value) => onUpdateTaxConfig({ federalSaltCapFloor: value ?? 0 })}
@@ -131,7 +125,6 @@ export function TaxesSection({
             <NumberField
               label="Federal SALT phaseout MAGI"
               prefix="$"
-              min="0"
               step="1000"
               value={taxConfig.federalSaltPhaseoutThreshold}
               onValueChange={(value) => onUpdateTaxConfig({ federalSaltPhaseoutThreshold: value ?? 0 })}
@@ -139,7 +132,6 @@ export function TaxesSection({
             <NumberField
               label="Federal SALT phaseout rate"
               suffix="%"
-              min="0"
               step="1"
               value={taxConfig.federalSaltPhaseoutRate}
               onValueChange={(value) => onUpdateTaxConfig({ federalSaltPhaseoutRate: value ?? 0 })}
@@ -147,7 +139,6 @@ export function TaxesSection({
             <NumberField
               label="Federal mortgage debt cap"
               prefix="$"
-              min="0"
               step="1000"
               value={taxConfig.federalMortgageInterestDebtCap}
               onValueChange={(value) => onUpdateTaxConfig({ federalMortgageInterestDebtCap: value ?? 0 })}
@@ -155,7 +146,6 @@ export function TaxesSection({
             <NumberField
               label="California mortgage debt cap"
               prefix="$"
-              min="0"
               step="1000"
               value={taxConfig.stateMortgageInterestDebtCap}
               onValueChange={(value) => onUpdateTaxConfig({ stateMortgageInterestDebtCap: value ?? 0 })}

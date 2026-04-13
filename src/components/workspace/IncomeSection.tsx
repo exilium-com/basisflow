@@ -128,7 +128,6 @@ function RecurringIncomeRowItem({
       <NumberField
         label="Amount"
         prefix="$"
-        min="0"
         step="1000"
         value={item.amount}
         onValueChange={(value) => onUpdateIncomeItem(item.id, { amount: value })}
@@ -161,7 +160,6 @@ function RsuRowItem({
           <NumberField
             label="Annual refresher"
             prefix="$"
-            min="0"
             step="1000"
             value={item.refresherAmount}
             onValueChange={(value) => onUpdateIncomeItem(item.id, { refresherAmount: value })}
@@ -169,7 +167,6 @@ function RsuRowItem({
           <NumberField
             label="Years left to vest"
             suffix="years"
-            min="1"
             step="1"
             value={item.vestingYears}
             onValueChange={(value) => onUpdateIncomeItem(item.id, { vestingYears: value })}
@@ -185,7 +182,6 @@ function RsuRowItem({
       <NumberField
         label="Unvested remaining"
         prefix="$"
-        min="0"
         step="1000"
         value={item.grantAmount}
         onValueChange={(value) => onUpdateIncomeItem(item.id, { grantAmount: value })}

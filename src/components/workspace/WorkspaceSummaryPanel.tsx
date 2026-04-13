@@ -106,8 +106,6 @@ export function WorkspaceSummaryPanel({
           <NumberField
             label="Horizon"
             suffix="yr"
-            min="1"
-            max="60"
             step="1"
             value={projectionState.horizonYears}
             onValueChange={(value) => onUpdateProjectionState({ horizonYears: value ?? 1 })}
@@ -156,8 +154,6 @@ export function WorkspaceSummaryPanel({
           <NumberField
             label="Match rate"
             suffix="%"
-            min="0"
-            max="100"
             step="1"
             value={matchRate}
             onValueChange={(value) => onUpdateIncomeField("matchRate", value ?? 0)}
@@ -165,7 +161,6 @@ export function WorkspaceSummaryPanel({
           <NumberField
             label="Inflation"
             suffix="%"
-            min="0"
             step="0.5"
             value={projectionState.inflationRate}
             onValueChange={(value) => onUpdateProjectionState({ inflationRate: value ?? 0 })}
@@ -173,7 +168,6 @@ export function WorkspaceSummaryPanel({
           <NumberField
             label="Baseline asset growth"
             suffix="%"
-            min="0"
             step="0.5"
             value={projectionState.assetGrowthRate}
             onValueChange={(value) => onUpdateProjectionState({ assetGrowthRate: value ?? 0 })}
@@ -181,7 +175,6 @@ export function WorkspaceSummaryPanel({
           <NumberField
             label="Gross income growth"
             suffix="%"
-            min="-10"
             step="0.5"
             value={projectionState.incomeGrowthRate}
             onValueChange={(value) => onUpdateProjectionState({ incomeGrowthRate: value ?? 0 })}
@@ -189,7 +182,6 @@ export function WorkspaceSummaryPanel({
           <NumberField
             label="Baseline expense growth"
             suffix="%"
-            min="-20"
             step="0.5"
             value={projectionState.expenseGrowthRate}
             onValueChange={(value) => onUpdateProjectionState({ expenseGrowthRate: value ?? 0 })}
@@ -197,7 +189,6 @@ export function WorkspaceSummaryPanel({
           <NumberField
             label="Home appreciation"
             suffix="%"
-            min="-10"
             step="0.5"
             value={projectionState.homeAppreciationRate}
             onValueChange={(value) => onUpdateProjectionState({ homeAppreciationRate: value ?? 0 })}
@@ -205,7 +196,6 @@ export function WorkspaceSummaryPanel({
           <NumberField
             label="Minimum cash"
             prefix="$"
-            min="0"
             step="1000"
             value={projectionState.minimumCash}
             onValueChange={(value) => onUpdateProjectionState({ minimumCash: value ?? 0 })}
