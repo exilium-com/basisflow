@@ -3,9 +3,16 @@ import clsx from "clsx";
 import { buttonTextClass, labelTextClass } from "../lib/text";
 
 const labelClassName = labelTextClass;
-const toggleClassName = "inline-flex h-10 items-center gap-1 border border-(--line) bg-(--white-soft) p-1";
-const segmentClassName =
-  `h-8 rounded-sm border border-transparent bg-transparent px-4 ${buttonTextClass} text-(--ink) transition hover:bg-(--teal-soft) focus-visible:outline-none`;
+const toggleClassNameBySize = {
+  default: "inline-flex h-10 items-center gap-1 border border-(--line) bg-(--white-soft) p-1",
+  compact: "inline-flex h-8 items-center gap-1 border border-(--line) bg-(--white-soft) p-1",
+};
+const segmentClassNameBySize = {
+  default:
+    `h-8 rounded-sm border border-transparent bg-transparent px-4 ${buttonTextClass} text-(--ink) transition hover:bg-(--teal-soft) focus-visible:outline-none`,
+  compact:
+    `h-6 rounded-sm border border-transparent bg-transparent px-3 ${buttonTextClass} text-(--ink) transition hover:bg-(--teal-soft) focus-visible:outline-none`,
+};
 const activeSegmentClassName = "!border-(--teal) !bg-(--teal-tint) !text-(--teal)";
 
 type SegmentedToggleOption<T extends string> = {
@@ -21,6 +28,7 @@ type SegmentedToggleProps<T extends string> = {
   label?: React.ReactNode;
   className?: string;
   disabled?: boolean;
+  size?: "default" | "compact";
 };
 
 export function SegmentedToggle<T extends string>({
@@ -31,15 +39,16 @@ export function SegmentedToggle<T extends string>({
   label = null,
   className = "",
   disabled = false,
+  size = "default",
 }: SegmentedToggleProps<T>) {
   return (
     <div className="grid justify-items-start gap-1">
       {label ? <div className={labelClassName}>{label}</div> : null}
-      <div className={clsx(toggleClassName, className)} role="group" aria-label={ariaLabel}>
+      <div className={clsx(toggleClassNameBySize[size], className)} role="group" aria-label={ariaLabel}>
         {options.map((option: SegmentedToggleOption<T>) => (
           <button
             key={option.value}
-            className={clsx(segmentClassName, value === option.value && activeSegmentClassName)}
+            className={clsx(segmentClassNameBySize[size], value === option.value && activeSegmentClassName)}
             type="button"
             aria-pressed={value === option.value}
             disabled={disabled}

@@ -46,7 +46,7 @@ export function RowItem({
     >
       {onRemove ? (
         <button
-          className="absolute top-4 right-4 z-10 border-0 bg-transparent p-0 leading-none transition hover:text-(--ink)
+          className="absolute top-4 right-4 z-10 border-0 bg-transparent p-0 leading-none hover:text-(--ink) transition
             focus-visible:outline-none"
           type="button"
           aria-label="remove"
@@ -58,7 +58,7 @@ export function RowItem({
 
       <div className="p-4 pr-12">
         <div className="flex items-start justify-between gap-4">
-          <div className={clsx("min-w-0 flex-1", bodyClassName || "grid grid-cols-3 gap-4")}>
+          <div className={clsx("min-w-0 flex-1", bodyClassName || "grid gap-4 sm:grid-cols-3")}>
             {children}
             {hasDetails ? (
               <button
@@ -80,7 +80,7 @@ export function RowItem({
             ) : null}
           </div>
           {action ? (
-            <div className="flex-none" onClick={(event: React.MouseEvent<HTMLDivElement>) => event.stopPropagation()}>
+            <div className="shrink-0" onClick={(event: React.MouseEvent<HTMLDivElement>) => event.stopPropagation()}>
               {action}
             </div>
           ) : null}

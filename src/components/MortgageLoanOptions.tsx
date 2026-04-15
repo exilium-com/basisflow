@@ -85,7 +85,7 @@ function MortgageLoanOptionCard({
       detailsTitle="Scenario details"
       detailsSummary={detailsSummary}
     >
-      <div className="flex gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row">
         <TextField
           className="flex-1"
           label="Scenario name"
@@ -94,7 +94,7 @@ function MortgageLoanOptionCard({
         />
         {loanState.kind === "rent" ? (
           <NumberField
-            className="w-48"
+            className="sm:w-48"
             label="Rent"
             prefix="$"
             suffix="/ month"
@@ -112,7 +112,7 @@ function MortgageLoanOptionCard({
         )}
       </div>
       {loanState.kind !== "rent" ? (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <NumberField
             label={loanState.kind === "arm" ? "Initial rate" : "Interest rate"}
             suffix="%"

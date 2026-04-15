@@ -159,7 +159,7 @@ function RsuRowItem({
       }}
       detailsTitle="RSU details"
       details={
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid gap-4 sm:grid-cols-3">
           <NumberField
             label="Annual refresher"
             prefix="$"
@@ -231,6 +231,7 @@ export function IncomeSection({
       summary="Cash In"
       actions={
         <AddMenu
+          className="w-full sm:w-auto"
           label="Add income"
           options={[
             { id: "salary", label: "Salary", onSelect: onAddSalaryItem },
