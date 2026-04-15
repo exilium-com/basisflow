@@ -45,7 +45,7 @@ function ShellActions({
   statusMessage,
 }: ShellActionsProps) {
   return (
-    <div className="flex shrink-0 items-center justify-end gap-2">
+    <div className="flex shrink-0 justify-end gap-2">
       {statusMessage ? <ToastMessage message={statusMessage} /> : null}
       <ActionButton onClick={onOpenSaveDialog}>Save</ActionButton>
       <ActionButton

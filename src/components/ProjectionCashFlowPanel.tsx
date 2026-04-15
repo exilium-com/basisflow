@@ -55,7 +55,12 @@ export function MonthlyCashFlowPanel({ items, netFlow }: MonthlyCashFlowPanelPro
   return (
     <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
       <div className="flex w-full justify-center sm:w-60 sm:shrink-0">
-        <svg className="h-auto w-full max-w-56" viewBox="0 0 224 224" role="img" aria-label="Monthly cash flow breakdown">
+        <svg
+          className="h-auto w-full max-w-56"
+          viewBox="0 0 224 224"
+          role="img"
+          aria-label="Monthly cash flow breakdown"
+        >
           <circle cx={cx} cy={cy} r={outerRadius} fill="var(--white)" stroke="var(--line-soft)" />
           {sliceTotal > 0
             ? items.map((item: MonthlyCashFlowItem) => {

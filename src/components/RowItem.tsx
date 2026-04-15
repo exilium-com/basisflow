@@ -46,7 +46,7 @@ export function RowItem({
     >
       {onRemove ? (
         <button
-          className="absolute top-4 right-4 z-10 border-0 bg-transparent p-0 leading-none transition hover:text-(--ink)
+          className="absolute top-4 right-4 z-10 border-0 bg-transparent p-0 leading-none hover:text-(--ink) transition
             focus-visible:outline-none"
           type="button"
           aria-label="remove"
@@ -80,7 +80,7 @@ export function RowItem({
             ) : null}
           </div>
           {action ? (
-            <div className="flex-none" onClick={(event: React.MouseEvent<HTMLDivElement>) => event.stopPropagation()}>
+            <div className="shrink-0" onClick={(event: React.MouseEvent<HTMLDivElement>) => event.stopPropagation()}>
               {action}
             </div>
           ) : null}

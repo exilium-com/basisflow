@@ -8,9 +8,14 @@ import { SegmentedToggle } from "../SegmentedToggle";
 import { netWorthChartLegend } from "../../lib/colors";
 import { usd } from "../../lib/format";
 import { type ProjectionResults } from "../../lib/projectionCalculation";
-import { toDisplayValue, type Projection, type ProjectionState } from "../../lib/projectionState";
+import { toDisplayValue, type Projection, type ProjectionDisplayMode, type ProjectionState } from "../../lib/projectionState";
 import { type MonthlyCashFlow, type ProjectionRow } from "../../lib/projectionUtils";
 import { buttonTextClass, labelTextClass, smallCapsTextClass } from "../../lib/text";
+
+const displayModeOptions: Array<{ value: ProjectionDisplayMode; label: string }> = [
+  { value: "nominal", label: "Nominal" },
+  { value: "real", label: "Real" },
+];
 
 type SummaryRow = {
   href: string;
@@ -40,7 +45,7 @@ function SummaryLinkRow({ href, label, annualValue }: SummaryRow) {
 
   return (
     <div className="flex items-baseline gap-2 border-t border-(--line) py-4">
-      <a href={href} className={`flex-1 ${labelTextClass} hover:text-(--ink)`}>
+      <a href={href} className={`${labelTextClass} flex-1 hover:text-(--ink)`}>
         {label}
       </a>
       <a href={href} className="font-bold">
@@ -48,7 +53,7 @@ function SummaryLinkRow({ href, label, annualValue }: SummaryRow) {
       </a>
       <button
         type="button"
-        className={`${labelTextClass} transition hover:text-(--ink)`}
+        className={`${labelTextClass} hover:text-(--ink) transition`}
         onClick={() => setPeriod(period === "annual" ? "monthly" : "annual")}
       >
         {period === "monthly" ? "/ month" : "/ year"}
@@ -84,10 +89,7 @@ export function WorkspaceSummaryPanel({
 
       <div className="grid gap-4 py-4">
         <ChartPanel title={cashFlowTitle}>
-          <MonthlyCashFlowPanel
-            items={monthlyCashFlow.items}
-            netFlow={monthlyCashFlow.netFlow}
-          />
+          <MonthlyCashFlowPanel items={monthlyCashFlow.items} netFlow={monthlyCashFlow.netFlow} />
         </ChartPanel>
 
         <ChartPanel
@@ -200,10 +202,7 @@ export function WorkspaceSummaryPanel({
               ariaLabel="Display mode"
               value={projectionState.displayMode}
               onChange={(displayMode) => onUpdateProjectionState({ displayMode })}
-              options={[
-                { value: "nominal", label: "Nominal" },
-                { value: "real", label: "Real" },
-              ]}
+              options={displayModeOptions}
             />
           </div>
           <div className="hidden shrink-0 lg:block">
@@ -211,10 +210,7 @@ export function WorkspaceSummaryPanel({
               ariaLabel="Display mode"
               value={projectionState.displayMode}
               onChange={(displayMode) => onUpdateProjectionState({ displayMode })}
-              options={[
-                { value: "nominal", label: "Nominal" },
-                { value: "real", label: "Real" },
-              ]}
+              options={displayModeOptions}
             />
           </div>
         </div>
@@ -252,7 +248,7 @@ export function WorkspaceSummaryPanel({
       </div>
 
       <div className="hidden lg:block">{summaryBody}</div>
-      {mobileSummaryOpen ? <div className="border-b border-(--line) bg-(--white) lg:hidden">{summaryBody}</div> : null}
+      {mobileSummaryOpen ? <div className="bg-(--white) border-b border-(--line) lg:hidden">{summaryBody}</div> : null}
     </div>
   );
 }
