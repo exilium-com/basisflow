@@ -6,8 +6,9 @@ type NormalizeStoredValue<T> = (value: unknown, fallback: T) => T;
 type UseStoredStateOptions<T> = {
   normalize?: NormalizeStoredValue<T>;
 };
-type StoredStateRecipe<T> = (draft: Draft<T>) => void;
-type StoredStateAction<T> = T | StoredStateRecipe<T>;
+export type StoredStateRecipe<T> = (draft: Draft<T>) => void;
+export type StoredStateAction<T> = T | StoredStateRecipe<T>;
+export type StoredStateSetter<T> = (nextState: StoredStateAction<T>) => void;
 
 export function useStoredState<T>(
   key: string,
@@ -20,7 +21,7 @@ export function useStoredState<T>(
     return value === null ? fallback : options.normalize ? options.normalize(value, fallback) : (value as T);
   });
 
-  const setState = useCallback((nextState: StoredStateAction<T>) => {
+  const setState = useCallback<StoredStateSetter<T>>((nextState) => {
     setReactState((current) =>
       typeof nextState === "function" ? produce(current, nextState as StoredStateRecipe<T>) : nextState,
     );

@@ -5,6 +5,7 @@ import { NumberField, TextAreaField } from "../Field";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { WorkspaceMetricSplit } from "./WorkspaceMetricSplit";
 import { WorkspaceSection } from "./WorkspaceSection";
+import { type StoredStateSetter } from "../../hooks/useStoredState";
 import { usd } from "../../lib/format";
 import { type IncomeResults, type ResolvedIncome } from "../../lib/incomeModel";
 import { type MortgageState } from "../../lib/mortgageConfig";
@@ -24,7 +25,7 @@ type TaxesSectionProps = {
   onSetFederalBrackets: (value: string) => void;
   onSetLongTermCapitalGains: (value: string) => void;
   onSetStateBrackets: (value: string) => void;
-  onUpdateMortgageState: (patch: Partial<MortgageState>) => void;
+  setMortgageState: StoredStateSetter<MortgageState>;
   onUpdateTaxConfig: (patch: Partial<TaxConfig>) => void;
 };
 
@@ -41,16 +42,18 @@ export function TaxesSection({
   onSetFederalBrackets,
   onSetLongTermCapitalGains,
   onSetStateBrackets,
-  onUpdateMortgageState,
+  setMortgageState,
   onUpdateTaxConfig,
 }: TaxesSectionProps) {
+  const totalTaxWithProperty = incomeResults.totalTaxes + income.propertyTax;
+
   return (
     <WorkspaceSection id="taxes" index="03" title="Taxes" summary="Deduction Logic">
       <WorkspaceMetricSplit
         mainClassName="grid gap-4"
         metrics={
           {
-            primaryItem: { label: "Total tax", value: usd(incomeResults.totalTaxes) },
+            primaryItem: { label: "Total tax", value: usd(totalTaxWithProperty) },
             items: [
               { label: "Federal tax", value: usd(incomeResults.federalTax) },
               { label: "California tax", value: usd(incomeResults.californiaTax) },
@@ -84,12 +87,16 @@ export function TaxesSection({
                   onValueChange={(value) => onUpdateTaxConfig({ caSdiRate: value ?? 0 })}
                 />
                 <NumberField
-                  label="Property tax"
-                  suffix="%"
-                  value={mortgageState.propertyTaxRate}
-                  step="0.1"
-                  onValueChange={(value) => onUpdateMortgageState({ propertyTaxRate: value ?? 0 })}
-                />
+                label="Property tax"
+                suffix="%"
+                value={mortgageState.propertyTaxRate}
+                step="0.1"
+                onValueChange={(value) =>
+                  setMortgageState((draft) => {
+                    draft.propertyTaxRate = value ?? 0;
+                  })
+                }
+              />
               </div>
             </div>
             <div className="grid gap-4 border-t border-(--line-soft) pt-4">

@@ -28,6 +28,8 @@ type WorkspaceSummaryPanelProps = {
   selectedYearLabel: string;
   topLevelSummaryRows: SummaryRow[];
   matchRate: number;
+  freeCashFlowBucketId: string;
+  reserveCashBucketId: string;
   freeCashFlowOptions: Array<{ id: string; name: string }>;
   onUpdateIncomeField: (field: "matchRate", value: number) => void;
   onUpdateProjectionState: (patch: Partial<ProjectionState>) => void;
@@ -65,6 +67,8 @@ export function WorkspaceSummaryPanel({
   selectedYearLabel,
   topLevelSummaryRows,
   matchRate,
+  freeCashFlowBucketId,
+  reserveCashBucketId,
   freeCashFlowOptions,
   onUpdateIncomeField,
   onUpdateProjectionState,
@@ -194,24 +198,23 @@ export function WorkspaceSummaryPanel({
             onValueChange={(value) => onUpdateProjectionState({ homeAppreciationRate: value ?? 0 })}
           />
           <NumberField
-            label="Minimum cash"
+            label="Target cash"
             prefix="$"
             step="1000"
-            value={projectionState.minimumCash}
-            onValueChange={(value) => onUpdateProjectionState({ minimumCash: value ?? 0 })}
+            value={projectionState.targetCash}
+            onValueChange={(value) => onUpdateProjectionState({ targetCash: value ?? 0 })}
           />
           <CheckboxField
-            className="col-span-2"
             label="Include vested RSUs"
             checked={projectionState.includeVestedRsusInNetWorth}
             onChange={(event) => onUpdateProjectionState({ includeVestedRsusInNetWorth: event.target.checked })}
           />
           <SelectField
             label="Free cash goes to"
-            value={projectionState.freeCashFlowBucketId}
+            value={freeCashFlowBucketId}
             onChange={(event) => onUpdateProjectionState({ freeCashFlowBucketId: event.target.value })}
           >
-            <option value="">Reserve cash</option>
+            <option value={reserveCashBucketId}>Reserve cash</option>
             {freeCashFlowOptions.map((bucket) => (
               <option key={bucket.id} value={bucket.id}>
                 {bucket.name}

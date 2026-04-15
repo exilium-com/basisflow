@@ -1,4 +1,4 @@
-import { type Mortgage } from "./mortgageConfig";
+import { DEFAULT_MORTGAGE_STATE, resolveAmountFromMode, type MortgageState } from "./mortgageConfig";
 
 type MortgageScheduleRow = {
   month: number;
@@ -51,10 +51,35 @@ export type MortgageArmDetails = {
   resetPayment: number;
 } | null;
 
+type MortgageLoan =
+  | {
+      id: string;
+      name: string;
+      kind: "conventional";
+      term: number;
+      rate: number;
+    }
+  | {
+      id: string;
+      name: string;
+      kind: "arm";
+      term: number;
+      fixedYears: number;
+      initialRate: number;
+      adjustedRate: number;
+    }
+  | {
+      id: string;
+      name: string;
+      kind: "rent";
+      rentPerMonth: number;
+      rentGrowthRate: number;
+    };
+
 export type MortgageScenario = {
-  mortgage: Mortgage;
+  mortgage: MortgageState;
   optionId: string;
-  kind: Mortgage["options"][number]["kind"];
+  kind: MortgageState["options"][number]["kind"];
   typeLabel: string;
   isArm: boolean;
   primaryRate: number;
@@ -227,11 +252,50 @@ function yearlyComposition(schedule: MortgageScheduleRow[]) {
   return yearsList;
 }
 
-export function buildMortgageScenario(mortgage: Mortgage, selectedOptionId: string = mortgage.activeLoanId): MortgageScenario {
-  const loanOption =
-    mortgage.options.find((option) => option.id === selectedOptionId) ??
-    mortgage.options.find((option) => option.id === mortgage.activeLoanId) ??
-    mortgage.options[0];
+function resolveLoanOption(option: MortgageState["options"][number]): MortgageLoan {
+  if (option.kind === "rent") {
+    return {
+      id: option.id,
+      name: option.name || "Rent",
+      kind: "rent",
+      rentPerMonth: Math.max(0, option.rentPerMonth ?? 3500),
+      rentGrowthRate: option.rentGrowthRate ?? 3,
+    };
+  }
+
+  if (option.kind === "arm") {
+    const initialRate = option.initialRate ?? 5.635;
+
+    return {
+      id: option.id,
+      name: option.name || "ARM",
+      kind: "arm",
+      term: Math.max(1, Math.round(option.term ?? 30)),
+      fixedYears: Math.max(1, Math.round(option.fixedYears ?? 7)),
+      initialRate,
+      adjustedRate: option.adjustedRate ?? initialRate,
+    };
+  }
+
+  return {
+    id: option.id,
+    name: option.name || "Conventional",
+    kind: "conventional",
+    term: Math.max(1, Math.round(option.term ?? 30)),
+    rate: option.rate ?? 6.475,
+  };
+}
+
+export function buildMortgageScenario(
+  mortgage: MortgageState,
+  selectedOptionId: string = mortgage.activeLoanId,
+): MortgageScenario {
+  const options = mortgage.options.length > 0 ? mortgage.options : DEFAULT_MORTGAGE_STATE.options;
+  const loanOption = resolveLoanOption(
+    options.find((option) => option.id === selectedOptionId) ??
+    options.find((option) => option.id === mortgage.activeLoanId) ??
+    options[0],
+  );
   if (loanOption.kind === "rent") {
     return {
       mortgage,
@@ -255,7 +319,8 @@ export function buildMortgageScenario(mortgage: Mortgage, selectedOptionId: stri
     };
   }
 
-  const loanAmount = Math.max(0, mortgage.homePrice - mortgage.downPaymentAmount);
+  const downPaymentAmount = resolveAmountFromMode(mortgage.downPayment, mortgage.homePrice);
+  const loanAmount = Math.max(0, mortgage.homePrice - downPaymentAmount);
   const monthlyTax = (mortgage.homePrice * (mortgage.propertyTaxRate / 100)) / 12;
   const monthlyInsurance = mortgage.insurancePerYear / 12;
   const monthlyHoa = mortgage.hoaPerMonth;

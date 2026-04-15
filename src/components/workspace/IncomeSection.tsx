@@ -270,11 +270,11 @@ export function IncomeSection({
         <WorkspaceMetricSplit
           metrics={
             {
-              primaryItem: { label: "Monthly take-home", value: usd(incomeResults.monthlyTakeHome, 2) },
+              primaryItem: { label: "Monthly take-home", value: usd(incomeResults.monthlyTakeHome) },
               items: [
-                { label: "Annual income", value: usd(incomeResults.grossSalary + incomeResults.passiveIncome, 2) },
-                { label: "Total taxes", value: usd(incomeResults.totalTaxes, 2) },
-                { label: "Retirement saving", value: usd(retirementSavingTotal, 2) },
+                { label: "Annual income", value: usd(incomeResults.grossSalary + incomeResults.passiveIncome) },
+                { label: "Total taxes", value: usd(incomeResults.totalTaxes) },
+                { label: "Retirement saving", value: usd(retirementSavingTotal) },
               ],
             }
           }

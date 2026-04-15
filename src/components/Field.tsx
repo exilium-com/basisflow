@@ -2,28 +2,12 @@ import React from "react";
 import clsx from "clsx";
 import { labelTextClass } from "../lib/text";
 
-export const fieldLabelClass = labelTextClass;
-
-const inputBaseClassName =
-  "w-full min-w-0 border-0 bg-transparent p-0 text-base font-semibold text-(--ink) outline-none";
-
-const selectClassName =
-  "w-full min-w-0 appearance-none border-0 bg-transparent p-0 pr-4 text-base font-semibold text-(--ink) outline-none";
-
-const textAreaClassName =
-  "min-h-48 w-full resize-y border border-(--line) bg-(--white) p-4 font-mono text-sm font-semibold leading-6 text-(--ink) outline-none";
-
-const inputFrameClassName =
-  "relative flex min-h-10 items-center border border-(--line) border-l-4 border-l-(--teal-soft) bg-(--white) px-4 transition-colors focus-within:border-(--teal) focus-within:border-l-(--teal)";
-const invalidInputFrameClassName = "border-(--danger) border-l-(--danger)";
-const affixClassName = `flex-none ${labelTextClass}`;
-const checkboxLabelClassName = "flex min-h-8 w-full items-center gap-2 text-base font-semibold text-(--ink)";
-
 type FieldProps = {
   label?: React.ReactNode;
   htmlFor?: string;
   className?: string;
   labelClassName?: string;
+  reserveLabelSpace?: boolean;
   children: React.ReactNode;
 };
 
@@ -44,40 +28,31 @@ type BaseFieldProps = {
   inputClassName?: string;
 };
 
-type TextFieldProps = BaseFieldProps &
-  Omit<React.InputHTMLAttributes<HTMLInputElement>, "className" | "children" | "label" | "prefix" | "suffix"> & {
-    prefix?: React.ReactNode;
-    suffix?: React.ReactNode;
-    invalid?: boolean;
-  };
+type NativeFieldProps<T> = BaseFieldProps & Omit<T, "className" | "label">;
+type FramedFieldProps<T> = NativeFieldProps<T> & { invalid?: boolean };
+type AffixedFieldProps<T> = FramedFieldProps<T> & {
+  prefix?: React.ReactNode;
+  suffix?: React.ReactNode;
+};
 
-type NumberFieldProps = BaseFieldProps &
+type TextFieldProps = AffixedFieldProps<Omit<React.InputHTMLAttributes<HTMLInputElement>, "prefix" | "suffix">>;
+
+type NumberFieldProps = AffixedFieldProps<
   Omit<
     React.InputHTMLAttributes<HTMLInputElement>,
-    "className" | "type" | "children" | "label" | "prefix" | "suffix" | "value" | "onChange"
+    "className" | "type" | "label" | "prefix" | "suffix" | "value" | "onChange"
   > & {
-    prefix?: React.ReactNode;
-    suffix?: React.ReactNode;
-    invalid?: boolean;
     compact?: boolean;
     value?: number | string | null;
     onChange?: React.ChangeEventHandler<HTMLInputElement> | null;
     onValueChange?: (value: number | null, rawValue: string) => void;
-  };
+  }
+>;
 
-type SelectFieldProps = BaseFieldProps &
-  Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "className" | "label"> & {
-    invalid?: boolean;
-    children: React.ReactNode;
-  };
+type SelectFieldProps = FramedFieldProps<React.SelectHTMLAttributes<HTMLSelectElement>>;
+type CheckboxFieldProps = FramedFieldProps<Omit<React.InputHTMLAttributes<HTMLInputElement>, "type">>;
 
-type CheckboxFieldProps = BaseFieldProps &
-  Omit<React.InputHTMLAttributes<HTMLInputElement>, "className" | "type" | "children" | "label"> & {
-    invalid?: boolean;
-  };
-
-type TextAreaFieldProps = BaseFieldProps &
-  Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "className" | "label">;
+type TextAreaFieldProps = NativeFieldProps<React.TextareaHTMLAttributes<HTMLTextAreaElement>>;
 
 type SliderFieldProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "className" | "type"> & {
   id?: string;
@@ -87,12 +62,34 @@ type SliderFieldProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "class
   labelClassName?: string;
 };
 
-export function Field({ label, htmlFor, className = "", labelClassName = "", children }: FieldProps) {
+type DollarPercentFieldProps = Omit<NumberFieldProps, "prefix" | "suffix" | "step"> & {
+  mode: "dollar" | "percent";
+  onModeToggle: () => void;
+  dollarStep?: React.InputHTMLAttributes<HTMLInputElement>["step"];
+  percentStep?: React.InputHTMLAttributes<HTMLInputElement>["step"];
+};
+
+function useInputId(htmlFor?: string) {
+  const resolvedId = React.useId();
+  return htmlFor ?? resolvedId;
+}
+
+export function Field({
+  label,
+  htmlFor,
+  className,
+  labelClassName,
+  reserveLabelSpace = false,
+  children,
+}: FieldProps) {
   return (
     <div className={clsx("grid min-w-0 gap-1", className)}>
-      {label ? (
-        <label className={clsx(fieldLabelClass, labelClassName)} htmlFor={htmlFor}>
-          {label}
+      {label || reserveLabelSpace ? (
+        <label
+          className={clsx(labelTextClass, labelClassName, reserveLabelSpace && "invisible select-none")}
+          htmlFor={htmlFor}
+        >
+          {reserveLabelSpace ? "." : label}
         </label>
       ) : null}
       {children}
@@ -100,12 +97,25 @@ export function Field({ label, htmlFor, className = "", labelClassName = "", chi
   );
 }
 
-export function InputFrame({ prefix = null, suffix = null, invalid = false, className = "", children }: InputFrameProps) {
+export function InputFrame({
+  prefix = null,
+  suffix = null,
+  invalid = false,
+  className,
+  children,
+}: InputFrameProps) {
   return (
-    <div className={clsx(inputFrameClassName, invalid && invalidInputFrameClassName, className)}>
-      {prefix ? <span className={clsx(affixClassName, "mr-2")}>{prefix}</span> : null}
+    <div
+      className={clsx(
+        `flex min-h-10 items-center border border-l-4 border-(--line) border-l-(--teal-soft) bg-(--white) px-4
+        transition-colors focus-within:border-(--teal)`,
+        invalid && "border-(--danger) border-l-(--danger)",
+        className,
+      )}
+    >
+      {prefix ? <span className={clsx("flex-none", labelTextClass, "mr-2")}>{prefix}</span> : null}
       {children}
-      {suffix ? <span className={clsx(affixClassName, "ml-2")}>{suffix}</span> : null}
+      {suffix ? <span className={clsx("flex-none", labelTextClass, "ml-2")}>{suffix}</span> : null}
     </div>
   );
 }
@@ -117,19 +127,26 @@ export function TextField({
   prefix = null,
   suffix = null,
   invalid = false,
-  className = "",
-  labelClassName = "",
-  frameClassName = "",
-  inputClassName = "",
+  className,
+  labelClassName,
+  frameClassName,
+  inputClassName,
   ...inputProps
 }: TextFieldProps) {
-  const resolvedId = React.useId();
-  const inputId = htmlFor ?? resolvedId;
+  const inputId = useInputId(htmlFor);
 
   return (
     <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
       <InputFrame prefix={prefix} suffix={suffix} invalid={invalid} className={frameClassName}>
-        <input id={inputId} type={type} className={clsx(inputBaseClassName, inputClassName)} {...inputProps} />
+        <input
+          id={inputId}
+          type={type}
+          className={clsx(
+            "w-full min-w-0 border-0 bg-transparent p-0 text-base font-semibold outline-none",
+            inputClassName,
+          )}
+          {...inputProps}
+        />
       </InputFrame>
     </Field>
   );
@@ -142,40 +159,32 @@ export function NumberField({
   suffix = null,
   invalid = false,
   compact = false,
-  className = "",
-  labelClassName = "",
-  frameClassName = "",
-  inputClassName = "",
+  className,
+  labelClassName,
+  frameClassName,
+  inputClassName,
   value = "",
   onChange = null,
   onValueChange,
   ...inputProps
 }: NumberFieldProps) {
-  const resolvedId = React.useId();
-  const inputId = htmlFor ?? resolvedId;
-  const usesNumericValue = typeof value === "number" || value == null;
-  const [draftValue, setDraftValue] = React.useState(() => (usesNumericValue ? (value == null ? "" : String(value)) : value));
-  const [isFocused, setIsFocused] = React.useState(false);
-  const lastNumericValueRef = React.useRef<number | null | undefined>(usesNumericValue ? value : undefined);
+  const inputId = useInputId(htmlFor);
+  const isNumericValue = typeof value === "number" || value == null;
+  const [draftValue, setDraftValue] = React.useState(() => (value == null ? "" : String(value)));
+  const [isEditing, setIsEditing] = React.useState(false);
 
   React.useEffect(() => {
-    if (!usesNumericValue || isFocused) {
-      return;
-    }
-
-    if (lastNumericValueRef.current !== value) {
+    if (isNumericValue && !isEditing) {
       setDraftValue(value == null ? "" : String(value));
-      lastNumericValueRef.current = value;
     }
-  }, [isFocused, usesNumericValue, value]);
+  }, [isEditing, isNumericValue, value]);
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
-    if (usesNumericValue) {
+    if (isNumericValue) {
       setDraftValue(event.target.value);
     }
 
     onChange?.(event);
-
     if (!onValueChange) {
       return;
     }
@@ -190,29 +199,27 @@ export function NumberField({
   }
 
   function handleBlur(event: React.FocusEvent<HTMLInputElement>) {
-    setIsFocused(false);
+    setIsEditing(false);
     inputProps.onBlur?.(event);
-
-    if (usesNumericValue) {
+    if (isNumericValue) {
       setDraftValue(value == null ? "" : String(value));
     }
   }
 
   return (
     <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
-      <InputFrame
-        prefix={prefix}
-        suffix={suffix}
-        invalid={invalid}
-        className={clsx(compact && "px-2", frameClassName)}
-      >
+      <InputFrame prefix={prefix} suffix={suffix} invalid={invalid} className={clsx(compact && "px-2", frameClassName)}>
         <input
           id={inputId}
           type="number"
-          className={clsx(inputBaseClassName, compact && "text-sm", inputClassName)}
+          className={clsx(
+            "w-full min-w-0 border-0 bg-transparent p-0 text-base font-semibold outline-none",
+            compact && "text-sm",
+            inputClassName,
+          )}
           {...inputProps}
-          value={usesNumericValue ? draftValue : value}
-          onFocus={() => setIsFocused(true)}
+          value={isNumericValue ? draftValue : value}
+          onFocus={() => setIsEditing(true)}
           onChange={handleChange}
           onBlur={handleBlur}
         />
@@ -225,24 +232,19 @@ export function SelectField({
   label,
   htmlFor,
   invalid = false,
-  className = "",
-  labelClassName = "",
-  frameClassName = "",
+  labelClassName,
+  frameClassName,
   children,
   ...inputProps
 }: SelectFieldProps) {
-  const resolvedId = React.useId();
-  const inputId = htmlFor ?? resolvedId;
+  const inputId = useInputId(htmlFor);
 
   return (
-    <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
+    <Field label={label} htmlFor={inputId} labelClassName={labelClassName}>
       <InputFrame invalid={invalid} className={frameClassName}>
-        <select id={inputId} className={selectClassName} {...inputProps}>
+        <select id={inputId} className="w-full font-semibold" {...inputProps}>
           {children}
         </select>
-        <span aria-hidden="true" className={`pointer-events-none absolute right-4 ${labelTextClass}`}>
-          ▾
-        </span>
       </InputFrame>
     </Field>
   );
@@ -252,22 +254,20 @@ export function CheckboxField({
   label,
   htmlFor,
   invalid = false,
-  className = "",
-  labelClassName = "",
-  frameClassName = "",
-  inputClassName = "",
+  labelClassName,
+  frameClassName,
+  inputClassName,
   ...inputProps
 }: CheckboxFieldProps) {
-  const resolvedId = React.useId();
-  const inputId = htmlFor ?? resolvedId;
+  const inputId = useInputId(htmlFor);
 
   return (
-    <div className={clsx("grid min-w-0 gap-1", className)}>
-      <div aria-hidden="true" className={clsx(fieldLabelClass, "invisible select-none", labelClassName)}>
-        {label || "."}
-      </div>
-      <InputFrame invalid={invalid} className={clsx("min-h-8 justify-start px-2", frameClassName)}>
-        <label className={clsx(checkboxLabelClassName, labelClassName)} htmlFor={inputId}>
+    <Field labelClassName={labelClassName} reserveLabelSpace>
+      <InputFrame invalid={invalid} className={clsx("justify-start px-2", frameClassName)}>
+        <label
+          className={clsx("flex w-full items-center gap-2 text-base font-semibold", labelClassName)}
+          htmlFor={inputId}
+        >
           <input
             id={inputId}
             type="checkbox"
@@ -277,24 +277,29 @@ export function CheckboxField({
           <span>{label}</span>
         </label>
       </InputFrame>
-    </div>
+    </Field>
   );
 }
 
 export function TextAreaField({
   label,
   htmlFor,
-  className = "",
-  labelClassName = "",
-  inputClassName = "",
+  labelClassName,
+  inputClassName,
   ...props
 }: TextAreaFieldProps) {
-  const resolvedId = React.useId();
-  const inputId = htmlFor ?? resolvedId;
+  const inputId = useInputId(htmlFor);
 
   return (
-    <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
-      <textarea id={inputId} className={clsx(textAreaClassName, inputClassName)} {...props} />
+    <Field label={label} htmlFor={inputId} labelClassName={labelClassName}>
+      <textarea
+        id={inputId}
+        className={clsx(
+          "min-h-48 w-full resize-y border border-(--line) bg-(--white) p-4 font-mono text-sm leading-6 outline-none",
+          inputClassName,
+        )}
+        {...props}
+      />
     </Field>
   );
 }
@@ -303,19 +308,18 @@ export function SliderField({
   id,
   label,
   valueLabel,
-  className = "",
-  labelClassName = "",
+  className,
+  labelClassName,
   ...inputProps
 }: SliderFieldProps) {
-  const resolvedId = React.useId();
-  const inputId = id ?? resolvedId;
+  const inputId = useInputId(id);
 
   return (
     <Field
       label={
         <>
           <span>{label}</span>
-          <span className="whitespace-nowrap text-(--ink)">{valueLabel}</span>
+          <span className="whitespace-nowrap">{valueLabel}</span>
         </>
       }
       htmlFor={inputId}
@@ -326,5 +330,38 @@ export function SliderField({
         <input id={inputId} className="slider-input w-full" type="range" {...inputProps} />
       </InputFrame>
     </Field>
+  );
+}
+
+export function DollarPercentField({
+  mode,
+  onModeToggle,
+  dollarStep = "1000",
+  percentStep = "0.1",
+  ...props
+}: DollarPercentFieldProps) {
+  const nextMode = mode === "dollar" ? "percent" : "dollar";
+  const unitButton = (
+    <button
+      type="button"
+      className={clsx(
+        `inline-flex items-center rounded-sm border border-(--teal-soft) px-1 text-(--teal) transition
+        focus-visible:outline-none`,
+        labelTextClass,
+      )}
+      aria-label={`Switch to ${nextMode === "dollar" ? "dollars" : "percent"}`}
+      onClick={onModeToggle}
+    >
+      {mode === "dollar" ? "$" : "%"}
+    </button>
+  );
+
+  return (
+    <NumberField
+      {...props}
+      step={mode === "dollar" ? dollarStep : percentStep}
+      prefix={mode === "dollar" ? unitButton : null}
+      suffix={mode === "percent" ? unitButton : null}
+    />
   );
 }

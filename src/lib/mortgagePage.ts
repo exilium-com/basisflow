@@ -1,4 +1,4 @@
-import { usd } from "./format";
+import { resolveAmountFromMode } from "./mortgageConfig";
 import { type MortgageScenario } from "./mortgageSchedule";
 
 export function serializeMortgageSummary(scenario: MortgageScenario) {
@@ -34,6 +34,10 @@ export function serializeMortgageSummary(scenario: MortgageScenario) {
     monthlyTax: scenario.monthlyTax,
     monthlyInsurance: scenario.monthlyInsurance,
     monthlyHoa: scenario.monthlyHoa,
+    maintenanceRate: scenario.mortgage.maintenanceRate,
+    purchaseClosingCost: resolveAmountFromMode(scenario.mortgage.purchaseClosingCost, scenario.mortgage.homePrice),
+    saleClosingCostMode: scenario.mortgage.saleClosingCost.mode,
+    saleClosingCostInput: scenario.mortgage.saleClosingCost.value,
     totalInterest: scenario.totalInterest,
     yearlyLoan,
   };
@@ -115,24 +119,4 @@ export function getMortgageRateForYear(scenario: MortgageScenario, year = 0) {
   }
 
   return year >= scenario.armDetails.resetYears ? scenario.armDetails.adjustedRate : scenario.primaryRate;
-}
-
-export function buildMortgageSummaryItems(scenario: MortgageScenario, year = 0) {
-  const monthlyLabelSuffix = year > 0 ? `in year ${year}` : "today";
-
-  if (scenario.kind === "rent") {
-    const monthlyRent = getMortgageMonthlyPaymentForYear(scenario, year);
-
-    return [
-      { label: "Annual housing cost", value: usd(monthlyRent * 12) },
-      { label: "Yearly increase", value: `${scenario.rentGrowthRate.toFixed(1)}%` },
-    ];
-  }
-
-  return [
-    { label: `Monthly principal ${monthlyLabelSuffix}`, value: usd(getMortgagePrincipalForYear(scenario, year)) },
-    { label: `Monthly interest ${monthlyLabelSuffix}`, value: usd(getMortgageInterestForYear(scenario, year)) },
-    { label: "Monthly property tax", value: usd(scenario.monthlyTax) },
-    { label: "Total interest", value: usd(scenario.totalInterest) },
-  ];
 }

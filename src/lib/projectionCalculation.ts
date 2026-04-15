@@ -39,7 +39,10 @@ type ProjectionBase = {
   income: ResolvedIncome;
   mortgage: {
     homePrice: number;
-    currentEquity: number;
+    purchaseClosingCost: number;
+    saleClosingCostMode: "percent" | "dollar";
+    saleClosingCostInput: number;
+    equityShortfall: number;
   };
   assetPlan: {
     totalContributions: number;
@@ -145,17 +148,26 @@ function computeDeductionTaxSavings(baseIncome: number, deduction: number, taxCo
   return roundTo(federal + state, 2);
 }
 
-function fundHomeEquityFromBuckets(bucketStates: ProjectedBucketState[], fundingBucketId: string, amount: number) {
-  if (!fundingBucketId || amount <= 0) {
-    return bucketStates;
+function fundHomePurchaseFromBuckets(
+  bucketStates: ProjectedBucketState[],
+  fundingBucketId: string,
+  equityAmount: number,
+  closingCostAmount: number,
+) {
+  if (!fundingBucketId || fundingBucketId === "none" || equityAmount + closingCostAmount <= 0) {
+    return {
+      bucketStates,
+      equityShortfall: 0,
+    };
   }
 
-  return bucketStates.map((bucketState) => {
+  let fundedAmount = 0;
+  const nextBucketStates = bucketStates.map((bucketState) => {
     if (bucketState.id !== fundingBucketId) {
       return bucketState;
     }
 
-    const fundedAmount = Math.min(bucketState.balance, amount);
+    fundedAmount = Math.min(bucketState.balance, equityAmount + closingCostAmount);
     if (fundedAmount <= 0) {
       return bucketState;
     }
@@ -174,6 +186,84 @@ function fundHomeEquityFromBuckets(bucketStates: ProjectedBucketState[], funding
       basisValue: Math.max(0, nextBasisValue),
     };
   });
+
+  const fundedEquity = Math.max(0, fundedAmount - closingCostAmount);
+
+  return {
+    bucketStates: nextBucketStates,
+    equityShortfall: Math.max(0, equityAmount - fundedEquity),
+  };
+}
+
+function moveBucketBalance(
+  bucketStates: ProjectedBucketState[],
+  sourceBucketId: string,
+  destinationBucketId: string,
+  amount: number,
+) {
+  if (!sourceBucketId || sourceBucketId === "none" || !destinationBucketId || destinationBucketId === "none") {
+    return bucketStates;
+  }
+
+  if (sourceBucketId === destinationBucketId || amount <= 0) {
+    return bucketStates;
+  }
+
+  const sourceBucket = bucketStates.find((bucketState) => bucketState.id === sourceBucketId);
+  const destinationBucket = bucketStates.find((bucketState) => bucketState.id === destinationBucketId);
+
+  if (!sourceBucket || !destinationBucket) {
+    return bucketStates;
+  }
+
+  const transferAmount = Math.min(sourceBucket.balance, amount);
+  if (transferAmount <= 0) {
+    return bucketStates;
+  }
+
+  return bucketStates.map((bucketState) => {
+    if (bucketState.id === sourceBucketId) {
+      const nextBalance = bucketState.balance - transferAmount;
+      const nextBasisValue =
+        bucketState.taxTreatment === "none" || bucketState.taxTreatment === "taxDeferred"
+          ? bucketState.balance > 0
+            ? bucketState.basisValue * (nextBalance / bucketState.balance)
+            : bucketState.basisValue
+          : 0;
+
+      return {
+        ...bucketState,
+        balance: nextBalance,
+        basisValue: Math.max(0, nextBasisValue),
+      };
+    }
+
+    if (bucketState.id === destinationBucketId) {
+      return {
+        ...bucketState,
+        balance: bucketState.balance + transferAmount,
+        basisValue:
+          bucketState.taxTreatment === "none" || bucketState.taxTreatment === "taxDeferred"
+            ? bucketState.basisValue + transferAmount
+            : bucketState.basisValue,
+      };
+    }
+
+    return bucketState;
+  });
+}
+
+function getHomeValue(base: ProjectionBase, year: number) {
+  return base.mortgage.homePrice * Math.pow(1 + base.projection.homeAppreciationRate, year);
+}
+
+function getHomeEquity(base: ProjectionBase, year: number) {
+  const homeValue = getHomeValue(base, year);
+  const saleClosingCost =
+    base.mortgage.saleClosingCostMode === "percent"
+      ? (homeValue * base.mortgage.saleClosingCostInput) / 100
+      : base.mortgage.saleClosingCostInput;
+  return homeValue - saleClosingCost - getMortgageEndingBalance(base.mortgageSummary, year) - base.mortgage.equityShortfall;
 }
 
 function advanceProjectedBucketWithNetContribution(
@@ -238,15 +328,11 @@ function withdrawBucketForNetCash({
   };
 }
 
-function restoreMinimumCash(
+function rebalanceTargetCash(
   base: ProjectionBase,
   bucketStates: ProjectedBucketState[],
   taxBases: { federalTaxableIncome?: number },
 ) {
-  if (base.projection.minimumCash <= 0) {
-    return bucketStates;
-  }
-
   const reserveCashIndex = bucketStates.findIndex((bucketState) => bucketState.id === base.reserveCashBucketId);
   if (reserveCashIndex === -1) {
     return bucketStates;
@@ -273,7 +359,7 @@ function restoreMinimumCash(
       return left.index - right.index;
     });
 
-  let reserveCashShortfall = Math.max(0, base.projection.minimumCash - nextBucketStates[reserveCashIndex].balance);
+  let reserveCashShortfall = Math.max(0, base.projection.targetCash - nextBucketStates[reserveCashIndex].balance);
   for (const { index } of liquidationCandidates) {
     if (reserveCashShortfall <= 0) {
       break;
@@ -295,7 +381,17 @@ function restoreMinimumCash(
       balance: roundTo(nextBucketStates[reserveCashIndex].balance + withdrawal.netCash, 2),
       basisValue: roundTo(Math.max(0, nextBucketStates[reserveCashIndex].basisValue) + withdrawal.netCash, 2),
     };
-    reserveCashShortfall = Math.max(0, base.projection.minimumCash - nextBucketStates[reserveCashIndex].balance);
+    reserveCashShortfall = Math.max(0, base.projection.targetCash - nextBucketStates[reserveCashIndex].balance);
+  }
+
+  const reserveCashExcess = Math.max(0, nextBucketStates[reserveCashIndex].balance - base.projection.targetCash);
+  if (reserveCashExcess > 0 && base.assetPlan.freeCashFlowBucket) {
+    return moveBucketBalance(
+      nextBucketStates,
+      base.reserveCashBucketId,
+      base.assetPlan.freeCashFlowBucket.id,
+      reserveCashExcess,
+    );
   }
 
   return nextBucketStates;
@@ -362,7 +458,10 @@ function createProjectionSimulation({
     income,
     mortgage: {
       homePrice: mortgageSummary.homePrice ?? 0,
-      currentEquity: mortgageSummary.currentEquity ?? 0,
+      purchaseClosingCost: mortgageSummary.purchaseClosingCost ?? 0,
+      saleClosingCostMode: mortgageSummary.saleClosingCostMode === "dollar" ? "dollar" : "percent",
+      saleClosingCostInput: mortgageSummary.saleClosingCostInput ?? 0,
+      equityShortfall: 0,
     },
     assetPlan: {
       totalContributions: assets.buckets.reduce((sum, bucket) => sum + bucket.contribution, 0),
@@ -381,27 +480,34 @@ function createProjectionSimulation({
     },
     reserveCashBucketId,
   };
-  const bucketStates = fundHomeEquityFromBuckets(
-    base.assets.buckets.map((bucket) => ({
-      ...bucket,
-      balance: bucket.current,
-      basisValue: bucket.taxTreatment === "none" ? bucket.basis : bucket.current,
-    })),
-    base.projection.mortgageFundingBucketId,
-    base.mortgage.currentEquity,
-  );
+  const equityAmount = mortgageSummary.kind === "rent" ? 0 : mortgageSummary.currentEquity ?? 0;
+  const initialBucketStates = base.assets.buckets.map((bucket) => ({
+    ...bucket,
+    balance: bucket.current,
+    basisValue: bucket.taxTreatment === "none" ? bucket.basis : bucket.current,
+  }));
+  const fundedPurchase =
+    mortgageSummary.kind === "rent"
+      ? { bucketStates: initialBucketStates, equityShortfall: 0 }
+      : fundHomePurchaseFromBuckets(
+          initialBucketStates,
+          base.projection.mortgageFundingBucketId,
+          equityAmount,
+          base.mortgage.purchaseClosingCost,
+        );
+  base.mortgage.equityShortfall = fundedPurchase.equityShortfall;
   const yearZeroContext = buildProjectionYearContext(base, 0);
-  const initialBucketStates = restoreMinimumCash(base, bucketStates, yearZeroContext.taxBases);
+  const currentBucketStates = rebalanceTargetCash(base, fundedPurchase.bucketStates, yearZeroContext.taxBases);
   const currentSnapshot = buildProjectionSnapshot({
     base,
     year: 0,
-    bucketStates: initialBucketStates,
+    bucketStates: currentBucketStates,
     taxBases: yearZeroContext.taxBases,
   });
 
   return {
     base,
-    bucketStates: initialBucketStates,
+    bucketStates: currentBucketStates,
     vestedRsuBalance: 0,
     vestedRsuBalanceById: {},
     projection: [
@@ -417,7 +523,7 @@ function createProjectionSimulation({
         snapshot: currentSnapshot,
         vestedRsuBalance: 0,
         vestedRsuBalanceById: {},
-        homeEquity: base.mortgage.currentEquity,
+        homeEquity: mortgageSummary.kind === "rent" ? 0 : getHomeEquity(base, 0),
       }),
     ],
   };
@@ -510,7 +616,11 @@ function buildProjectionRow({
 
 function buildProjectionYearContext(base: ProjectionBase, year: number): ProjectionYearContext {
   const growthFactor = Math.pow(1 + base.projection.incomeGrowthRate, year);
-  const housingCost = getMortgageAnnualHousingCost(base.mortgageSummary, year);
+  const maintenanceCost =
+    base.mortgageSummary.kind === "rent"
+      ? 0
+      : getHomeValue(base, year) * ((base.mortgageSummary.maintenanceRate ?? 0) / 100);
+  const housingCost = getMortgageAnnualHousingCost(base.mortgageSummary, year) + maintenanceCost;
   const income: ResolvedIncome = {
     ...base.income,
     grossSalary: base.income.grossSalary * growthFactor,
@@ -566,7 +676,7 @@ function allocateFreeCash(
   const allocatedCash = Math.max(0, yearContext.freeCashBeforeAllocation);
   const currentReserveCash =
     bucketStates.find((bucketState) => bucketState.id === base.reserveCashBucketId)?.balance ?? 0;
-  const reserveCashTopUp = Math.min(allocatedCash, Math.max(0, base.projection.minimumCash - currentReserveCash));
+  const reserveCashTopUp = Math.min(allocatedCash, Math.max(0, base.projection.targetCash - currentReserveCash));
   const investableCash = allocatedCash - reserveCashTopUp;
   let deductibleContribution = 0;
   if (base.assetPlan.freeCashFlowBucket && investableCash > 0) {
@@ -617,6 +727,10 @@ function buildNextVestedRsuBalancesById(
 }
 
 function getMortgageEndingBalance(mortgageSummary: MortgageSummary, year: number) {
+  if (year <= 0) {
+    return mortgageSummary.loanAmount ?? 0;
+  }
+
   const loanYear = mortgageSummary.yearlyLoan?.find((row) => row.year === year);
   if (loanYear) {
     return loanYear.endingBalance;
@@ -634,7 +748,7 @@ function advanceProjectionYear(simulation: ProjectionSimulation, year: number) {
     incomeDirectedContributions: base.assetPlan.incomeDirectedContributions,
     reserveCashFlow: allocation.reserveCashFlow,
   });
-  const nextBucketStatesWithMinimumCash = restoreMinimumCash(base, nextBucketStates, appliedContext.taxBases);
+  const nextBucketStatesWithTargetCash = rebalanceTargetCash(base, nextBucketStates, appliedContext.taxBases);
   const vestedRsuBalance = roundTo(
     simulation.vestedRsuBalance * (1 + base.projection.assetGrowthRate) + appliedContext.rsuNet,
     2,
@@ -649,17 +763,16 @@ function advanceProjectionYear(simulation: ProjectionSimulation, year: number) {
   const homeEquity =
     base.mortgageSummary.kind === "rent"
       ? 0
-      : base.mortgage.homePrice * Math.pow(1 + base.projection.homeAppreciationRate, year) -
-        getMortgageEndingBalance(base.mortgageSummary, year);
+      : getHomeEquity(base, year);
   const yearContext = buildProjectionYearContext(base, year);
   const snapshot = buildProjectionSnapshot({
     base,
     year,
-    bucketStates: nextBucketStatesWithMinimumCash,
+    bucketStates: nextBucketStatesWithTargetCash,
     taxBases: yearContext.taxBases,
   });
 
-  simulation.bucketStates = nextBucketStatesWithMinimumCash;
+  simulation.bucketStates = nextBucketStatesWithTargetCash;
   simulation.vestedRsuBalance = vestedRsuBalance;
   simulation.vestedRsuBalanceById = vestedRsuBalanceById;
   simulation.projection.push(
