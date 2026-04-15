@@ -184,7 +184,7 @@ export function WorkspaceSummaryPanel({
 
   return (
     <div>
-      <div className="grid gap-4 border-b border-(--line) bg-(--white) py-4 lg:sticky lg:top-0 lg:z-10">
+      <div className="grid gap-4 bg-(--white) py-4 lg:sticky lg:top-0 lg:z-10 lg:border-b lg:border-(--line)">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className={smallCapsTextClass}>
@@ -194,17 +194,29 @@ export function WorkspaceSummaryPanel({
               {usd(toDisplayValue(currentRow.netWorth, projection.currentYear, projection))}
             </strong>
           </div>
-          <SegmentedToggle
-            className="shrink-0"
-            size="compact"
-            ariaLabel="Display mode"
-            value={projectionState.displayMode}
-            onChange={(displayMode) => onUpdateProjectionState({ displayMode })}
-            options={[
-              { value: "nominal", label: "Nominal" },
-              { value: "real", label: "Real" },
-            ]}
-          />
+          <div className="shrink-0 lg:hidden">
+            <SegmentedToggle
+              size="compact"
+              ariaLabel="Display mode"
+              value={projectionState.displayMode}
+              onChange={(displayMode) => onUpdateProjectionState({ displayMode })}
+              options={[
+                { value: "nominal", label: "Nominal" },
+                { value: "real", label: "Real" },
+              ]}
+            />
+          </div>
+          <div className="hidden shrink-0 lg:block">
+            <SegmentedToggle
+              ariaLabel="Display mode"
+              value={projectionState.displayMode}
+              onChange={(displayMode) => onUpdateProjectionState({ displayMode })}
+              options={[
+                { value: "nominal", label: "Nominal" },
+                { value: "real", label: "Real" },
+              ]}
+            />
+          </div>
         </div>
 
         <div className="flex items-end gap-4">
@@ -228,13 +240,15 @@ export function WorkspaceSummaryPanel({
           />
         </div>
 
-        <button
-          type="button"
-          className={`action-button w-full lg:hidden ${buttonTextClass}`}
-          onClick={() => setMobileSummaryOpen((open) => !open)}
-        >
-          {mobileSummaryOpen ? "Hide Summary" : "Show Summary"}
-        </button>
+        <div className="lg:hidden">
+          <button
+            type="button"
+            className={`action-button w-full justify-center ${buttonTextClass}`}
+            onClick={() => setMobileSummaryOpen((open) => !open)}
+          >
+            {mobileSummaryOpen ? "Hide Summary" : "Show Summary"}
+          </button>
+        </div>
       </div>
 
       <div className="hidden lg:block">{summaryBody}</div>
