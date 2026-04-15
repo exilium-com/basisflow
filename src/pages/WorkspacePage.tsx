@@ -43,7 +43,6 @@ import {
   type MortgageLoanField,
   type MortgageOptionKind,
   type MortgageState,
-  toggleMortgageValueMode,
 } from "../lib/mortgageConfig";
 import {
   getMortgageInterestForYear,
@@ -355,13 +354,7 @@ export function WorkspacePage() {
     });
   }
 
-  function updateMortgageState(patch: Partial<MortgageState>) {
-    setMortgageState((draft) => {
-      Object.assign(draft, patch);
-    });
-  }
-
-  function updateLoanField(optionId: string, field: MortgageLoanField, value: number | string | null) {
+  function updateLoanField(optionId: string, field: MortgageLoanField, value: number | null) {
     setMortgageState((draft) => {
       const option = draft.options.find((entry) => entry.id === optionId);
       if (option) {
@@ -563,11 +556,6 @@ export function WorkspacePage() {
             mortgageSummaryItems={mortgageSummaryItems}
             scenariosById={scenariosById}
             onAddMortgageOption={addMortgageOption}
-            onToggleMortgageValueMode={(field) =>
-              setMortgageState((draft) => {
-                toggleMortgageValueMode(draft, field);
-              })
-            }
             onRemoveLoan={removeMortgageOption}
             onSelectLoan={selectLoan}
             onUpdateLoanField={updateLoanField}
@@ -575,7 +563,7 @@ export function WorkspacePage() {
             onUpdateMortgageFundingBucketId={(mortgageFundingBucketId) =>
               updateProjectionState({ mortgageFundingBucketId })
             }
-            onUpdateMortgageState={updateMortgageState}
+            setMortgageState={setMortgageState}
           />
 
           <TaxesSection
@@ -591,7 +579,7 @@ export function WorkspacePage() {
             onSetFederalBrackets={setFederalBrackets}
             onSetLongTermCapitalGains={setLongTermCapitalGains}
             onSetStateBrackets={setStateBrackets}
-            onUpdateMortgageState={updateMortgageState}
+            setMortgageState={setMortgageState}
             onUpdateTaxConfig={updateTaxConfig}
           />
 

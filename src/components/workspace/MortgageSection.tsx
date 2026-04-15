@@ -4,13 +4,14 @@ import { DollarPercentField, NumberField, SelectField } from "../Field";
 import { MortgageLoanOptionList } from "../MortgageLoanOptions";
 import { WorkspaceMetricSplit } from "./WorkspaceMetricSplit";
 import { WorkspaceSection } from "./WorkspaceSection";
+import { type StoredStateSetter } from "../../hooks/useStoredState";
 import { labelTextClass } from "../../lib/text";
 import {
-  type MortgageValueModeField,
   type Mortgage,
   type MortgageLoanField,
   type MortgageOptionKind,
   type MortgageState,
+  toggleMortgageValueMode,
 } from "../../lib/mortgageConfig";
 import { type MortgageScenario } from "../../lib/mortgageSchedule";
 
@@ -26,13 +27,12 @@ type MortgageSectionProps = {
   monthlyHousingCost: string;
   mortgageSummaryItems: MetricItem[];
   onAddMortgageOption: (kind: MortgageOptionKind) => void;
-  onToggleMortgageValueMode: (field: MortgageValueModeField) => void;
   onRemoveLoan: (optionId: string) => void;
   onSelectLoan: (optionId: string) => void;
-  onUpdateLoanField: (optionId: string, field: MortgageLoanField, value: number | string | null) => void;
+  onUpdateLoanField: (optionId: string, field: MortgageLoanField, value: number | null) => void;
   onUpdateLoanName: (optionId: string, name: string) => void;
   onUpdateMortgageFundingBucketId: (bucketId: string) => void;
-  onUpdateMortgageState: (patch: Partial<MortgageState>) => void;
+  setMortgageState: StoredStateSetter<MortgageState>;
   scenariosById: Record<string, MortgageScenario>;
 };
 
@@ -46,13 +46,12 @@ export function MortgageSection({
   monthlyHousingCost,
   mortgageSummaryItems,
   onAddMortgageOption,
-  onToggleMortgageValueMode,
   onRemoveLoan,
   onSelectLoan,
   onUpdateLoanField,
   onUpdateLoanName,
   onUpdateMortgageFundingBucketId,
-  onUpdateMortgageState,
+  setMortgageState,
   scenariosById,
 }: MortgageSectionProps) {
   const isRentScenario = mortgageScenario.kind === "rent";
@@ -99,16 +98,28 @@ export function MortgageSection({
               prefix="$"
               value={mortgageState.homePrice}
               step="50000"
-              onValueChange={(value) => onUpdateMortgageState({ homePrice: value ?? 0 })}
+              onValueChange={(value) =>
+                setMortgageState((draft) => {
+                  draft.homePrice = value ?? 0;
+                })
+              }
             />
             <DollarPercentField
               label="Down payment"
-              mode={mortgageState.downPaymentMode}
-              value={mortgageState.downPayment}
+              mode={mortgageState.downPayment.mode}
+              value={mortgageState.downPayment.value}
               dollarStep="1000"
               percentStep="0.5"
-              onModeToggle={() => onToggleMortgageValueMode("downPayment")}
-              onValueChange={(value) => onUpdateMortgageState({ downPayment: value ?? 0 })}
+              onModeToggle={() =>
+                setMortgageState((draft) => {
+                  toggleMortgageValueMode(draft, "downPayment");
+                })
+              }
+              onValueChange={(value) =>
+                setMortgageState((draft) => {
+                  draft.downPayment.value = value ?? 0;
+                })
+              }
             />
             <div className="col-span-2 grid grid-cols-3 gap-4">
               <NumberField
@@ -117,7 +128,11 @@ export function MortgageSection({
                 suffix="/ year"
                 value={mortgageState.insurancePerYear}
                 step="50"
-                onValueChange={(value) => onUpdateMortgageState({ insurancePerYear: value ?? 0 })}
+                onValueChange={(value) =>
+                  setMortgageState((draft) => {
+                    draft.insurancePerYear = value ?? 0;
+                  })
+                }
               />
               <NumberField
                 label="HOA"
@@ -125,7 +140,11 @@ export function MortgageSection({
                 suffix="/ month"
                 value={mortgageState.hoaPerMonth}
                 step="50"
-                onValueChange={(value) => onUpdateMortgageState({ hoaPerMonth: value ?? 0 })}
+                onValueChange={(value) =>
+                  setMortgageState((draft) => {
+                    draft.hoaPerMonth = value ?? 0;
+                  })
+                }
               />
               <SelectField
                 label="Down payment funded by"
@@ -146,25 +165,45 @@ export function MortgageSection({
                 suffix="% / year"
                 step="0.1"
                 value={mortgageState.maintenanceRate}
-                onValueChange={(value) => onUpdateMortgageState({ maintenanceRate: value ?? 0 })}
+                onValueChange={(value) =>
+                  setMortgageState((draft) => {
+                    draft.maintenanceRate = value ?? 0;
+                  })
+                }
               />
               <DollarPercentField
                 label="Buy closing cost"
-                mode={mortgageState.purchaseClosingCostMode}
-                value={mortgageState.purchaseClosingCost}
+                mode={mortgageState.purchaseClosingCost.mode}
+                value={mortgageState.purchaseClosingCost.value}
                 dollarStep="500"
                 percentStep="0.1"
-                onModeToggle={() => onToggleMortgageValueMode("purchaseClosingCost")}
-                onValueChange={(value) => onUpdateMortgageState({ purchaseClosingCost: value ?? 0 })}
+                onModeToggle={() =>
+                  setMortgageState((draft) => {
+                    toggleMortgageValueMode(draft, "purchaseClosingCost");
+                  })
+                }
+                onValueChange={(value) =>
+                  setMortgageState((draft) => {
+                    draft.purchaseClosingCost.value = value ?? 0;
+                  })
+                }
               />
               <DollarPercentField
                 label="Selling cost"
-                mode={mortgageState.saleClosingCostMode}
-                value={mortgageState.saleClosingCost}
+                mode={mortgageState.saleClosingCost.mode}
+                value={mortgageState.saleClosingCost.value}
                 dollarStep="500"
                 percentStep="0.1"
-                onModeToggle={() => onToggleMortgageValueMode("saleClosingCost")}
-                onValueChange={(value) => onUpdateMortgageState({ saleClosingCost: value ?? 0 })}
+                onModeToggle={() =>
+                  setMortgageState((draft) => {
+                    toggleMortgageValueMode(draft, "saleClosingCost");
+                  })
+                }
+                onValueChange={(value) =>
+                  setMortgageState((draft) => {
+                    draft.saleClosingCost.value = value ?? 0;
+                  })
+                }
               />
             </div>
           </div>
