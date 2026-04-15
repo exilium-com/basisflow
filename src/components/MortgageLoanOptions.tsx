@@ -4,14 +4,12 @@ import { ProjectedValueDisplay } from "./ProjectedValueDisplay";
 import { RowItem } from "./RowItem";
 import { usd } from "../lib/format";
 import { getMortgageMonthlyPaymentForYear } from "../lib/mortgagePage";
-import { type Mortgage, type MortgageLoanField, type MortgageState } from "../lib/mortgageConfig";
+import { type MortgageLoanField, type MortgageState } from "../lib/mortgageConfig";
 import { type MortgageScenario } from "../lib/mortgageSchedule";
 
-type Loan = Mortgage["options"][number];
 type LoanState = MortgageState["options"][number];
 
 type MortgageLoanOptionCardProps = {
-  loan: Loan;
   loanState: LoanState;
   optionCount: number;
   currentYear: number;
@@ -25,15 +23,13 @@ type MortgageLoanOptionCardProps = {
 
 type MortgageLoanOptionListProps = Omit<
   MortgageLoanOptionCardProps,
-  "loan" | "loanState" | "optionCount" | "scenario" | "selected"
+  "loanState" | "optionCount" | "scenario" | "selected"
 > & {
-  mortgage: Mortgage;
   scenariosById: Record<string, MortgageScenario>;
   state: MortgageState;
 };
 
 function MortgageLoanOptionCard({
-  loan,
   loanState,
   optionCount,
   currentYear,
@@ -55,34 +51,34 @@ function MortgageLoanOptionCard({
     <RowItem
       bodyClassName="grid gap-4"
       selected={selected}
-      onSelect={() => onSelectLoan(loan.id)}
+      onSelect={() => onSelectLoan(loanState.id)}
       removeLabel={optionCount > 1 ? `Remove ${loanState.name || "scenario"}` : undefined}
-      onRemove={optionCount > 1 ? () => onRemoveLoan(loan.id) : undefined}
+      onRemove={optionCount > 1 ? () => onRemoveLoan(loanState.id) : undefined}
       details={
-        loan.kind === "arm" ? (
+        loanState.kind === "arm" ? (
           <>
             <NumberField
               label="Reset rate"
               suffix="%"
               value={loanState.adjustedRate}
               step="0.125"
-              onValueChange={(value) => onUpdateLoanField(loan.id, "adjustedRate", value)}
+              onValueChange={(value) => onUpdateLoanField(loanState.id, "adjustedRate", value)}
             />
             <NumberField
               label="Fixed years"
               suffix="years"
               value={loanState.fixedYears}
               step="1"
-              onValueChange={(value) => onUpdateLoanField(loan.id, "fixedYears", value)}
+              onValueChange={(value) => onUpdateLoanField(loanState.id, "fixedYears", value)}
             />
           </>
-        ) : loan.kind === "rent" ? (
+        ) : loanState.kind === "rent" ? (
           <NumberField
             label="Yearly increase"
             suffix="%"
             value={loanState.rentGrowthRate}
             step="0.5"
-            onValueChange={(value) => onUpdateLoanField(loan.id, "rentGrowthRate", value)}
+            onValueChange={(value) => onUpdateLoanField(loanState.id, "rentGrowthRate", value)}
           />
         ) : null
       }
@@ -94,9 +90,9 @@ function MortgageLoanOptionCard({
           className="flex-1"
           label="Scenario name"
           value={loanState.name}
-          onChange={(event) => onUpdateLoanName(loan.id, event.target.value)}
+          onChange={(event) => onUpdateLoanName(loanState.id, event.target.value)}
         />
-        {loan.kind === "rent" ? (
+        {loanState.kind === "rent" ? (
           <NumberField
             className="w-48"
             label="Rent"
@@ -104,7 +100,7 @@ function MortgageLoanOptionCard({
             suffix="/ month"
             value={loanState.rentPerMonth}
             step="50"
-            onValueChange={(value) => onUpdateLoanField(loan.id, "rentPerMonth", value)}
+            onValueChange={(value) => onUpdateLoanField(loanState.id, "rentPerMonth", value)}
           />
         ) : (
           <div className="w-40">
@@ -115,21 +111,23 @@ function MortgageLoanOptionCard({
           </div>
         )}
       </div>
-      {loan.kind !== "rent" ? (
+      {loanState.kind !== "rent" ? (
         <div className="grid grid-cols-2 gap-4">
           <NumberField
-            label={loan.kind === "arm" ? "Initial rate" : "Interest rate"}
+            label={loanState.kind === "arm" ? "Initial rate" : "Interest rate"}
             suffix="%"
-            value={loan.kind === "arm" ? loanState.initialRate : loanState.rate}
+            value={loanState.kind === "arm" ? loanState.initialRate : loanState.rate}
             step="0.125"
-            onValueChange={(value) => onUpdateLoanField(loan.id, loan.kind === "arm" ? "initialRate" : "rate", value)}
+            onValueChange={(value) =>
+              onUpdateLoanField(loanState.id, loanState.kind === "arm" ? "initialRate" : "rate", value)
+            }
           />
           <NumberField
             label="Loan term"
             suffix="years"
             value={loanState.term}
             step="1"
-            onValueChange={(value) => onUpdateLoanField(loan.id, "term", value)}
+            onValueChange={(value) => onUpdateLoanField(loanState.id, "term", value)}
           />
         </div>
       ) : null}
@@ -143,10 +141,9 @@ export function MortgageLoanOptionList(props: MortgageLoanOptionListProps) {
   return (
     <div className="grid gap-2" role="list">
       {props.state.options.map((loanState) => {
-        const loan = props.mortgage.options.find((entry) => entry.id === loanState.id);
         const scenario = props.scenariosById[loanState.id];
 
-        if (!loan || !scenario) {
+        if (!scenario) {
           return null;
         }
 
@@ -154,7 +151,6 @@ export function MortgageLoanOptionList(props: MortgageLoanOptionListProps) {
           <MortgageLoanOptionCard
             key={loanState.id}
             {...props}
-            loan={loan}
             loanState={loanState}
             optionCount={optionCount}
             scenario={scenario}

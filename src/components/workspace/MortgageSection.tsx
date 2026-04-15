@@ -7,7 +7,6 @@ import { WorkspaceSection } from "./WorkspaceSection";
 import { type StoredStateSetter } from "../../hooks/useStoredState";
 import { labelTextClass } from "../../lib/text";
 import {
-  type Mortgage,
   type MortgageLoanField,
   type MortgageOptionKind,
   type MortgageState,
@@ -20,7 +19,6 @@ type MetricItem = { label: string; value: string };
 type MortgageSectionProps = {
   assetOptions: Array<{ id: string; name: string }>;
   currentYear: number;
-  mortgage: Mortgage;
   mortgageScenario: MortgageScenario;
   mortgageFundingBucketId: string;
   mortgageState: MortgageState;
@@ -39,7 +37,6 @@ type MortgageSectionProps = {
 export function MortgageSection({
   assetOptions,
   currentYear,
-  mortgage,
   mortgageScenario,
   mortgageFundingBucketId,
   mortgageState,
@@ -211,7 +208,6 @@ export function MortgageSection({
 
         <MortgageLoanOptionList
           currentYear={currentYear}
-          mortgage={mortgage}
           scenariosById={scenariosById}
           state={mortgageState}
           onSelectLoan={onSelectLoan}

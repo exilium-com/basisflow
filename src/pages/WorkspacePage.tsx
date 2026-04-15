@@ -36,7 +36,6 @@ import {
   type IncomeItem,
 } from "../lib/incomeModel";
 import {
-  createMortgage,
   createMortgageOption,
   DEFAULT_MORTGAGE_STATE,
   normalizeMortgageState,
@@ -110,11 +109,10 @@ export function WorkspacePage() {
     setLongTermCapitalGains(JSON.stringify(taxConfig.longTermCapitalGains, null, 2));
   }, [taxConfig]);
 
-  const mortgage = createMortgage(mortgageState);
   const scenariosById = Object.fromEntries(
-    mortgage.options.map((option) => [option.id, buildMortgageScenario(mortgage, option.id)]),
+    mortgageState.options.map((option) => [option.id, buildMortgageScenario(mortgageState, option.id)]),
   ) as Record<string, MortgageScenario>;
-  const mortgageScenario = scenariosById[mortgage.activeLoanId];
+  const mortgageScenario = scenariosById[mortgageState.activeLoanId];
   const mortgageSummary = serializeMortgageSummary(mortgageScenario);
   const annualPropertyTax = mortgageSummary.kind === "rent" ? 0 : getMortgageYearPropertyTax(mortgageSummary);
 
@@ -548,7 +546,6 @@ export function WorkspacePage() {
           <MortgageSection
             assetOptions={assetOptions}
             currentYear={projection.currentYear}
-            mortgage={mortgage}
             mortgageScenario={mortgageScenario}
             mortgageFundingBucketId={effectiveMortgageFundingBucketId}
             mortgageState={mortgageState}

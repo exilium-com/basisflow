@@ -29,31 +29,6 @@ export type MortgageOptionState = {
   rentGrowthRate: number | null;
 };
 
-export type MortgageLoan =
-  | {
-      id: string;
-      name: string;
-      kind: "conventional";
-      term: number;
-      rate: number;
-    }
-  | {
-      id: string;
-      name: string;
-      kind: "arm";
-      term: number;
-      fixedYears: number;
-      initialRate: number;
-      adjustedRate: number;
-    }
-  | {
-      id: string;
-      name: string;
-      kind: "rent";
-      rentPerMonth: number;
-      rentGrowthRate: number;
-    };
-
 export type MortgageState = {
   homePrice: number;
   downPayment: ValueModePair;
@@ -65,22 +40,6 @@ export type MortgageState = {
   saleClosingCost: ValueModePair;
   activeLoanId: string;
   options: MortgageOptionState[];
-};
-
-export type Mortgage = {
-  homePrice: number;
-  downPaymentMode: DollarPercentMode;
-  downPaymentInput: number;
-  downPaymentAmount: number;
-  propertyTaxRate: number;
-  insurancePerYear: number;
-  hoaPerMonth: number;
-  maintenanceRate: number;
-  purchaseClosingCost: number;
-  saleClosingCostMode: DollarPercentMode;
-  saleClosingCostInput: number;
-  activeLoanId: string;
-  options: MortgageLoan[];
 };
 
 const CONVENTIONAL_DEFAULTS = {
@@ -267,7 +226,7 @@ export function normalizeMortgageState(parsed: unknown, fallback: MortgageState)
   };
 }
 
-function resolveAmountFromMode(input: ValueModePair, homePrice: number) {
+export function resolveAmountFromMode(input: ValueModePair, homePrice: number) {
   return input.mode === "percent" ? (homePrice * input.value) / 100 : input.value;
 }
 
@@ -295,70 +254,4 @@ export function toggleMortgageValueMode(state: MortgageState, field: MortgageVal
       return;
     }
   }
-}
-
-function createMortgageLoan(option: MortgageOptionState): MortgageLoan {
-  if (option.kind === "rent") {
-    return {
-      id: option.id,
-      name: option.name || RENT_DEFAULTS.name,
-      kind: "rent",
-      rentPerMonth: Math.max(0, option.rentPerMonth ?? RENT_DEFAULTS.rentPerMonth),
-      rentGrowthRate: option.rentGrowthRate ?? RENT_DEFAULTS.rentGrowthRate,
-    };
-  }
-
-  if (option.kind === "arm") {
-    const initialRate = option.initialRate ?? ARM_DEFAULTS.initialRate;
-
-    return {
-      id: option.id,
-      name: option.name || ARM_DEFAULTS.name,
-      kind: "arm",
-      term: Math.max(1, Math.round(option.term ?? ARM_DEFAULTS.term)),
-      fixedYears: Math.max(1, Math.round(option.fixedYears ?? ARM_DEFAULTS.fixedYears)),
-      initialRate,
-      adjustedRate: option.adjustedRate ?? initialRate,
-    };
-  }
-
-  return {
-    id: option.id,
-    name: option.name || CONVENTIONAL_DEFAULTS.name,
-    kind: "conventional",
-    term: Math.max(1, Math.round(option.term ?? CONVENTIONAL_DEFAULTS.term)),
-    rate: option.rate ?? CONVENTIONAL_DEFAULTS.rate,
-  };
-}
-
-export function createMortgage(state: MortgageState = DEFAULT_MORTGAGE_STATE): Mortgage {
-  const homePrice = Math.max(0, state.homePrice ?? MORTGAGE_DEFAULTS.homePrice);
-  const downPayment = normalizeValueModePair(state.downPayment, DEFAULT_MORTGAGE_STATE.downPayment);
-  const purchaseClosingCost = normalizeValueModePair(
-    state.purchaseClosingCost,
-    DEFAULT_MORTGAGE_STATE.purchaseClosingCost,
-  );
-  const saleClosingCost = normalizeValueModePair(state.saleClosingCost, DEFAULT_MORTGAGE_STATE.saleClosingCost);
-  const options =
-    state.options.length > 0
-      ? state.options.map((option) => createMortgageLoan(option))
-      : DEFAULT_MORTGAGE_STATE.options.map(createMortgageLoan);
-  const optionIds = new Set(options.map((option) => option.id));
-  const activeLoanId = optionIds.has(state.activeLoanId) ? state.activeLoanId : options[0].id;
-
-  return {
-    homePrice,
-    downPaymentMode: downPayment.mode,
-    downPaymentInput: Math.max(0, downPayment.value),
-    downPaymentAmount: resolveAmountFromMode(downPayment, homePrice),
-    propertyTaxRate: Math.max(0, state.propertyTaxRate ?? MORTGAGE_DEFAULTS.propertyTaxRate),
-    insurancePerYear: Math.max(0, state.insurancePerYear ?? MORTGAGE_DEFAULTS.insurancePerYear),
-    hoaPerMonth: Math.max(0, state.hoaPerMonth ?? MORTGAGE_DEFAULTS.hoaPerMonth),
-    maintenanceRate: Math.max(0, state.maintenanceRate ?? MORTGAGE_DEFAULTS.maintenanceRate),
-    purchaseClosingCost: resolveAmountFromMode(purchaseClosingCost, homePrice),
-    saleClosingCostMode: saleClosingCost.mode,
-    saleClosingCostInput: Math.max(0, saleClosingCost.value),
-    activeLoanId,
-    options,
-  };
 }

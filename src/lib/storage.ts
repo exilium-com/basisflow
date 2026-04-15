@@ -1,5 +1,5 @@
 import { buildIncomeSummary, calculateIncome, DEFAULT_INCOME, normalizeIncome, resolveIncome } from "./incomeModel";
-import { createMortgage, DEFAULT_MORTGAGE_STATE, normalizeMortgageState } from "./mortgageConfig";
+import { DEFAULT_MORTGAGE_STATE, normalizeMortgageState } from "./mortgageConfig";
 import {
   getMortgageYearAverageBalance,
   getMortgageYearInterest,
@@ -60,9 +60,7 @@ function shouldRebuildSummaries(name: string) {
 }
 
 function buildStoredMortgageSummary(documentValue: StorageDocument) {
-  const mortgage = createMortgage(
-    normalizeMortgageState(documentValue[MORTGAGE_STATE_KEY], DEFAULT_MORTGAGE_STATE),
-  );
+  const mortgage = normalizeMortgageState(documentValue[MORTGAGE_STATE_KEY], DEFAULT_MORTGAGE_STATE);
   return serializeMortgageSummary(buildMortgageScenario(mortgage, mortgage.activeLoanId));
 }
 

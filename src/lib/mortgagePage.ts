@@ -1,3 +1,4 @@
+import { resolveAmountFromMode } from "./mortgageConfig";
 import { type MortgageScenario } from "./mortgageSchedule";
 
 export function serializeMortgageSummary(scenario: MortgageScenario) {
@@ -34,9 +35,9 @@ export function serializeMortgageSummary(scenario: MortgageScenario) {
     monthlyInsurance: scenario.monthlyInsurance,
     monthlyHoa: scenario.monthlyHoa,
     maintenanceRate: scenario.mortgage.maintenanceRate,
-    purchaseClosingCost: scenario.mortgage.purchaseClosingCost,
-    saleClosingCostMode: scenario.mortgage.saleClosingCostMode,
-    saleClosingCostInput: scenario.mortgage.saleClosingCostInput,
+    purchaseClosingCost: resolveAmountFromMode(scenario.mortgage.purchaseClosingCost, scenario.mortgage.homePrice),
+    saleClosingCostMode: scenario.mortgage.saleClosingCost.mode,
+    saleClosingCostInput: scenario.mortgage.saleClosingCost.value,
     totalInterest: scenario.totalInterest,
     yearlyLoan,
   };
