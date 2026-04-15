@@ -34,10 +34,12 @@ export function buildMonthlyCashFlow({
   incomeSummary,
   projection,
   currentRow,
+  annualPropertyTax = 0,
 }: {
   incomeSummary: IncomeSummary;
   projection: Projection;
   currentRow: ProjectionRow;
+  annualPropertyTax?: number;
 }) {
   const growthFactor = Math.pow(1 + projection.incomeGrowthRate, projection.currentYear);
   const grossIncome = toDisplayValue(
@@ -55,8 +57,9 @@ export function buildMonthlyCashFlow({
     projection,
   );
   const takeHome = toDisplayValue(currentRow.takeHome / 12, projection.currentYear, projection);
-  const taxes = grossIncome - retirementSaving - takeHome;
-  const mortgage = toDisplayValue(currentRow.mortgageLineItem / 12, projection.currentYear, projection);
+  const propertyTax = toDisplayValue(annualPropertyTax / 12, projection.currentYear, projection);
+  const taxes = grossIncome - retirementSaving - takeHome + propertyTax;
+  const mortgage = toDisplayValue((currentRow.mortgageLineItem - annualPropertyTax) / 12, projection.currentYear, projection);
   const expenses = toDisplayValue(currentRow.nonHousingExpenses / 12, projection.currentYear, projection);
   const netFlow = grossIncome - taxes - retirementSaving - mortgage - expenses;
   const items: MonthlyCashFlowItem[] = [

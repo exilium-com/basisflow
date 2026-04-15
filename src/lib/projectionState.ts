@@ -22,7 +22,7 @@ type ProjectionSettings = {
   includeVestedRsusInNetWorth: boolean;
   mortgageFundingBucketId: string;
   freeCashFlowBucketId: string;
-  minimumCash: number;
+  targetCash: number;
 };
 
 export type ProjectionState = ProjectionSettings & {
@@ -40,7 +40,7 @@ const PROJECTION_NUMBER_FIELDS = [
   "expenseGrowthRate",
   "incomeGrowthRate",
   "homeAppreciationRate",
-  "minimumCash",
+  "targetCash",
 ] as const satisfies ReadonlyArray<keyof ProjectionState>;
 
 export const DEFAULT_PROJECTION_STATE: ProjectionState = {
@@ -55,7 +55,7 @@ export const DEFAULT_PROJECTION_STATE: ProjectionState = {
   includeVestedRsusInNetWorth: false,
   mortgageFundingBucketId: "",
   freeCashFlowBucketId: "",
-  minimumCash: 0,
+  targetCash: 10000,
   assetOverrides: {},
   expenseOverrides: {},
 };
@@ -127,7 +127,7 @@ export function createProjection(state: ProjectionState): Projection {
     includeVestedRsusInNetWorth: state.includeVestedRsusInNetWorth,
     mortgageFundingBucketId: state.mortgageFundingBucketId,
     freeCashFlowBucketId: state.freeCashFlowBucketId,
-    minimumCash: Math.max(0, state.minimumCash),
+    targetCash: Math.max(0, state.targetCash),
   };
 }
 

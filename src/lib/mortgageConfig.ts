@@ -1,6 +1,7 @@
-import { readNumber } from "./format";
+import { readNumber, roundTo } from "./format";
 
-export type MortgageDownPaymentMode = "percent" | "dollar";
+export type DollarPercentMode = "percent" | "dollar";
+export type MortgageValueModeField = "downPayment" | "purchaseClosingCost" | "saleClosingCost";
 export type MortgageOptionKind = "conventional" | "arm" | "rent";
 export type MortgageLoanField =
   | "rate"
@@ -51,23 +52,32 @@ export type MortgageLoan =
 
 export type MortgageState = {
   homePrice: number;
-  downPaymentMode: MortgageDownPaymentMode;
+  downPaymentMode: DollarPercentMode;
   downPayment: number;
   propertyTaxRate: number;
   insurancePerYear: number;
   hoaPerMonth: number;
+  maintenanceRate: number;
+  purchaseClosingCostMode: DollarPercentMode;
+  purchaseClosingCost: number;
+  saleClosingCostMode: DollarPercentMode;
+  saleClosingCost: number;
   activeLoanId: string;
   options: MortgageOptionState[];
 };
 
 export type Mortgage = {
   homePrice: number;
-  downPaymentMode: MortgageDownPaymentMode;
+  downPaymentMode: DollarPercentMode;
   downPaymentInput: number;
   downPaymentAmount: number;
   propertyTaxRate: number;
   insurancePerYear: number;
   hoaPerMonth: number;
+  maintenanceRate: number;
+  purchaseClosingCost: number;
+  saleClosingCostMode: DollarPercentMode;
+  saleClosingCostInput: number;
   activeLoanId: string;
   options: MortgageLoan[];
 };
@@ -114,6 +124,9 @@ export const MORTGAGE_DEFAULTS = {
   propertyTaxRate: 1.18,
   insurancePerYear: 1800,
   hoaPerMonth: 0,
+  maintenanceRate: 1,
+  purchaseClosingCost: 4000,
+  saleClosingCostPercent: 0,
 };
 
 const MORTGAGE_NUMBER_FIELDS = [
@@ -122,6 +135,9 @@ const MORTGAGE_NUMBER_FIELDS = [
   "propertyTaxRate",
   "insurancePerYear",
   "hoaPerMonth",
+  "maintenanceRate",
+  "purchaseClosingCost",
+  "saleClosingCost",
 ] as const satisfies ReadonlyArray<keyof MortgageState>;
 
 function defaultOptionValues(kind: MortgageOptionKind) {
@@ -173,6 +189,11 @@ export const DEFAULT_MORTGAGE_STATE: MortgageState = {
   propertyTaxRate: MORTGAGE_DEFAULTS.propertyTaxRate,
   insurancePerYear: MORTGAGE_DEFAULTS.insurancePerYear,
   hoaPerMonth: MORTGAGE_DEFAULTS.hoaPerMonth,
+  maintenanceRate: MORTGAGE_DEFAULTS.maintenanceRate,
+  purchaseClosingCostMode: "dollar",
+  purchaseClosingCost: MORTGAGE_DEFAULTS.purchaseClosingCost,
+  saleClosingCostMode: "percent",
+  saleClosingCost: MORTGAGE_DEFAULTS.saleClosingCostPercent,
   activeLoanId: DEFAULT_MORTGAGE_OPTIONS.activeLoanId,
   options: DEFAULT_MORTGAGE_OPTIONS.options,
 };
@@ -222,9 +243,56 @@ export function normalizeMortgageState(parsed: unknown, fallback: MortgageState)
     ...fallback,
     ...numericState,
     downPaymentMode: state.downPaymentMode === "dollar" ? "dollar" : "percent",
+    purchaseClosingCostMode: state.purchaseClosingCostMode === "percent" ? "percent" : "dollar",
+    saleClosingCostMode: state.saleClosingCostMode === "dollar" ? "dollar" : "percent",
+    saleClosingCost: readNumber(state.saleClosingCost, fallback.saleClosingCost),
     activeLoanId,
     options,
   };
+}
+
+function resolveAmountFromMode(input: number, mode: DollarPercentMode, homePrice: number) {
+  return mode === "percent" ? (homePrice * input) / 100 : input;
+}
+
+function convertModeValue(input: number, currentMode: DollarPercentMode, nextMode: DollarPercentMode, homePrice: number) {
+  if (currentMode === nextMode) {
+    return input;
+  }
+
+  const amount = resolveAmountFromMode(input, currentMode, homePrice);
+  return nextMode === "percent" ? (homePrice > 0 ? (amount / homePrice) * 100 : 0) : amount;
+}
+
+export function toggleMortgageValueMode(state: MortgageState, field: MortgageValueModeField) {
+  if (field === "downPayment") {
+    const nextMode = state.downPaymentMode === "dollar" ? "percent" : "dollar";
+    state.downPayment = nextMode === "percent"
+      ? roundTo(convertModeValue(state.downPayment, state.downPaymentMode, nextMode, state.homePrice), 3)
+      : Math.round(convertModeValue(state.downPayment, state.downPaymentMode, nextMode, state.homePrice));
+    state.downPaymentMode = nextMode;
+    return;
+  }
+
+  if (field === "purchaseClosingCost") {
+    const nextMode = state.purchaseClosingCostMode === "dollar" ? "percent" : "dollar";
+    state.purchaseClosingCost = nextMode === "percent"
+      ? roundTo(
+          convertModeValue(state.purchaseClosingCost, state.purchaseClosingCostMode, nextMode, state.homePrice),
+          3,
+        )
+      : Math.round(
+          convertModeValue(state.purchaseClosingCost, state.purchaseClosingCostMode, nextMode, state.homePrice),
+        );
+    state.purchaseClosingCostMode = nextMode;
+    return;
+  }
+
+  const nextMode = state.saleClosingCostMode === "dollar" ? "percent" : "dollar";
+  state.saleClosingCost = nextMode === "percent"
+    ? roundTo(convertModeValue(state.saleClosingCost, state.saleClosingCostMode, nextMode, state.homePrice), 3)
+    : Math.round(convertModeValue(state.saleClosingCost, state.saleClosingCostMode, nextMode, state.homePrice));
+  state.saleClosingCostMode = nextMode;
 }
 
 function createMortgageLoan(option: MortgageOptionState): MortgageLoan {
@@ -265,6 +333,10 @@ export function createMortgage(state: MortgageState = DEFAULT_MORTGAGE_STATE): M
   const homePrice = Math.max(0, state.homePrice ?? MORTGAGE_DEFAULTS.homePrice);
   const downPaymentMode = state.downPaymentMode === "dollar" ? "dollar" : "percent";
   const downPaymentInput = Math.max(0, state.downPayment ?? MORTGAGE_DEFAULTS.downPaymentPercent);
+  const purchaseClosingCostMode = state.purchaseClosingCostMode === "percent" ? "percent" : "dollar";
+  const purchaseClosingCostInput = Math.max(0, state.purchaseClosingCost ?? MORTGAGE_DEFAULTS.purchaseClosingCost);
+  const saleClosingCostMode = state.saleClosingCostMode === "dollar" ? "dollar" : "percent";
+  const saleClosingCostInput = Math.max(0, state.saleClosingCost ?? MORTGAGE_DEFAULTS.saleClosingCostPercent);
   const options = state.options.length > 0 ? state.options.map((option) => createMortgageLoan(option)) : DEFAULT_MORTGAGE_STATE.options.map(createMortgageLoan);
   const optionIds = new Set(options.map((option) => option.id));
   const activeLoanId = optionIds.has(state.activeLoanId) ? state.activeLoanId : options[0].id;
@@ -273,10 +345,14 @@ export function createMortgage(state: MortgageState = DEFAULT_MORTGAGE_STATE): M
     homePrice,
     downPaymentMode,
     downPaymentInput,
-    downPaymentAmount: downPaymentMode === "percent" ? (homePrice * downPaymentInput) / 100 : downPaymentInput,
+    downPaymentAmount: resolveAmountFromMode(downPaymentInput, downPaymentMode, homePrice),
     propertyTaxRate: Math.max(0, state.propertyTaxRate ?? MORTGAGE_DEFAULTS.propertyTaxRate),
     insurancePerYear: Math.max(0, state.insurancePerYear ?? MORTGAGE_DEFAULTS.insurancePerYear),
     hoaPerMonth: Math.max(0, state.hoaPerMonth ?? MORTGAGE_DEFAULTS.hoaPerMonth),
+    maintenanceRate: Math.max(0, state.maintenanceRate ?? MORTGAGE_DEFAULTS.maintenanceRate),
+    purchaseClosingCost: resolveAmountFromMode(purchaseClosingCostInput, purchaseClosingCostMode, homePrice),
+    saleClosingCostMode,
+    saleClosingCostInput,
     activeLoanId,
     options,
   };

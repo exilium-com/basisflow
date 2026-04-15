@@ -174,11 +174,11 @@ describe("calculateProjection", () => {
     expect(yearOne.vestedRsuBalanceById["rsu-1"]).not.toBe(100000);
   });
 
-  it("sells custom assets to restore minimum cash before drawing from retirement accounts", () => {
+  it("sells custom assets to restore target cash before drawing from retirement accounts", () => {
     const yearOne = runProjectionScenario({
       salary: 0,
       annualExpenses: 5000,
-      minimumCash: 1000,
+      targetCash: 1000,
       accounts: [
         {
           id: "brokerage",
@@ -200,11 +200,11 @@ describe("calculateProjection", () => {
     expect(yearOne.bucketSnapshotsById["ira-bucket"]?.balance).toBe(7000);
   });
 
-  it("does not sell illiquid assets when restoring minimum cash", () => {
+  it("does not sell illiquid assets when restoring target cash", () => {
     const yearOne = runProjectionScenario({
       salary: 0,
       annualExpenses: 5000,
-      minimumCash: 1000,
+      targetCash: 1000,
       accounts: [
         {
           id: "brokerage",
@@ -227,6 +227,32 @@ describe("calculateProjection", () => {
     expect(yearOne.bucketSnapshotsById["ira-bucket"]?.balance).toBe(4000);
   });
 
+  it("invests excess reserve cash down to the target", () => {
+    const today = runProjectionScenario({
+      targetCash: 10000,
+      freeCashFlowBucketId: "brokerage",
+      currentYear: 0,
+      accounts: [
+        {
+          id: "cash-bucket",
+          name: "Cash",
+          balance: 50000,
+          growth: 0,
+        },
+        {
+          id: "brokerage",
+          name: "Brokerage",
+          balance: 0,
+          basis: 0,
+          growth: 0,
+        },
+      ],
+    }).getYear(0);
+
+    expect(today.residualCash).toBe(10000);
+    expect(today.bucketSnapshotsById.brokerage?.balance).toBe(40000);
+  });
+
   it("keeps ownership costs after the mortgage payoff year", () => {
     expect(
       getMortgageAnnualHousingCost({
@@ -243,6 +269,10 @@ describe("calculateProjection", () => {
         monthlyTax: 400,
         monthlyInsurance: 100,
         monthlyHoa: 50,
+        maintenanceRate: 0,
+        purchaseClosingCost: 0,
+        saleClosingCostMode: "percent",
+        saleClosingCostInput: 0,
         totalInterest: 100000,
         yearlyLoan: [{ year: 1, payment: 2500, principal: 1000, interest: 950, averageBalance: 250000, endingBalance: 0 }],
       }, 2),
@@ -264,6 +294,10 @@ describe("calculateProjection", () => {
       monthlyTax: 400,
       monthlyInsurance: 100,
       monthlyHoa: 50,
+      maintenanceRate: 0,
+      purchaseClosingCost: 0,
+      saleClosingCostMode: "percent" as const,
+      saleClosingCostInput: 0,
       totalInterest: 100000,
       yearlyLoan: [
         { year: 1, payment: 3250, principal: 1800, interest: 900, averageBalance: 510000, endingBalance: 500000 },
@@ -293,6 +327,10 @@ describe("calculateProjection", () => {
         monthlyTax: 400,
         monthlyInsurance: 100,
         monthlyHoa: 50,
+        maintenanceRate: 0,
+        purchaseClosingCost: 0,
+        saleClosingCostMode: "percent",
+        saleClosingCostInput: 0,
         totalInterest: 100000,
         yearlyLoan: [{ year: 1, payment: 3250, principal: 1800, interest: 900, averageBalance: 510000, endingBalance: 500000 }],
       }, 0),
@@ -364,6 +402,118 @@ describe("calculateProjection", () => {
     expect(yearTwo.freeCashBeforeAllocation).toBeLessThan(yearOne.freeCashBeforeAllocation);
   });
 
+  it("adds yearly home maintenance to owner housing cost", () => {
+    const yearOne = runProjectionScenario({
+      annualMortgage: 24000,
+      homePrice: 1000000,
+      currentEquity: 200000,
+      maintenanceRate: 1,
+      currentYear: 1,
+    }).getYear(1);
+
+    expect(yearOne.mortgageLineItem).toBe(34000);
+  });
+
+  it("reduces buy-side net worth for purchase closing costs", () => {
+    const withoutClosingCosts = runProjectionScenario({
+      homePrice: 1000000,
+      currentEquity: 200000,
+      accounts: [
+        {
+          id: "cash-bucket",
+          name: "Cash",
+          balance: 400000,
+          growth: 0,
+        },
+      ],
+      mortgageFundingBucketId: "cash-bucket",
+      currentYear: 0,
+    }).getYear(0);
+
+    const withClosingCosts = runProjectionScenario({
+      homePrice: 1000000,
+      currentEquity: 200000,
+      purchaseClosingCost: 20000,
+      accounts: [
+        {
+          id: "cash-bucket",
+          name: "Cash",
+          balance: 400000,
+          growth: 0,
+        },
+      ],
+      mortgageFundingBucketId: "cash-bucket",
+      currentYear: 0,
+    }).getYear(0);
+
+    expect(withClosingCosts.netWorth).toBeLessThan(withoutClosingCosts.netWorth);
+  });
+
+  it("reduces projected home equity for selling costs", () => {
+    const withoutSellingCosts = runProjectionScenario({
+      homePrice: 1000000,
+      currentEquity: 200000,
+      currentYear: 0,
+    }).getYear(0);
+
+    const withSellingCosts = runProjectionScenario({
+      homePrice: 1000000,
+      currentEquity: 200000,
+      saleClosingCost: 5,
+      currentYear: 0,
+    }).getYear(0);
+
+    expect(withSellingCosts.homeEquity).toBeLessThan(withoutSellingCosts.homeEquity);
+    expect(withSellingCosts.netWorth).toBeLessThan(withoutSellingCosts.netWorth);
+    expect(withSellingCosts.homeEquity).toBe(150000);
+  });
+
+  it("uses current equity, not full home value, in year zero", () => {
+    const today = runProjectionScenario({
+      homePrice: 1000000,
+      currentEquity: 200000,
+      currentYear: 0,
+    }).getYear(0);
+
+    expect(today.homeEquity).toBe(200000);
+  });
+
+  it("does not grant unfunded down-payment equity in year zero", () => {
+    const funded = runProjectionScenario({
+      homePrice: 1000000,
+      currentEquity: 200000,
+      accounts: [
+        {
+          id: "cash-bucket",
+          name: "Cash",
+          balance: 250000,
+          growth: 0,
+        },
+      ],
+      mortgageFundingBucketId: "cash-bucket",
+      currentYear: 0,
+    }).getYear(0);
+
+    const unfunded = runProjectionScenario({
+      homePrice: 1000000,
+      currentEquity: 200000,
+      accounts: [
+        {
+          id: "cash-bucket",
+          name: "Cash",
+          balance: 50000,
+          growth: 0,
+        },
+      ],
+      mortgageFundingBucketId: "cash-bucket",
+      currentYear: 0,
+    }).getYear(0);
+
+    expect(unfunded.homeEquity).toBeLessThan(funded.homeEquity);
+    expect(unfunded.netWorth).toBeLessThan(funded.netWorth);
+    expect(unfunded.homeEquity).toBe(50000);
+  });
+
   it("handles a realistic salary plus mortgage scenario without double counting cash", () => {
     const yearOne = runProjectionScenario({
       salary: realisticIncome.grossSalary,
@@ -427,7 +577,7 @@ describe("calculateProjection", () => {
     expect(yearOne.nonHousingExpenses).toBe(50000);
     expect(yearOne.mortgageLineItem).toBe(84000);
     expect(yearOne.freeCashBeforeAllocation).toBe(-32849.48);
-    expect(yearOne.residualCash).toBe(yearOne.freeCashBeforeAllocation);
+    expect(yearOne.residualCash).toBe(0);
   });
 
   it.each(projectionGoldens)("$name", (testCase) => {

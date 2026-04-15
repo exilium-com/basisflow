@@ -45,11 +45,7 @@ export function ExpensesSection({
       actions={<ActionButton onClick={onAddExpense}>Add expense</ActionButton>}
     >
       <div className="grid gap-2">
-        {expenseState.expenses.length === 0 ? (
-          <div className={`${labelTextClass} py-4`}>
-            Spend some money!
-          </div>
-        ) : null}
+        {expenseState.expenses.length === 0 ? <div className={`${labelTextClass} py-4`}>Spend some money!</div> : null}
 
         {expenseState.expenses.map((expense) => {
           const override = expenseOverrides[expense.id];
@@ -62,17 +58,14 @@ export function ExpensesSection({
               onRemove={() => onRemoveExpense(expense.id)}
               detailsTitle="Expense details"
               detailsSummary={
-                showsGrowthOverride && override?.growthRate != null
-                  ? `Annual increase ${override.growthRate}%`
-                  : null
+                showsGrowthOverride && override?.growthRate != null ? `Annual increase ${override.growthRate}%` : null
               }
-              detailsClassName="flex flex-wrap items-end gap-4"
+              detailsClassName="flex flex-wrap items-start gap-4"
               details={
                 <>
                   <SegmentedToggle
                     label="Cadence"
                     ariaLabel={`Cadence for ${expense.name || "expense"}`}
-                    className="w-fit"
                     value={expense.frequency}
                     onChange={(frequency) => onUpdateExpense(expense.id, { frequency })}
                     options={[
@@ -83,7 +76,6 @@ export function ExpensesSection({
                   />
                   {showsGrowthOverride ? (
                     <NumberField
-                      className="w-32"
                       label="Annual increase"
                       suffix="%"
                       step="0.5"
@@ -94,7 +86,6 @@ export function ExpensesSection({
                   ) : null}
                   {expense.frequency === "one_off" ? (
                     <NumberField
-                      className="w-24"
                       label="Relative year"
                       step="1"
                       value={expense.oneOffYear ?? ""}
@@ -113,9 +104,7 @@ export function ExpensesSection({
               <NumberField
                 label="Amount"
                 prefix="$"
-                suffix={
-                  expense.frequency === "annual" ? "/ year" : expense.frequency === "one_off" ? "" : "/ month"
-                }
+                suffix={expense.frequency === "annual" ? "/ year" : expense.frequency === "one_off" ? "" : "/ month"}
                 step="50"
                 placeholder="0"
                 value={expense.amount}

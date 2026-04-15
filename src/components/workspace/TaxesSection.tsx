@@ -44,13 +44,15 @@ export function TaxesSection({
   onUpdateMortgageState,
   onUpdateTaxConfig,
 }: TaxesSectionProps) {
+  const totalTaxWithProperty = incomeResults.totalTaxes + income.propertyTax;
+
   return (
     <WorkspaceSection id="taxes" index="03" title="Taxes" summary="Deduction Logic">
       <WorkspaceMetricSplit
         mainClassName="grid gap-4"
         metrics={
           {
-            primaryItem: { label: "Total tax", value: usd(incomeResults.totalTaxes) },
+            primaryItem: { label: "Total tax", value: usd(totalTaxWithProperty) },
             items: [
               { label: "Federal tax", value: usd(incomeResults.federalTax) },
               { label: "California tax", value: usd(incomeResults.californiaTax) },

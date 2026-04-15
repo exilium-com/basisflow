@@ -8,6 +8,7 @@ import { WorkspaceSummaryPanel } from "../components/workspace/WorkspaceSummaryP
 import { WorkspaceLayout } from "../components/WorkspaceLayout";
 import { PageShell } from "../components/PageShell";
 import { useStoredState } from "../hooks/useStoredState";
+import { usd } from "../lib/format";
 import {
   DEFAULT_ASSETS_STATE,
   PINNED_BUCKETS,
@@ -25,7 +26,6 @@ import {
   normalizeExpensesState,
   type ExpenseStateItem,
 } from "../lib/expensesModel";
-import { roundTo } from "../lib/format";
 import {
   buildIncomeSummary,
   calculateIncome,
@@ -40,13 +40,14 @@ import {
   createMortgageOption,
   DEFAULT_MORTGAGE_STATE,
   normalizeMortgageState,
-  type MortgageDownPaymentMode,
   type MortgageLoanField,
   type MortgageOptionKind,
   type MortgageState,
+  toggleMortgageValueMode,
 } from "../lib/mortgageConfig";
 import {
-  buildMortgageSummaryItems,
+  getMortgageInterestForYear,
+  getMortgagePrincipalForYear,
   getMortgageYearAverageBalance,
   getMortgageYearInterest,
   getMortgageYearPropertyTax,
@@ -116,7 +117,7 @@ export function WorkspacePage() {
   ) as Record<string, MortgageScenario>;
   const mortgageScenario = scenariosById[mortgage.activeLoanId];
   const mortgageSummary = serializeMortgageSummary(mortgageScenario);
-  const mortgageSummaryItems = buildMortgageSummaryItems(mortgageScenario, projectionState.currentYear);
+  const annualPropertyTax = mortgageSummary.kind === "rent" ? 0 : getMortgageYearPropertyTax(mortgageSummary);
 
   const resolvedIncome = resolveIncome(income, {
     mortgageAverageBalance: getMortgageYearAverageBalance(mortgageSummary, 0),
@@ -155,7 +156,34 @@ export function WorkspacePage() {
 
   const projectionAssets = createAssets(projectionAssetState, projectionState.assetGrowthRate);
   const projectionExpenses = createExpenses(projectionExpenseState, projectionState.expenseGrowthRate);
-  const projection = createProjection(projectionState);
+  const assetOptions = projectionAssets.buckets.map((bucket) => ({
+    id: bucket.id,
+    name: bucket.name,
+  }));
+  const freeCashFlowOptions = projectionAssets.buckets
+    .filter(
+      (bucket) => bucket.id !== reserveCashBucketId && (incomeDirectedContributions[bucket.id] ?? 0) === 0,
+    )
+    .map((bucket) => ({
+      id: bucket.id,
+      name: bucket.name,
+    }));
+  const effectiveMortgageFundingBucketId = projectionState.mortgageFundingBucketId || reserveCashBucketId;
+  const effectiveFreeCashFlowBucketId =
+    projectionState.freeCashFlowBucketId ||
+    projectionAssets.buckets.find(
+      (bucket) =>
+        bucket.id !== reserveCashBucketId &&
+        bucket.taxTreatment === "none" &&
+        (incomeDirectedContributions[bucket.id] ?? 0) === 0,
+    )?.id ||
+    freeCashFlowOptions[0]?.id ||
+    "";
+  const projection = createProjection({
+    ...projectionState,
+    mortgageFundingBucketId: effectiveMortgageFundingBucketId,
+    freeCashFlowBucketId: effectiveFreeCashFlowBucketId,
+  });
   const projectionResults = calculateProjection({
     incomeSummary,
     mortgageSummary,
@@ -168,10 +196,55 @@ export function WorkspacePage() {
   const currentRow =
     projectionResults.projection.find((row) => row.year === projection.currentYear) ?? projectionResults.ending;
   const selectedYearLabel = projection.currentYear === 0 ? "Today" : `Year ${projection.currentYear}`;
+  const annualHousingCost = currentRow.mortgageLineItem - annualPropertyTax;
+  const monthlyHousingCostValue = toDisplayValue(annualHousingCost / 12, projection.currentYear, projection);
+  const mortgageSummaryItems =
+    mortgageScenario.kind === "rent"
+      ? [
+          {
+            label: "Annual housing cost",
+            value: usd(toDisplayValue(annualHousingCost, projection.currentYear, projection)),
+          },
+          {
+            label: "Yearly increase",
+            value: `${mortgageScenario.rentGrowthRate.toFixed(1)}%`,
+          },
+        ]
+      : (() => {
+          const monthlyPrincipal = getMortgagePrincipalForYear(mortgageScenario, projection.currentYear);
+          const monthlyInterest = getMortgageInterestForYear(mortgageScenario, projection.currentYear);
+          const monthlyUpkeep = annualHousingCost / 12 - monthlyPrincipal - monthlyInterest;
+          const monthlyLabelSuffix = projection.currentYear > 0 ? `in year ${projection.currentYear}` : "today";
+
+          return [
+            {
+              label: `Monthly principal ${monthlyLabelSuffix}`,
+              value: usd(toDisplayValue(monthlyPrincipal, projection.currentYear, projection)),
+            },
+            {
+              label: `Monthly interest ${monthlyLabelSuffix}`,
+              value: usd(toDisplayValue(monthlyInterest, projection.currentYear, projection)),
+            },
+            {
+              label: "Monthly upkeep",
+              value: usd(toDisplayValue(monthlyUpkeep, projection.currentYear, projection)),
+            },
+            {
+              label: "Monthly property tax",
+              value: usd(toDisplayValue(annualPropertyTax / 12, projection.currentYear, projection)),
+            },
+            {
+              label: "Total interest",
+              value: usd(mortgageScenario.totalInterest),
+            },
+          ];
+        })();
+  const monthlyHousingCost = usd(monthlyHousingCostValue);
   const monthlyCashFlow = buildMonthlyCashFlow({
     incomeSummary,
     projection,
     currentRow,
+    annualPropertyTax,
   });
   const retirementSavingTotal =
     resolvedIncome.employee401k +
@@ -189,19 +262,7 @@ export function WorkspacePage() {
       Math.pow(1 + projection.incomeGrowthRate, projection.currentYear) +
     currentRow.rsuGross;
   const projectedAnnualTax =
-    projectedAnnualGrossIncome - annualRetirementContributions - currentRow.takeHome - currentRow.rsuNet;
-  const assetOptions = projectionAssets.buckets.map((bucket) => ({
-    id: bucket.id,
-    name: bucket.name,
-  }));
-  const freeCashFlowOptions = projectionAssets.buckets
-    .filter(
-      (bucket) => bucket.id !== reserveCashBucketId && (incomeDirectedContributions[bucket.id] ?? 0) === 0,
-    )
-    .map((bucket) => ({
-      id: bucket.id,
-      name: bucket.name,
-    }));
+    projectedAnnualGrossIncome - annualRetirementContributions - currentRow.takeHome - currentRow.rsuNet + annualPropertyTax;
 
   useEffect(() => {
     saveJson(MORTGAGE_SUMMARY_KEY, mortgageSummary);
@@ -300,11 +361,11 @@ export function WorkspacePage() {
     });
   }
 
-  function updateLoanField(optionId: string, field: MortgageLoanField, value: number | null) {
+  function updateLoanField(optionId: string, field: MortgageLoanField, value: number | string | null) {
     setMortgageState((draft) => {
       const option = draft.options.find((entry) => entry.id === optionId);
       if (option) {
-        option[field] = value;
+        Object.assign(option, { [field]: value } as Partial<(typeof draft.options)[number]>);
       }
     });
   }
@@ -315,29 +376,6 @@ export function WorkspacePage() {
       if (option) {
         option.name = name;
       }
-    });
-  }
-
-  function handleDownPaymentMode(mode: MortgageDownPaymentMode) {
-    setMortgageState((draft) => {
-      if (draft.downPaymentMode === mode) {
-        return;
-      }
-
-      const currentMortgage = createMortgage(draft);
-      const currentAmount =
-        draft.downPaymentMode === "percent"
-          ? (currentMortgage.homePrice * currentMortgage.downPaymentInput) / 100
-          : currentMortgage.downPaymentInput;
-      const convertedValue =
-        mode === "percent"
-          ? currentMortgage.homePrice > 0
-            ? (currentAmount / currentMortgage.homePrice) * 100
-            : 0
-          : currentAmount;
-
-      draft.downPaymentMode = mode;
-      draft.downPayment = mode === "percent" ? roundTo(convertedValue, 3) : Math.round(convertedValue);
     });
   }
 
@@ -462,7 +500,7 @@ export function WorkspacePage() {
     {
       href: "#mortgage",
       label: "Housing cost",
-      annualValue: toDisplayValue(currentRow.mortgageLineItem, projection.currentYear, projection),
+      annualValue: toDisplayValue(annualHousingCost, projection.currentYear, projection),
     },
     {
       href: "#taxes",
@@ -490,6 +528,8 @@ export function WorkspacePage() {
               selectedYearLabel={selectedYearLabel}
               topLevelSummaryRows={topLevelSummaryRows}
               matchRate={income.matchRate}
+              freeCashFlowBucketId={effectiveFreeCashFlowBucketId}
+              reserveCashBucketId={reserveCashBucketId}
               freeCashFlowOptions={freeCashFlowOptions}
               onUpdateIncomeField={(field, value) => updateIncomeField(field, value)}
               onUpdateProjectionState={updateProjectionState}
@@ -517,12 +557,17 @@ export function WorkspacePage() {
             currentYear={projection.currentYear}
             mortgage={mortgage}
             mortgageScenario={mortgageScenario}
-            mortgageFundingBucketId={projectionState.mortgageFundingBucketId}
+            mortgageFundingBucketId={effectiveMortgageFundingBucketId}
             mortgageState={mortgageState}
+            monthlyHousingCost={monthlyHousingCost}
             mortgageSummaryItems={mortgageSummaryItems}
             scenariosById={scenariosById}
             onAddMortgageOption={addMortgageOption}
-            onHandleDownPaymentMode={handleDownPaymentMode}
+            onToggleMortgageValueMode={(field) =>
+              setMortgageState((draft) => {
+                toggleMortgageValueMode(draft, field);
+              })
+            }
             onRemoveLoan={removeMortgageOption}
             onSelectLoan={selectLoan}
             onUpdateLoanField={updateLoanField}

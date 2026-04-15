@@ -201,11 +201,7 @@ export function normalizeIncomeItem(item: unknown): IncomeItem {
 export function normalizeIncome(parsed: unknown, fallback: Income): Income {
   const income = typeof parsed === "object" && parsed ? (parsed as Record<string, unknown>) : {};
   const numericState = Object.fromEntries(
-    INCOME_NUMBER_FIELDS.map((field) =>
-      field === "megaBackdoor"
-        ? [field, readNumber(income.megaBackdoor ?? income.megaBackdoorInput, fallback.megaBackdoor)]
-        : [field, readNumber(income[field], fallback[field])],
-    ),
+    INCOME_NUMBER_FIELDS.map((field) => [field, readNumber(income[field], fallback[field])]),
   ) as Pick<Income, (typeof INCOME_NUMBER_FIELDS)[number]>;
 
   return {

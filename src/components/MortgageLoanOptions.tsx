@@ -17,7 +17,7 @@ type MortgageLoanOptionCardProps = {
   currentYear: number;
   onRemoveLoan: (optionId: string) => void;
   onSelectLoan: (optionId: string) => void;
-  onUpdateLoanField: (optionId: string, field: MortgageLoanField, value: number | null) => void;
+  onUpdateLoanField: (optionId: string, field: MortgageLoanField, value: number | string | null) => void;
   onUpdateLoanName: (optionId: string, name: string) => void;
   scenario: MortgageScenario;
   selected: boolean;
@@ -103,7 +103,7 @@ function MortgageLoanOptionCard({
             prefix="$"
             suffix="/ month"
             value={loanState.rentPerMonth}
-            step="1"
+            step="50"
             onValueChange={(value) => onUpdateLoanField(loan.id, "rentPerMonth", value)}
           />
         ) : (

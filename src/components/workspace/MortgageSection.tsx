@@ -1,16 +1,13 @@
 import React from "react";
 import { AddMenu } from "../AddMenu";
-import { NumberField, SelectField } from "../Field";
+import { DollarPercentField, NumberField, SelectField } from "../Field";
 import { MortgageLoanOptionList } from "../MortgageLoanOptions";
-import { SegmentedToggle } from "../SegmentedToggle";
 import { WorkspaceMetricSplit } from "./WorkspaceMetricSplit";
 import { WorkspaceSection } from "./WorkspaceSection";
-import { usd } from "../../lib/format";
-import { getMortgageMonthlyPaymentForYear } from "../../lib/mortgagePage";
 import { labelTextClass } from "../../lib/text";
 import {
+  type MortgageValueModeField,
   type Mortgage,
-  type MortgageDownPaymentMode,
   type MortgageLoanField,
   type MortgageOptionKind,
   type MortgageState,
@@ -26,12 +23,13 @@ type MortgageSectionProps = {
   mortgageScenario: MortgageScenario;
   mortgageFundingBucketId: string;
   mortgageState: MortgageState;
+  monthlyHousingCost: string;
   mortgageSummaryItems: MetricItem[];
   onAddMortgageOption: (kind: MortgageOptionKind) => void;
-  onHandleDownPaymentMode: (mode: MortgageDownPaymentMode) => void;
+  onToggleMortgageValueMode: (field: MortgageValueModeField) => void;
   onRemoveLoan: (optionId: string) => void;
   onSelectLoan: (optionId: string) => void;
-  onUpdateLoanField: (optionId: string, field: MortgageLoanField, value: number | null) => void;
+  onUpdateLoanField: (optionId: string, field: MortgageLoanField, value: number | string | null) => void;
   onUpdateLoanName: (optionId: string, name: string) => void;
   onUpdateMortgageFundingBucketId: (bucketId: string) => void;
   onUpdateMortgageState: (patch: Partial<MortgageState>) => void;
@@ -45,9 +43,10 @@ export function MortgageSection({
   mortgageScenario,
   mortgageFundingBucketId,
   mortgageState,
+  monthlyHousingCost,
   mortgageSummaryItems,
   onAddMortgageOption,
-  onHandleDownPaymentMode,
+  onToggleMortgageValueMode,
   onRemoveLoan,
   onSelectLoan,
   onUpdateLoanField,
@@ -83,11 +82,11 @@ export function MortgageSection({
             primaryItem: {
               label: (
                 <span className="grid gap-1">
-                  <span>{isRentScenario ? "Estimated monthly rent for" : "Estimated monthly payment for"}</span>
+                  <span>{isRentScenario ? "Estimated monthly rent for" : "Estimated monthly housing cost for"}</span>
                   <span className={labelTextClass}>{mortgageScenario.typeLabel}</span>
                 </span>
               ),
-              value: usd(getMortgageMonthlyPaymentForYear(mortgageScenario, currentYear)),
+              value: monthlyHousingCost,
             },
             items: mortgageSummaryItems,
           }
@@ -102,38 +101,22 @@ export function MortgageSection({
               step="50000"
               onValueChange={(value) => onUpdateMortgageState({ homePrice: value ?? 0 })}
             />
-
-            <div className="flex items-end gap-4">
-              <div className="shrink-0">
-                <SegmentedToggle
-                  label="Down payment"
-                  ariaLabel="Down payment mode"
-                  className="w-fit"
-                  value={mortgageState.downPaymentMode}
-                  onChange={onHandleDownPaymentMode}
-                  options={[
-                    { value: "dollar", label: "$" },
-                    { value: "percent", label: "%" },
-                  ]}
-                />
-              </div>
-              <NumberField
-                className="min-w-0 flex-1"
-                label={null}
-                prefix={mortgageState.downPaymentMode === "dollar" ? "$" : null}
-                suffix={mortgageState.downPaymentMode === "percent" ? "%" : null}
-                value={mortgageState.downPayment}
-                step={mortgageState.downPaymentMode === "dollar" ? "1000" : "0.5"}
-                onValueChange={(value) => onUpdateMortgageState({ downPayment: value ?? 0 })}
-              />
-            </div>
+            <DollarPercentField
+              label="Down payment"
+              mode={mortgageState.downPaymentMode}
+              value={mortgageState.downPayment}
+              dollarStep="1000"
+              percentStep="0.5"
+              onModeToggle={() => onToggleMortgageValueMode("downPayment")}
+              onValueChange={(value) => onUpdateMortgageState({ downPayment: value ?? 0 })}
+            />
             <div className="col-span-2 grid grid-cols-3 gap-4">
               <NumberField
                 label="Home insurance"
                 prefix="$"
                 suffix="/ year"
                 value={mortgageState.insurancePerYear}
-                step="1"
+                step="50"
                 onValueChange={(value) => onUpdateMortgageState({ insurancePerYear: value ?? 0 })}
               />
               <NumberField
@@ -141,7 +124,7 @@ export function MortgageSection({
                 prefix="$"
                 suffix="/ month"
                 value={mortgageState.hoaPerMonth}
-                step="1"
+                step="50"
                 onValueChange={(value) => onUpdateMortgageState({ hoaPerMonth: value ?? 0 })}
               />
               <SelectField
@@ -149,13 +132,40 @@ export function MortgageSection({
                 value={mortgageFundingBucketId}
                 onChange={(event) => onUpdateMortgageFundingBucketId(event.target.value)}
               >
-                <option value="">None</option>
+                <option value="none">None</option>
                 {assetOptions.map((bucket) => (
                   <option key={bucket.id} value={bucket.id}>
                     {bucket.name}
                   </option>
                 ))}
               </SelectField>
+            </div>
+            <div className="col-span-2 grid grid-cols-3 gap-4">
+              <NumberField
+                label="Maintenance"
+                suffix="% / year"
+                step="0.1"
+                value={mortgageState.maintenanceRate}
+                onValueChange={(value) => onUpdateMortgageState({ maintenanceRate: value ?? 0 })}
+              />
+              <DollarPercentField
+                label="Buy closing cost"
+                mode={mortgageState.purchaseClosingCostMode}
+                value={mortgageState.purchaseClosingCost}
+                dollarStep="500"
+                percentStep="0.1"
+                onModeToggle={() => onToggleMortgageValueMode("purchaseClosingCost")}
+                onValueChange={(value) => onUpdateMortgageState({ purchaseClosingCost: value ?? 0 })}
+              />
+              <DollarPercentField
+                label="Selling cost"
+                mode={mortgageState.saleClosingCostMode}
+                value={mortgageState.saleClosingCost}
+                dollarStep="500"
+                percentStep="0.1"
+                onModeToggle={() => onToggleMortgageValueMode("saleClosingCost")}
+                onValueChange={(value) => onUpdateMortgageState({ saleClosingCost: value ?? 0 })}
+              />
             </div>
           </div>
         ) : null}

@@ -40,6 +40,9 @@ export type ProjectionScenarioOptions = {
   annualMortgage?: number;
   housingKind?: "conventional" | "rent";
   rentGrowthRate?: number;
+  maintenanceRate?: number;
+  purchaseClosingCost?: number;
+  saleClosingCost?: number;
   yearlyLoan?: Array<{ year: number; payment?: number; principal?: number; interest: number; endingBalance?: number }>;
   annualExpenses?: number;
   homePrice?: number;
@@ -56,7 +59,7 @@ export type ProjectionScenarioOptions = {
   homeAppreciationRate?: number;
   includeVestedRsusInNetWorth?: boolean;
   mortgageFundingBucketId?: string;
-  minimumCash?: number;
+  targetCash?: number;
   taxConfig?: Partial<TaxConfig>;
 };
 
@@ -227,6 +230,9 @@ function createMortgageSummary({
   housingKind = "conventional",
   annualMortgage = 0,
   rentGrowthRate = 0,
+  maintenanceRate = 0,
+  purchaseClosingCost = 0,
+  saleClosingCost = 0,
   homePrice = 0,
   currentEquity = 0,
   yearlyLoan = [],
@@ -234,6 +240,9 @@ function createMortgageSummary({
   housingKind?: "conventional" | "rent";
   annualMortgage?: number;
   rentGrowthRate?: number;
+  maintenanceRate?: number;
+  purchaseClosingCost?: number;
+  saleClosingCost?: number;
   homePrice?: number;
   currentEquity?: number;
   yearlyLoan?: Array<{
@@ -280,6 +289,10 @@ function createMortgageSummary({
     monthlyTax: 0,
     monthlyInsurance: 0,
     monthlyHoa: 0,
+    maintenanceRate,
+    purchaseClosingCost,
+    saleClosingCostMode: "percent" as const,
+    saleClosingCostInput: saleClosingCost,
     totalInterest: normalizedYearlyLoan.reduce((sum, row) => sum + row.interest, 0),
     currentEquity: housingKind === "rent" ? 0 : roundTo(currentEquity, 2),
     homePrice: roundTo(homePrice, 2),
@@ -318,7 +331,7 @@ function createProjectionState({
   includeVestedRsusInNetWorth = false,
   freeCashFlowBucketId = "",
   mortgageFundingBucketId = "",
-  minimumCash = 0,
+  targetCash = 0,
 }: ProjectionScenarioOptions) {
   return {
     ...DEFAULT_PROJECTION_STATE,
@@ -331,7 +344,7 @@ function createProjectionState({
     includeVestedRsusInNetWorth,
     freeCashFlowBucketId,
     mortgageFundingBucketId,
-    minimumCash,
+    targetCash,
   };
 }
 
@@ -362,6 +375,9 @@ export function runProjectionScenario({
   annualMortgage = 0,
   housingKind = "conventional",
   rentGrowthRate = 0,
+  maintenanceRate = 0,
+  purchaseClosingCost = 0,
+  saleClosingCost = 0,
   yearlyLoan = [],
   annualExpenses = 0,
   homePrice = 0,
@@ -378,7 +394,7 @@ export function runProjectionScenario({
   homeAppreciationRate = 0,
   includeVestedRsusInNetWorth = false,
   mortgageFundingBucketId = "",
-  minimumCash = 0,
+  targetCash = 0,
   taxConfig = DEFAULT_CONFIG,
 }: ProjectionScenarioOptions = {}): ProjectionScenarioRun {
   const normalizedRetirement = {
@@ -401,6 +417,9 @@ export function runProjectionScenario({
       housingKind,
       annualMortgage,
       rentGrowthRate,
+      maintenanceRate,
+      purchaseClosingCost,
+      saleClosingCost,
       homePrice,
       currentEquity,
       yearlyLoan,
@@ -417,7 +436,7 @@ export function runProjectionScenario({
       includeVestedRsusInNetWorth,
       freeCashFlowBucketId,
       mortgageFundingBucketId,
-      minimumCash,
+      targetCash,
     }),
     taxConfig: normalizeConfig(clone(taxConfig)),
   };
