@@ -64,7 +64,7 @@ const RETIREMENT_BUCKET_IDS = new Set([
 
 function EmptyChart({ ariaLabel }: EmptyChartProps) {
   return (
-    <svg viewBox="0 0 720 320" role="img" aria-label={ariaLabel}>
+    <svg className="h-auto w-full" viewBox="0 0 720 320" role="img" aria-label={ariaLabel}>
       <rect x="18" y="18" width="684" height="284" fill="var(--white-soft)" stroke="var(--line-soft)" />
     </svg>
   );
@@ -104,7 +104,7 @@ function ProjectionLineChart({
   const zeroY = clamp(plotTop + ((maxValue - 0) / span) * innerHeight, plotTop, plotBottom);
 
   return (
-    <svg viewBox="0 0 720 320" role="img" aria-label={ariaLabel}>
+    <svg className="h-auto w-full" viewBox="0 0 720 320" role="img" aria-label={ariaLabel}>
       <rect
         x={plotLeft}
         y={plotTop}
@@ -230,7 +230,7 @@ export function NetWorthChart({ projection, results, currentYear }: ProjectionCh
   const netWorthLine = stackedRows.map((row, index) => pointFor(row.netWorth, index));
 
   return (
-    <svg viewBox="0 0 720 320" role="img" aria-label="Net worth over time chart">
+    <svg className="h-auto w-full" viewBox="0 0 720 320" role="img" aria-label="Net worth over time chart">
       <rect
         x={plotLeft}
         y={plotTop}

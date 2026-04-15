@@ -78,7 +78,7 @@ export function TaxesSection({
           <div className="grid gap-4">
             <div className="grid gap-4">
               <div className={smallCapsTextClass}>Tax Rates</div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <NumberField
                   label="CA SDI"
                   suffix="%"
@@ -101,7 +101,7 @@ export function TaxesSection({
             </div>
             <div className="grid gap-4 border-t border-(--line-soft) pt-4">
               <div className={smallCapsTextClass}>Contribution Limits</div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <NumberField
                   label="Employee 401(k)"
                   prefix="$"
@@ -134,7 +134,7 @@ export function TaxesSection({
             </div>
             <div className="grid gap-4 border-t border-(--line-soft) pt-4">
               <div className={smallCapsTextClass}>Standard Deductions</div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <NumberField
                   label="Federal"
                   prefix="$"
@@ -153,7 +153,7 @@ export function TaxesSection({
             </div>
             <div className="grid gap-4 border-t border-(--line-soft) pt-4">
               <div className={smallCapsTextClass}>SALT</div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <NumberField
                   label="Max deduction"
                   prefix="$"
@@ -186,7 +186,7 @@ export function TaxesSection({
             </div>
             <div className="grid gap-4 border-t border-(--line-soft) pt-4">
               <div className={smallCapsTextClass}>Mortgage Debt Cap</div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <NumberField
                   label="Federal"
                   prefix="$"
@@ -227,7 +227,7 @@ export function TaxesSection({
               onChange={(event) => onSetLongTermCapitalGains(event.target.value)}
             />
           </div>
-          <div className="mt-4 flex items-center gap-4">
+          <div className="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
             <ActionButton onClick={onApplyTaxTables}>Apply tax tables</ActionButton>
             <div className={`min-h-6 ${labelTextClass}`}>{taxEditorStatus}</div>
           </div>

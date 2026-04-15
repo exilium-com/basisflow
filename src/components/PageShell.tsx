@@ -45,7 +45,7 @@ function ShellActions({
   statusMessage,
 }: ShellActionsProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex shrink-0 items-center justify-end gap-2">
       {statusMessage ? <ToastMessage message={statusMessage} /> : null}
       <ActionButton onClick={onOpenSaveDialog}>Save</ActionButton>
       <ActionButton
@@ -173,9 +173,9 @@ export function PageShell({ actions = null, title = "BasisFlow", children }: Pag
 
   return (
     <div className="mx-auto mb-8 flex min-h-screen w-full max-w-screen-2xl flex-col px-4">
-      <header className="my-4 flex items-end justify-between border-b border-(--line) pb-4">
-        <Link to="/" className="no-underline">
-          <h1 className="font-serif text-4xl leading-none tracking-tight text-(--ink)">{title}</h1>
+      <header className="my-4 flex items-start justify-between gap-4 border-b border-(--line) pb-4 sm:items-end">
+        <Link to="/" className="min-w-0 no-underline">
+          <h1 className="font-serif text-3xl leading-none tracking-tight text-(--ink) sm:text-4xl">{title}</h1>
         </Link>
         <ShellActions
           actions={actions}

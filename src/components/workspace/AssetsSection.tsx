@@ -42,7 +42,11 @@ export function AssetsSection({
       index="05"
       title="Assets"
       summary="Balance Sheet"
-      actions={<ActionButton onClick={onAddAssetBucket}>Add asset</ActionButton>}
+      actions={
+        <ActionButton className="w-full justify-center sm:w-auto" onClick={onAddAssetBucket}>
+          Add asset
+        </ActionButton>
+      }
     >
       <div className="grid gap-2">
         {assetsView.orderedBuckets.map((bucket) => {
@@ -65,7 +69,7 @@ export function AssetsSection({
               onRemove={isPinnedBucket || isLinkedRsuBucket ? undefined : () => onRemoveAssetBucket(bucket.id)}
               detailsTitle="Asset details"
               detailsSummary={detailsSummary || null}
-              detailsClassName="grid grid-cols-2 gap-4"
+              detailsClassName="grid gap-4 sm:grid-cols-2"
               details={
                 <>
                   {showsGrowthOverride ? (

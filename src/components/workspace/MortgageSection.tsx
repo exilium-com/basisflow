@@ -62,6 +62,7 @@ export function MortgageSection({
       summary="Housing Cost"
       actions={
         <AddMenu
+          className="w-full sm:w-auto"
           label="Add scenario"
           options={[
             { id: "conventional", label: "Conventional", onSelect: () => onAddMortgageOption("conventional") },
@@ -87,9 +88,9 @@ export function MortgageSection({
             items: mortgageSummaryItems,
           }
         }
-      >
+        >
         {!allScenariosAreRent ? (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <NumberField
               label="Home price"
               prefix="$"
@@ -118,7 +119,7 @@ export function MortgageSection({
                 })
               }
             />
-            <div className="col-span-2 grid grid-cols-3 gap-4">
+            <div className="grid gap-4 sm:col-span-2 sm:grid-cols-3">
               <NumberField
                 label="Home insurance"
                 prefix="$"
@@ -156,7 +157,7 @@ export function MortgageSection({
                 ))}
               </SelectField>
             </div>
-            <div className="col-span-2 grid grid-cols-3 gap-4">
+            <div className="grid gap-4 sm:col-span-2 sm:grid-cols-3">
               <NumberField
                 label="Maintenance"
                 suffix="% / year"

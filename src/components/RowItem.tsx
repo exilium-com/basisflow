@@ -58,7 +58,7 @@ export function RowItem({
 
       <div className="p-4 pr-12">
         <div className="flex items-start justify-between gap-4">
-          <div className={clsx("min-w-0 flex-1", bodyClassName || "grid grid-cols-3 gap-4")}>
+          <div className={clsx("min-w-0 flex-1", bodyClassName || "grid gap-4 sm:grid-cols-3")}>
             {children}
             {hasDetails ? (
               <button

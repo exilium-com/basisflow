@@ -1,17 +1,16 @@
 import React, { useState } from "react";
 import { AdvancedPanel } from "../AdvancedPanel";
 import { ChartPanel } from "../ChartPanel";
-import { CheckboxField, NumberField, SelectField } from "../Field";
+import { CheckboxField, NumberField, SelectField, SliderField } from "../Field";
 import { MonthlyCashFlowPanel } from "../ProjectionCashFlowPanel";
 import { NetWorthChart } from "../ProjectionLineCharts";
 import { SegmentedToggle } from "../SegmentedToggle";
-import { SliderField } from "../Field";
 import { netWorthChartLegend } from "../../lib/colors";
 import { usd } from "../../lib/format";
 import { type ProjectionResults } from "../../lib/projectionCalculation";
 import { toDisplayValue, type Projection, type ProjectionState } from "../../lib/projectionState";
 import { type MonthlyCashFlow, type ProjectionRow } from "../../lib/projectionUtils";
-import { labelTextClass, primaryNumberTextClass, smallCapsTextClass } from "../../lib/text";
+import { buttonTextClass, labelTextClass, smallCapsTextClass } from "../../lib/text";
 
 type SummaryRow = {
   href: string;
@@ -40,7 +39,7 @@ function SummaryLinkRow({ href, label, annualValue }: SummaryRow) {
   const value = usd(period === "monthly" ? annualValue / 12 : annualValue);
 
   return (
-    <div className="flex gap-2 border-t border-(--line) py-4">
+    <div className="flex items-baseline gap-2 border-t border-(--line) py-4">
       <a href={href} className={`flex-1 ${labelTextClass} hover:text-(--ink)`}>
         {label}
       </a>
@@ -73,62 +72,18 @@ export function WorkspaceSummaryPanel({
   onUpdateIncomeField,
   onUpdateProjectionState,
 }: WorkspaceSummaryPanelProps) {
-  return (
+  const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
+  const cashFlowTitle =
+    projection.currentYear === 0 ? "Monthly Cash Flow Today" : `Monthly Cash Flow in Year ${projection.currentYear}`;
+
+  const summaryBody = (
     <>
-      <div className="sticky top-0 z-10 grid gap-4 border-b border-(--line) bg-(--white) pt-4 pb-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className={smallCapsTextClass}>
-              {`Net Worth ${selectedYearLabel === "Today" ? "Today" : `In ${selectedYearLabel}`}`}
-            </div>
-            <strong className={primaryNumberTextClass}>
-              {usd(toDisplayValue(currentRow.netWorth, projection.currentYear, projection))}
-            </strong>
-          </div>
-          <SegmentedToggle
-            ariaLabel="Display mode"
-            value={projectionState.displayMode}
-            onChange={(displayMode) => onUpdateProjectionState({ displayMode })}
-            options={[
-              { value: "nominal", label: "Nominal" },
-              { value: "real", label: "Real" },
-            ]}
-          />
-        </div>
-
-        <div className="flex justify-between gap-4">
-          <SliderField
-            label="Selected year"
-            valueLabel={selectedYearLabel}
-            min="0"
-            max={projection.horizonYears}
-            step="1"
-            value={projection.currentYear}
-            onChange={(event) => onUpdateProjectionState({ currentYear: Number(event.target.value) })}
-            className="flex-1"
-          />
-          <NumberField
-            label="Horizon"
-            suffix="yr"
-            step="1"
-            value={projectionState.horizonYears}
-            onValueChange={(value) => onUpdateProjectionState({ horizonYears: value ?? 1 })}
-          />
-        </div>
-      </div>
-
       {topLevelSummaryRows.map((row) => (
         <SummaryLinkRow key={row.href} {...row} />
       ))}
 
-      <div className="grid gap-4 pt-4 pb-4">
-        <ChartPanel
-          title={
-            projection.currentYear === 0
-              ? "Monthly Cash Flow Today"
-              : `Monthly Cash Flow in Year ${projection.currentYear}`
-          }
-        >
+      <div className="grid gap-4 py-4">
+        <ChartPanel title={cashFlowTitle}>
           <MonthlyCashFlowPanel
             items={monthlyCashFlow.items}
             netFlow={monthlyCashFlow.netFlow}
@@ -154,7 +109,7 @@ export function WorkspaceSummaryPanel({
         title="Parameters"
         defaultOpen={false}
       >
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <NumberField
             label="Match rate"
             suffix="%"
@@ -210,6 +165,7 @@ export function WorkspaceSummaryPanel({
             onChange={(event) => onUpdateProjectionState({ includeVestedRsusInNetWorth: event.target.checked })}
           />
           <SelectField
+            className="sm:col-span-2"
             label="Free cash goes to"
             value={freeCashFlowBucketId}
             onChange={(event) => onUpdateProjectionState({ freeCashFlowBucketId: event.target.value })}
@@ -224,5 +180,65 @@ export function WorkspaceSummaryPanel({
         </div>
       </AdvancedPanel>
     </>
+  );
+
+  return (
+    <div>
+      <div className="grid gap-4 border-b border-(--line) bg-(--white) py-4 lg:sticky lg:top-0 lg:z-10">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className={smallCapsTextClass}>
+              {`Net Worth ${selectedYearLabel === "Today" ? "Today" : `In ${selectedYearLabel}`}`}
+            </div>
+            <strong className="font-serif text-3xl text-(--teal) sm:text-4xl">
+              {usd(toDisplayValue(currentRow.netWorth, projection.currentYear, projection))}
+            </strong>
+          </div>
+          <SegmentedToggle
+            className="shrink-0"
+            size="compact"
+            ariaLabel="Display mode"
+            value={projectionState.displayMode}
+            onChange={(displayMode) => onUpdateProjectionState({ displayMode })}
+            options={[
+              { value: "nominal", label: "Nominal" },
+              { value: "real", label: "Real" },
+            ]}
+          />
+        </div>
+
+        <div className="flex items-end gap-4">
+          <SliderField
+            label="Selected year"
+            valueLabel={selectedYearLabel}
+            min="0"
+            max={projection.horizonYears}
+            step="1"
+            value={projection.currentYear}
+            onChange={(event) => onUpdateProjectionState({ currentYear: Number(event.target.value) })}
+            className="flex-1"
+          />
+          <NumberField
+            className="w-24 shrink-0"
+            label="Horizon"
+            suffix="yr"
+            step="1"
+            value={projectionState.horizonYears}
+            onValueChange={(value) => onUpdateProjectionState({ horizonYears: value ?? 1 })}
+          />
+        </div>
+
+        <button
+          type="button"
+          className={`action-button w-full lg:hidden ${buttonTextClass}`}
+          onClick={() => setMobileSummaryOpen((open) => !open)}
+        >
+          {mobileSummaryOpen ? "Hide Summary" : "Show Summary"}
+        </button>
+      </div>
+
+      <div className="hidden lg:block">{summaryBody}</div>
+      {mobileSummaryOpen ? <div className="border-b border-(--line) bg-(--white) lg:hidden">{summaryBody}</div> : null}
+    </div>
   );
 }

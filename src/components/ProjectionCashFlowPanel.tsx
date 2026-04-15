@@ -53,9 +53,9 @@ export function MonthlyCashFlowPanel({ items, netFlow }: MonthlyCashFlowPanelPro
   let currentAngle = -Math.PI / 2;
 
   return (
-    <div className="flex items-center gap-4 p-4">
-      <div className="flex w-60 shrink-0 justify-center">
-        <svg viewBox="0 0 224 224" role="img" aria-label="Monthly cash flow breakdown">
+    <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
+      <div className="flex w-full justify-center sm:w-60 sm:shrink-0">
+        <svg className="h-auto w-full max-w-56" viewBox="0 0 224 224" role="img" aria-label="Monthly cash flow breakdown">
           <circle cx={cx} cy={cy} r={outerRadius} fill="var(--white)" stroke="var(--line-soft)" />
           {sliceTotal > 0
             ? items.map((item: MonthlyCashFlowItem) => {
@@ -91,7 +91,7 @@ export function MonthlyCashFlowPanel({ items, netFlow }: MonthlyCashFlowPanelPro
           </text>
         </svg>
       </div>
-      <div className="grid flex-1 gap-2">
+      <div className="grid min-w-0 flex-1 gap-2">
         {items.map((item: MonthlyCashFlowItem, index: number) => (
           <div
             key={item.label}

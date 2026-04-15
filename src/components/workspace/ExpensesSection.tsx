@@ -42,7 +42,11 @@ export function ExpensesSection({
       index="04"
       title="Expenses"
       summary="Cash Out"
-      actions={<ActionButton onClick={onAddExpense}>Add expense</ActionButton>}
+      actions={
+        <ActionButton className="w-full justify-center sm:w-auto" onClick={onAddExpense}>
+          Add expense
+        </ActionButton>
+      }
     >
       <div className="grid gap-2">
         {expenseState.expenses.length === 0 ? <div className={`${labelTextClass} py-4`}>Spend some money!</div> : null}
