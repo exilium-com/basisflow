@@ -1,7 +1,6 @@
 import {
   DEFAULT_ASSETS_STATE,
   PINNED_BUCKETS,
-  buildIncomeDirectedContributions,
   createAssets,
   normalizeAssetsState,
   type AssetBucketState,
@@ -280,7 +279,6 @@ function createMortgageSummary({
   return {
     type: housingKind === "rent" ? "rent" : "loan",
     kind: housingKind,
-    typeLabel: housingKind === "rent" ? "Rent" : "Conventional",
     isArm: false,
     rentGrowthRate,
     loanAmount: roundTo(Math.max(0, homePrice - currentEquity), 2),
@@ -455,7 +453,7 @@ export function runProjectionScenario({
   const rsuGrowthRateById = Object.fromEntries(
     assetsState.buckets
       .filter((bucket) => bucket.linkedRsuId)
-      .map((bucket) => [bucket.linkedRsuId as string, ((bucket.growth ?? projectionState.assetGrowthRate) / 100)]),
+      .map((bucket) => [bucket.linkedRsuId as string, (bucket.growth ?? projectionState.assetGrowthRate) / 100]),
   ) as Record<string, number>;
   const results = calculateProjection({
     incomeSummary: scenario.incomeSummary,

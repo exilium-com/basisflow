@@ -1,6 +1,4 @@
-import React from "react";
 import { ActionButton } from "../components/ActionButton";
-import { PageShell } from "../components/PageShell";
 import { pageSectionClass, surfaceClass } from "../lib/ui";
 
 const TOOL_AREAS = [
@@ -28,7 +26,7 @@ const TOOL_AREAS = [
 
 export function HomePage() {
   return (
-    <PageShell title="Basisflow">
+    <div className="mx-auto flex min-h-screen w-full max-w-screen-2xl flex-col px-4">
       <main className={`${surfaceClass} flex-1 overflow-hidden`}>
         <section className="relative isolate flex flex-1 overflow-hidden">
           <div className="pointer-events-none absolute inset-0 opacity-90" aria-hidden="true">
@@ -52,17 +50,15 @@ export function HomePage() {
           <div className={`${pageSectionClass} relative flex flex-1`}>
             <div className="home-reveal mx-auto grid max-w-4xl flex-1 content-center gap-8 py-8">
               <div className="grid gap-4">
-                <h1 className="max-w-4xl text-4xl leading-none">
-                  See how income turns to net worth.
-                </h1>
+                <h1 className="max-w-4xl text-4xl">See how income turns to net worth.</h1>
                 <p className="home-reveal home-delay-1 max-w-2xl text-base leading-6 text-(--ink-soft)">
                   Basisflow combines income, assets, mortgage, expenses, and projection into one working model so you
                   can understand how today&apos;s cash flow compounds into long-run outcomes.
                 </p>
                 <ActionButton
                   to="/workspace"
-                  className="home-reveal home-delay-2 border-(--teal) bg-(--teal) text-base font-extrabold
-                    text-(--white) uppercase tracking-wide"
+                  className="home-reveal home-delay-2 border-(--teal) bg-(--teal) text-base font-extrabold tracking-wide
+                    text-(--white) uppercase"
                 >
                   Get started
                 </ActionButton>
@@ -72,15 +68,12 @@ export function HomePage() {
                 {TOOL_AREAS.map((item) => (
                   <article
                     key={item.title}
-                    className="home-reveal home-delay-2 border-b border-(--line-soft) py-4 transition hover:translate-x-1"
+                    className="home-reveal home-delay-2 border-b border-(--line-soft) py-4 transition
+                      hover:translate-x-1"
                   >
                     <div className="grid gap-1 border-l pl-4" style={{ borderColor: item.border }}>
-                      <h2 className="text-2xl leading-none">
-                        {item.title}
-                      </h2>
-                      <p className="max-w-xl text-base leading-6 text-(--ink-soft)">
-                        {item.description}
-                      </p>
+                      <h2 className="text-2xl">{item.title}</h2>
+                      <p className="max-w-xl text-base leading-6 text-(--ink-soft)">{item.description}</p>
                     </div>
                   </article>
                 ))}
@@ -89,6 +82,6 @@ export function HomePage() {
           </div>
         </section>
       </main>
-    </PageShell>
+    </div>
   );
 }

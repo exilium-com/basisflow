@@ -232,17 +232,19 @@ export function SelectField({
   label,
   htmlFor,
   invalid = false,
+  className,
   labelClassName,
   frameClassName,
+  inputClassName,
   children,
   ...inputProps
 }: SelectFieldProps) {
   const inputId = useInputId(htmlFor);
 
   return (
-    <Field label={label} htmlFor={inputId} labelClassName={labelClassName}>
+    <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
       <InputFrame invalid={invalid} className={frameClassName}>
-        <select id={inputId} className="w-full font-semibold" {...inputProps}>
+        <select id={inputId} className={clsx("w-full font-semibold", inputClassName)} {...inputProps}>
           {children}
         </select>
       </InputFrame>
@@ -254,6 +256,7 @@ export function CheckboxField({
   label,
   htmlFor,
   invalid = false,
+  className,
   labelClassName,
   frameClassName,
   inputClassName,
@@ -262,7 +265,7 @@ export function CheckboxField({
   const inputId = useInputId(htmlFor);
 
   return (
-    <Field labelClassName={labelClassName} reserveLabelSpace>
+    <Field className={className} labelClassName={labelClassName} reserveLabelSpace>
       <InputFrame invalid={invalid} className={clsx("justify-start px-2", frameClassName)}>
         <label
           className={clsx("flex w-full items-center gap-2 text-base font-semibold", labelClassName)}
@@ -284,6 +287,7 @@ export function CheckboxField({
 export function TextAreaField({
   label,
   htmlFor,
+  className,
   labelClassName,
   inputClassName,
   ...props
@@ -291,7 +295,7 @@ export function TextAreaField({
   const inputId = useInputId(htmlFor);
 
   return (
-    <Field label={label} htmlFor={inputId} labelClassName={labelClassName}>
+    <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
       <textarea
         id={inputId}
         className={clsx(

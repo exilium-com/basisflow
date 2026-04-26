@@ -1,11 +1,11 @@
 import { readNumber, roundTo } from "./format";
 
-export type DollarPercentMode = "percent" | "dollar";
-export type ValueModePair = {
+type DollarPercentMode = "percent" | "dollar";
+type ValueModePair = {
   mode: DollarPercentMode;
   value: number;
 };
-export type MortgageValueModeField = "downPayment" | "purchaseClosingCost" | "saleClosingCost";
+type MortgageValueModeField = "downPayment" | "purchaseClosingCost" | "saleClosingCost";
 export type MortgageOptionKind = "conventional" | "arm" | "rent";
 export type MortgageLoanField =
   | "rate"
@@ -18,7 +18,6 @@ export type MortgageLoanField =
 
 export type MortgageOptionState = {
   id: string;
-  name: string;
   kind: MortgageOptionKind;
   rate: number | null;
   term: number | null;
@@ -43,7 +42,6 @@ export type MortgageState = {
 };
 
 const CONVENTIONAL_DEFAULTS = {
-  name: "Conventional",
   kind: "conventional" as const,
   rate: 6.475,
   term: 30,
@@ -55,7 +53,6 @@ const CONVENTIONAL_DEFAULTS = {
 };
 
 const ARM_DEFAULTS = {
-  name: "ARM",
   kind: "arm" as const,
   rate: null,
   term: 30,
@@ -67,7 +64,6 @@ const ARM_DEFAULTS = {
 };
 
 const RENT_DEFAULTS = {
-  name: "Rent",
   kind: "rent" as const,
   rate: null,
   term: null,
@@ -78,7 +74,7 @@ const RENT_DEFAULTS = {
   rentGrowthRate: 3,
 };
 
-export const MORTGAGE_DEFAULTS = {
+const MORTGAGE_DEFAULTS = {
   homePrice: 800000,
   downPaymentPercent: 20,
   propertyTaxRate: 1.18,
@@ -115,7 +111,6 @@ export function createMortgageOption(overrides: Partial<MortgageOptionState> = {
 
   return {
     id: overrides.id ?? crypto.randomUUID(),
-    name: overrides.name ?? defaults.name,
     kind,
     rate: overrides.rate ?? defaults.rate,
     term: overrides.term ?? defaults.term,
@@ -128,7 +123,7 @@ export function createMortgageOption(overrides: Partial<MortgageOptionState> = {
 }
 
 function buildDefaultOptions() {
-  const primary = createMortgageOption({ name: "Primary", kind: "conventional" });
+  const primary = createMortgageOption({ kind: "conventional" });
 
   return {
     options: [primary],
@@ -186,7 +181,6 @@ function normalizeMortgageOption(parsed: unknown, fallback?: MortgageOptionState
 
   return {
     id: typeof raw.id === "string" && raw.id ? raw.id : (fallback?.id ?? crypto.randomUUID()),
-    name: typeof raw.name === "string" && raw.name.trim() ? raw.name : (fallback?.name ?? defaults.name),
     kind,
     rate: readNumber(raw.rate, fallback?.rate ?? defaults.rate),
     term: readNumber(raw.term, fallback?.term ?? defaults.term),
@@ -207,13 +201,16 @@ export function normalizeMortgageState(parsed: unknown, fallback: MortgageState)
   const normalizedOptions = Array.isArray(state.options)
     ? state.options.map((option, index) => normalizeMortgageOption(option, fallback.options[index]))
     : fallback.options;
-  const options = normalizedOptions.length > 0 ? normalizedOptions : fallback.options;
-  const optionIds = new Set(options.map((option) => option.id));
-  const fallbackActiveLoanId = options[0]?.id ?? fallback.activeLoanId;
+  const allOptions = normalizedOptions.length > 0 ? normalizedOptions : fallback.options;
+  const allOptionIds = new Set(allOptions.map((option) => option.id));
   const activeLoanIdCandidate =
     typeof state.activeLoanId === "string" && state.activeLoanId ? state.activeLoanId : null;
-  const activeLoanId =
-    activeLoanIdCandidate && optionIds.has(activeLoanIdCandidate) ? activeLoanIdCandidate : fallbackActiveLoanId;
+  const activeOption =
+    activeLoanIdCandidate && allOptionIds.has(activeLoanIdCandidate)
+      ? allOptions.find((option) => option.id === activeLoanIdCandidate)
+      : allOptions[0];
+  const options = activeOption ? [activeOption] : fallback.options.slice(0, 1);
+  const activeLoanId = options[0]?.id ?? fallback.activeLoanId;
 
   return {
     ...fallback,

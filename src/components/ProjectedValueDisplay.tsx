@@ -1,4 +1,3 @@
-import React from "react";
 import { labelTextClass } from "../lib/text";
 
 type ProjectedValueDisplayProps = {

@@ -1,4 +1,3 @@
-import React from "react";
 import clsx from "clsx";
 import { usd } from "../lib/format";
 import { labelTextClass } from "../lib/text";

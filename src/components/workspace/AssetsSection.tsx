@@ -1,4 +1,3 @@
-import React from "react";
 import { ActionButton } from "../ActionButton";
 import { CheckboxField, NumberField, SelectField, TextField } from "../Field";
 import { ProjectedValueDisplay } from "../ProjectedValueDisplay";
@@ -43,7 +42,7 @@ export function AssetsSection({
       title="Assets"
       summary="Balance Sheet"
       actions={
-        <ActionButton className="w-full justify-center sm:w-auto" onClick={onAddAssetBucket}>
+        <ActionButton className="w-full sm:w-auto" onClick={onAddAssetBucket}>
           Add asset
         </ActionButton>
       }
