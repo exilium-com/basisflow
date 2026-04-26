@@ -5,10 +5,10 @@ import { NumberField, TextAreaField } from "../Field";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { WorkspaceMetricSplit } from "./WorkspaceMetricSplit";
 import { WorkspaceSection } from "./WorkspaceSection";
-import { type StoredStateSetter } from "../../hooks/useStoredState";
 import { usd } from "../../lib/format";
 import { type IncomeResults, type ResolvedIncome } from "../../lib/incomeModel";
 import { type MortgageState } from "../../lib/mortgageConfig";
+import type { DraftStateSetter } from "../../lib/state";
 import { type TaxConfig } from "../../lib/taxConfig";
 import { labelTextClass, smallCapsTextClass } from "../../lib/text";
 
@@ -25,7 +25,7 @@ type TaxesSectionProps = {
   onSetFederalBrackets: (value: string) => void;
   onSetLongTermCapitalGains: (value: string) => void;
   onSetStateBrackets: (value: string) => void;
-  setMortgageState: StoredStateSetter<MortgageState>;
+  setMortgageState: DraftStateSetter<MortgageState>;
   onUpdateTaxConfig: (patch: Partial<TaxConfig>) => void;
 };
 
@@ -65,7 +65,6 @@ export function TaxesSection({
   return (
     <WorkspaceSection id="taxes" index="03" title="Taxes" summary="Deduction Logic">
       <WorkspaceMetricSplit
-        mainClassName="grid gap-4"
         metrics={{
           primaryItem: { label: "Total tax", value: usd(totalTaxWithProperty) },
           items: [

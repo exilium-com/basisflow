@@ -3,7 +3,6 @@ import { DollarPercentField, NumberField, SelectField } from "../Field";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { WorkspaceMetricSplit } from "./WorkspaceMetricSplit";
 import { WorkspaceSection } from "./WorkspaceSection";
-import { type StoredStateSetter } from "../../hooks/useStoredState";
 import {
   type MortgageLoanField,
   type MortgageOptionKind,
@@ -11,6 +10,7 @@ import {
   toggleMortgageValueMode,
 } from "../../lib/mortgageConfig";
 import { type MortgageScenario } from "../../lib/mortgageSchedule";
+import type { DraftStateSetter } from "../../lib/state";
 
 type MetricItem = { label: string; value: string };
 
@@ -24,7 +24,7 @@ type MortgageSectionProps = {
   onChangeHousingKind: (kind: MortgageOptionKind) => void;
   onUpdateLoanField: (optionId: string, field: MortgageLoanField, value: number | null) => void;
   onUpdateMortgageFundingBucketId: (bucketId: string) => void;
-  setMortgageState: StoredStateSetter<MortgageState>;
+  setMortgageState: DraftStateSetter<MortgageState>;
 };
 
 export function MortgageSection({
@@ -51,7 +51,6 @@ export function MortgageSection({
   return (
     <WorkspaceSection id="mortgage" index="02" title="Home & Mortgage" summary="Housing Cost">
       <WorkspaceMetricSplit
-        mainClassName="grid gap-4"
         metrics={{
           primaryItem: {
             label: isRentScenario ? "Estimated monthly rent" : "Estimated monthly housing cost",

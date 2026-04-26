@@ -268,7 +268,6 @@ export function IncomeSection({
 
       <div className="mt-8">
         <WorkspaceMetricSplit
-          mainClassName="grid gap-4"
           metrics={{
             primaryItem: { label: "Monthly take-home", value: usd(incomeResults.monthlyTakeHome) },
             items: [

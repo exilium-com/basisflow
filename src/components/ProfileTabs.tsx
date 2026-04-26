@@ -9,7 +9,7 @@ type ProfileTabsProps = {
   onDuplicateProfile: (name: string) => void;
   onRemoveProfile: (name: string) => void;
   onRenameProfile: (currentName: string, nextName: string) => void;
-  onResetAll: () => void;
+  onResetProfile: (name: string) => void;
   onSelectProfile: (name: string) => void;
   renameProfileName?: string | null;
   onRenameClosed?: () => void;
@@ -22,7 +22,7 @@ export function ProfileTabs({
   onDuplicateProfile,
   onRemoveProfile,
   onRenameProfile,
-  onResetAll,
+  onResetProfile,
   onSelectProfile,
   renameProfileName = null,
   onRenameClosed,
@@ -39,11 +39,15 @@ export function ProfileTabs({
     [activeProfileName, profiles],
   );
 
+  function closeMenu() {
+    setMenuProfileName(null);
+    setMenuPosition({});
+  }
+
   function startRename(profile: string) {
     setRenameWidth(profileTabRefs.current[profile]?.offsetWidth ?? null);
     setRenamingProfileName(profile);
-    setMenuProfileName(null);
-    setMenuPosition({});
+    closeMenu();
   }
 
   function closeRename() {
@@ -105,8 +109,7 @@ export function ProfileTabs({
       className="relative flex min-w-0 flex-1 items-stretch"
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
-          setMenuProfileName(null);
-          setMenuPosition({});
+          closeMenu();
         }
       }}
     >
@@ -180,8 +183,7 @@ export function ProfileTabs({
                     onClick={(event) => {
                       event.stopPropagation();
                       if (menuOpen) {
-                        setMenuProfileName(null);
-                        setMenuPosition({});
+                        closeMenu();
                       } else {
                         setMenuProfileName(profile);
                         setMenuPosition(getMenuPosition(profile));
@@ -213,8 +215,7 @@ export function ProfileTabs({
             type="button"
             onClick={() => {
               onDuplicateProfile(menuProfileName);
-              setMenuProfileName(null);
-              setMenuPosition({});
+              closeMenu();
             }}
           >
             Duplicate
@@ -233,8 +234,7 @@ export function ProfileTabs({
             type="button"
             onClick={() => {
               onRemoveProfile(menuProfileName);
-              setMenuProfileName(null);
-              setMenuPosition({});
+              closeMenu();
             }}
           >
             Remove
@@ -244,9 +244,8 @@ export function ProfileTabs({
               hover:bg-(--destructive-soft) focus-visible:outline-none"
             type="button"
             onClick={() => {
-              onResetAll();
-              setMenuProfileName(null);
-              setMenuPosition({});
+              onResetProfile(menuProfileName);
+              closeMenu();
             }}
           >
             Reset

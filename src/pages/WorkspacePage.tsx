@@ -6,43 +6,20 @@ import { MortgageSection } from "../components/workspace/MortgageSection";
 import { TaxesSection } from "../components/workspace/TaxesSection";
 import { WorkspaceSummaryPanel } from "../components/workspace/WorkspaceSummaryPanel";
 import { WorkspaceLayout } from "../components/WorkspaceLayout";
-import { PageShell } from "../components/PageShell";
-import { useStoredState } from "../hooks/useStoredState";
+import { useDraftFieldSetter } from "../hooks/useDraftFieldSetter";
 import { usd } from "../lib/format";
 import {
-  DEFAULT_ASSETS_STATE,
   PINNED_BUCKETS,
   buildIncomeDirectedContributions,
   createAssetBucket,
   createAssets,
   deriveAssetsState,
-  normalizeAssetsState,
   resolvePinnedBuckets,
   type AssetBucketState,
 } from "../lib/assetsModel";
-import {
-  createExpenses,
-  DEFAULT_EXPENSES_STATE,
-  normalizeExpensesState,
-  type ExpenseStateItem,
-} from "../lib/expensesModel";
-import {
-  buildIncomeSummary,
-  calculateIncome,
-  DEFAULT_INCOME,
-  normalizeIncome,
-  resolveIncome,
-  type Income,
-  type IncomeItem,
-} from "../lib/incomeModel";
-import {
-  createMortgageOption,
-  DEFAULT_MORTGAGE_STATE,
-  normalizeMortgageState,
-  type MortgageLoanField,
-  type MortgageOptionKind,
-  type MortgageState,
-} from "../lib/mortgageConfig";
+import { createExpenses, type ExpenseStateItem } from "../lib/expensesModel";
+import { buildIncomeSummary, calculateIncome, resolveIncome, type Income, type IncomeItem } from "../lib/incomeModel";
+import { createMortgageOption, type MortgageLoanField, type MortgageOptionKind } from "../lib/mortgageConfig";
 import {
   getMortgageInterestForYear,
   getMortgagePrincipalForYear,
@@ -54,49 +31,36 @@ import {
 import { buildMortgageScenario } from "../lib/mortgageSchedule";
 import { calculateProjection } from "../lib/projectionCalculation";
 import {
-  DEFAULT_PROJECTION_STATE,
   createProjection,
-  normalizeProjectionState,
   toDisplayValue,
   type ProjectionState,
   type ProjectionAssetOverride,
   type ProjectionExpenseOverride,
 } from "../lib/projectionState";
 import { buildMonthlyCashFlow } from "../lib/projectionUtils";
-import { saveJson } from "../lib/storage";
-import {
-  ASSETS_STATE_KEY,
-  EXPENSES_STATE_KEY,
-  INCOME_STATE_KEY,
-  INCOME_SUMMARY_KEY,
-  MORTGAGE_STATE_KEY,
-  MORTGAGE_SUMMARY_KEY,
-  PROJECTION_STATE_KEY,
-} from "../lib/storageKeys";
-import { loadTaxConfig, saveTaxConfig, type TaxConfig } from "../lib/taxConfig";
+import { type WorkspaceProfile, type WorkspaceProfileDocument } from "../lib/profileStore";
+import type { DraftStateSetter } from "../lib/state";
+import { normalizeConfig, type TaxConfig } from "../lib/taxConfig";
 import { surfaceClass } from "../lib/ui";
 
-export function WorkspacePage() {
-  const [income, setIncome] = useStoredState<Income>(INCOME_STATE_KEY, DEFAULT_INCOME, {
-    normalize: normalizeIncome,
-  });
-  const [mortgageState, setMortgageState] = useStoredState<MortgageState>(MORTGAGE_STATE_KEY, DEFAULT_MORTGAGE_STATE, {
-    normalize: normalizeMortgageState,
-  });
-  const [assetState, setAssetState] = useStoredState(ASSETS_STATE_KEY, DEFAULT_ASSETS_STATE, {
-    normalize: normalizeAssetsState,
-  });
-  const [expenseState, setExpenseState] = useStoredState(EXPENSES_STATE_KEY, DEFAULT_EXPENSES_STATE, {
-    normalize: normalizeExpensesState,
-  });
-  const [projectionState, setProjectionState] = useStoredState<ProjectionState>(
-    PROJECTION_STATE_KEY,
-    DEFAULT_PROJECTION_STATE,
-    {
-      normalize: normalizeProjectionState,
-    },
-  );
-  const [taxConfig, setTaxConfig] = useState(loadTaxConfig);
+type WorkspacePageProps = {
+  profile: WorkspaceProfile;
+  setProfileDocument: DraftStateSetter<WorkspaceProfileDocument>;
+};
+
+export function WorkspacePage({ profile, setProfileDocument }: WorkspacePageProps) {
+  const { document: profileDocument, name: profileName } = profile;
+  const income = profileDocument.income;
+  const mortgageState = profileDocument.mortgage;
+  const assetState = profileDocument.assets;
+  const expenseState = profileDocument.expenses;
+  const projectionState = profileDocument.projection;
+  const taxConfig = profileDocument.taxConfig;
+  const setIncome = useDraftFieldSetter(setProfileDocument, "income");
+  const setMortgageState = useDraftFieldSetter(setProfileDocument, "mortgage");
+  const setAssetState = useDraftFieldSetter(setProfileDocument, "assets");
+  const setExpenseState = useDraftFieldSetter(setProfileDocument, "expenses");
+  const setProjectionState = useDraftFieldSetter(setProfileDocument, "projection");
   const [federalBrackets, setFederalBrackets] = useState(() => JSON.stringify(taxConfig.federalBrackets, null, 2));
   const [stateBrackets, setStateBrackets] = useState(() => JSON.stringify(taxConfig.stateBrackets, null, 2));
   const [longTermCapitalGains, setLongTermCapitalGains] = useState(() =>
@@ -108,6 +72,9 @@ export function WorkspacePage() {
     setStateBrackets(JSON.stringify(taxConfig.stateBrackets, null, 2));
     setLongTermCapitalGains(JSON.stringify(taxConfig.longTermCapitalGains, null, 2));
   }, [taxConfig]);
+  useEffect(() => {
+    setTaxEditorStatus("");
+  }, [profileName]);
 
   const mortgageScenario = buildMortgageScenario(mortgageState, mortgageState.activeLoanId);
   const mortgageSummary = serializeMortgageSummary(mortgageScenario);
@@ -260,29 +227,25 @@ export function WorkspacePage() {
     currentRow.rsuNet +
     annualPropertyTax;
 
-  useEffect(() => {
-    saveJson(MORTGAGE_SUMMARY_KEY, mortgageSummary);
-  }, [mortgageSummary]);
-
-  useEffect(() => {
-    saveJson(INCOME_SUMMARY_KEY, incomeSummary);
-  }, [incomeSummary]);
-
   function updateTaxConfig(patch: Partial<TaxConfig>) {
     setTaxEditorStatus("");
-    const nextConfig = saveTaxConfig({ ...taxConfig, ...patch });
-    setTaxConfig(nextConfig);
+    const nextConfig = normalizeConfig({ ...taxConfig, ...patch });
+    setProfileDocument((draft) => {
+      draft.taxConfig = nextConfig;
+    });
   }
 
   function applyTaxTables() {
     try {
-      const nextConfig = saveTaxConfig({
+      const nextConfig = normalizeConfig({
         ...taxConfig,
         federalBrackets: JSON.parse(federalBrackets),
         stateBrackets: JSON.parse(stateBrackets),
         longTermCapitalGains: JSON.parse(longTermCapitalGains),
       });
-      setTaxConfig(nextConfig);
+      setProfileDocument((draft) => {
+        draft.taxConfig = nextConfig;
+      });
       setTaxEditorStatus("Saved tax tables.");
     } catch (error) {
       setTaxEditorStatus(`Config error: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -477,102 +440,100 @@ export function WorkspacePage() {
   ];
 
   return (
-    <PageShell>
-      <main className={surfaceClass}>
-        <WorkspaceLayout
-          summary={
-            <WorkspaceSummaryPanel
-              currentRow={currentRow}
-              monthlyCashFlow={monthlyCashFlow}
-              projection={projection}
-              projectionResults={projectionResults}
-              projectionState={projectionState}
-              selectedYearLabel={selectedYearLabel}
-              topLevelSummaryRows={topLevelSummaryRows}
-              matchRate={income.matchRate}
-              freeCashFlowBucketId={effectiveFreeCashFlowBucketId}
-              reserveCashBucketId={reserveCashBucketId}
-              freeCashFlowOptions={freeCashFlowOptions}
-              onUpdateIncomeField={(field, value) => updateIncomeField(field, value)}
-              onUpdateProjectionState={updateProjectionState}
-            />
+    <main className={surfaceClass}>
+      <WorkspaceLayout
+        summary={
+          <WorkspaceSummaryPanel
+            currentRow={currentRow}
+            monthlyCashFlow={monthlyCashFlow}
+            projection={projection}
+            projectionResults={projectionResults}
+            projectionState={projectionState}
+            selectedYearLabel={selectedYearLabel}
+            topLevelSummaryRows={topLevelSummaryRows}
+            matchRate={income.matchRate}
+            freeCashFlowBucketId={effectiveFreeCashFlowBucketId}
+            reserveCashBucketId={reserveCashBucketId}
+            freeCashFlowOptions={freeCashFlowOptions}
+            onUpdateIncomeField={(field, value) => updateIncomeField(field, value)}
+            onUpdateProjectionState={updateProjectionState}
+          />
+        }
+      >
+        <IncomeSection
+          income={income}
+          incomeResults={incomeResults}
+          projection={projection}
+          rsuGrowthRateById={rsuGrowthRateById}
+          selectedYearLabel={selectedYearLabel}
+          retirementSavingTotal={retirementSavingTotal}
+          taxConfig={taxConfig}
+          onAddSalaryItem={addSalaryItem}
+          onAddPassiveIncomeItem={addPassiveIncomeItem}
+          onAddRsuItem={addRsuItem}
+          onRemoveIncomeItem={removeIncomeItem}
+          onUpdateIncomeField={updateIncomeField}
+          onUpdateIncomeItem={updateIncomeItem}
+        />
+
+        <MortgageSection
+          assetOptions={assetOptions}
+          mortgageScenario={mortgageScenario}
+          mortgageFundingBucketId={effectiveMortgageFundingBucketId}
+          mortgageState={mortgageState}
+          monthlyHousingCost={monthlyHousingCost}
+          mortgageSummaryItems={mortgageSummaryItems}
+          onChangeHousingKind={changeHousingKind}
+          onUpdateLoanField={updateLoanField}
+          onUpdateMortgageFundingBucketId={(mortgageFundingBucketId) =>
+            updateProjectionState({ mortgageFundingBucketId })
           }
-        >
-          <IncomeSection
-            income={income}
-            incomeResults={incomeResults}
-            projection={projection}
-            rsuGrowthRateById={rsuGrowthRateById}
-            selectedYearLabel={selectedYearLabel}
-            retirementSavingTotal={retirementSavingTotal}
-            taxConfig={taxConfig}
-            onAddSalaryItem={addSalaryItem}
-            onAddPassiveIncomeItem={addPassiveIncomeItem}
-            onAddRsuItem={addRsuItem}
-            onRemoveIncomeItem={removeIncomeItem}
-            onUpdateIncomeField={updateIncomeField}
-            onUpdateIncomeItem={updateIncomeItem}
-          />
+          setMortgageState={setMortgageState}
+        />
 
-          <MortgageSection
-            assetOptions={assetOptions}
-            mortgageScenario={mortgageScenario}
-            mortgageFundingBucketId={effectiveMortgageFundingBucketId}
-            mortgageState={mortgageState}
-            monthlyHousingCost={monthlyHousingCost}
-            mortgageSummaryItems={mortgageSummaryItems}
-            onChangeHousingKind={changeHousingKind}
-            onUpdateLoanField={updateLoanField}
-            onUpdateMortgageFundingBucketId={(mortgageFundingBucketId) =>
-              updateProjectionState({ mortgageFundingBucketId })
-            }
-            setMortgageState={setMortgageState}
-          />
+        <TaxesSection
+          federalBrackets={federalBrackets}
+          income={resolvedIncome}
+          incomeResults={incomeResults}
+          longTermCapitalGains={longTermCapitalGains}
+          mortgageState={mortgageState}
+          stateBrackets={stateBrackets}
+          taxConfig={taxConfig}
+          taxEditorStatus={taxEditorStatus}
+          onApplyTaxTables={applyTaxTables}
+          onSetFederalBrackets={setFederalBrackets}
+          onSetLongTermCapitalGains={setLongTermCapitalGains}
+          onSetStateBrackets={setStateBrackets}
+          setMortgageState={setMortgageState}
+          onUpdateTaxConfig={updateTaxConfig}
+        />
 
-          <TaxesSection
-            federalBrackets={federalBrackets}
-            income={resolvedIncome}
-            incomeResults={incomeResults}
-            longTermCapitalGains={longTermCapitalGains}
-            mortgageState={mortgageState}
-            stateBrackets={stateBrackets}
-            taxConfig={taxConfig}
-            taxEditorStatus={taxEditorStatus}
-            onApplyTaxTables={applyTaxTables}
-            onSetFederalBrackets={setFederalBrackets}
-            onSetLongTermCapitalGains={setLongTermCapitalGains}
-            onSetStateBrackets={setStateBrackets}
-            setMortgageState={setMortgageState}
-            onUpdateTaxConfig={updateTaxConfig}
-          />
+        <ExpensesSection
+          expenseState={expenseState}
+          expenseGrowthRate={projectionState.expenseGrowthRate}
+          expenseOverrides={projectionState.expenseOverrides}
+          currentRow={currentRow}
+          projection={projection}
+          selectedYearLabel={selectedYearLabel}
+          onAddExpense={addExpense}
+          onRemoveExpense={removeExpense}
+          onUpdateExpense={updateExpense}
+          onUpdateExpenseOverride={updateExpenseOverride}
+        />
 
-          <ExpensesSection
-            expenseState={expenseState}
-            expenseGrowthRate={projectionState.expenseGrowthRate}
-            expenseOverrides={projectionState.expenseOverrides}
-            currentRow={currentRow}
-            projection={projection}
-            selectedYearLabel={selectedYearLabel}
-            onAddExpense={addExpense}
-            onRemoveExpense={removeExpense}
-            onUpdateExpense={updateExpense}
-            onUpdateExpenseOverride={updateExpenseOverride}
-          />
-
-          <AssetsSection
-            assetsView={assetsView}
-            assetGrowthRate={projectionState.assetGrowthRate}
-            assetOverrides={projectionState.assetOverrides}
-            currentRow={currentRow}
-            projection={projection}
-            selectedYearLabel={selectedYearLabel}
-            onAddAssetBucket={addAssetBucket}
-            onRemoveAssetBucket={removeAssetBucket}
-            onUpdateAssetBucket={updateAssetBucket}
-            onUpdateAssetOverride={updateAssetOverride}
-          />
-        </WorkspaceLayout>
-      </main>
-    </PageShell>
+        <AssetsSection
+          assetsView={assetsView}
+          assetGrowthRate={projectionState.assetGrowthRate}
+          assetOverrides={projectionState.assetOverrides}
+          currentRow={currentRow}
+          projection={projection}
+          selectedYearLabel={selectedYearLabel}
+          onAddAssetBucket={addAssetBucket}
+          onRemoveAssetBucket={removeAssetBucket}
+          onUpdateAssetBucket={updateAssetBucket}
+          onUpdateAssetOverride={updateAssetOverride}
+        />
+      </WorkspaceLayout>
+    </main>
   );
 }

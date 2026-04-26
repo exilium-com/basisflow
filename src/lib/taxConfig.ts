@@ -1,8 +1,5 @@
 import { readNumber, roundTo } from "./format";
 import type { ResolvedIncome } from "./incomeModel";
-import { loadStoredJson, saveJson } from "./storage";
-
-export const STORAGE_KEY = "basisflow_tax_config";
 
 export type TaxBracket = {
   top: number | null;
@@ -205,29 +202,16 @@ export function normalizeConfig(rawConfig: unknown): TaxConfig {
       fallback.stateMortgageInterestDebtCap,
     ),
     caSdiRate: readNonNegativeConfigNumber((config as { caSdiRate?: unknown }).caSdiRate, fallback.caSdiRate),
-    federalBrackets: normalizeBracketList((config as { federalBrackets?: unknown }).federalBrackets, fallback.federalBrackets),
+    federalBrackets: normalizeBracketList(
+      (config as { federalBrackets?: unknown }).federalBrackets,
+      fallback.federalBrackets,
+    ),
     stateBrackets: normalizeBracketList((config as { stateBrackets?: unknown }).stateBrackets, fallback.stateBrackets),
     longTermCapitalGains: normalizeBracketList(
       (config as { longTermCapitalGains?: unknown }).longTermCapitalGains,
       fallback.longTermCapitalGains,
     ),
   };
-}
-
-export function loadTaxConfig(): TaxConfig {
-  return normalizeConfig(loadStoredJson(STORAGE_KEY));
-}
-
-export function saveTaxConfig(config: unknown): TaxConfig {
-  const normalized = normalizeConfig(config);
-  saveJson(STORAGE_KEY, normalized);
-  return normalized;
-}
-
-export function resetTaxConfig(): TaxConfig {
-  const defaults = cloneDefaultConfig();
-  saveJson(STORAGE_KEY, defaults);
-  return defaults;
 }
 
 export function getTaxDeductions(

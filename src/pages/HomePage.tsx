@@ -1,6 +1,5 @@
 import React from "react";
 import { ActionButton } from "../components/ActionButton";
-import { PageShell } from "../components/PageShell";
 import { pageSectionClass, surfaceClass } from "../lib/ui";
 
 const TOOL_AREAS = [
@@ -28,7 +27,7 @@ const TOOL_AREAS = [
 
 export function HomePage() {
   return (
-    <PageShell>
+    <div className="mx-auto flex min-h-screen w-full max-w-screen-2xl flex-col px-4">
       <main className={`${surfaceClass} flex-1 overflow-hidden`}>
         <section className="relative isolate flex flex-1 overflow-hidden">
           <div className="pointer-events-none absolute inset-0 opacity-90" aria-hidden="true">
@@ -84,6 +83,6 @@ export function HomePage() {
           </div>
         </section>
       </main>
-    </PageShell>
+    </div>
   );
 }
