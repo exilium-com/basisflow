@@ -106,7 +106,7 @@ export function ProfileTabs({
   return (
     <div
       ref={containerRef}
-      className="relative flex min-w-0 flex-1 items-stretch"
+      className="relative flex min-w-0 flex-1"
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
           closeMenu();
@@ -115,8 +115,7 @@ export function ProfileTabs({
     >
       <nav
         ref={tabListRef}
-        className="hide-scrollbar flex min-w-0 flex-1 items-stretch overflow-x-auto overflow-y-visible
-          whitespace-nowrap"
+        className="hide-scrollbar flex min-w-0 flex-1 overflow-x-auto overflow-y-visible whitespace-nowrap"
         aria-label="Profiles"
       >
         {!activeProfileName ? (
@@ -142,8 +141,7 @@ export function ProfileTabs({
                 profileTabRefs.current[profile] = element;
               }}
               className={clsx(
-                `relative flex min-w-40 shrink-0 items-center border-b-2 border-transparent bg-transparent transition
-                duration-150`,
+                "relative flex min-w-40 shrink-0 items-center border-b-2 border-transparent transition",
                 index > 0 && "border-l border-(--line)",
                 active
                   ? "border-b-(--teal) bg-(--teal-tint) shadow-sm"
@@ -199,7 +197,7 @@ export function ProfileTabs({
         })}
         <button
           className="sticky right-0 z-20 shrink-0 bg-(--paper) px-4 text-lg text-(--ink-soft) transition
-            hover:bg-(--paper) hover:text-(--ink) focus-visible:outline-none"
+            hover:text-(--ink) focus-visible:outline-none"
           type="button"
           aria-label="Create profile"
           onClick={onCreateProfile}

@@ -186,7 +186,7 @@ export function WorkspaceSummaryPanel({
 
   return (
     <div>
-      <div className="grid gap-4 bg-(--white) py-4 lg:sticky lg:top-0 lg:z-10 lg:border-b lg:border-(--line)">
+      <div className="grid gap-4 bg-(--white) py-4 lg:border-b lg:border-(--line)">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className={smallCapsTextClass}>
@@ -239,7 +239,7 @@ export function WorkspaceSummaryPanel({
         <div className="lg:hidden">
           <button
             type="button"
-            className={`action-button w-full justify-center ${buttonTextClass}`}
+            className={`action-button w-full ${buttonTextClass}`}
             onClick={() => setMobileSummaryOpen((open) => !open)}
           >
             {mobileSummaryOpen ? "Hide Summary" : "Show Summary"}

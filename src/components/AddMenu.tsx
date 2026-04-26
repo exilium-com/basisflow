@@ -51,7 +51,7 @@ export function AddMenu({ label, options, align = "right", className }: AddMenuP
     <div ref={rootRef} className={clsx("relative", className)}>
       <button
         type="button"
-        className={clsx("action-button w-full justify-center sm:w-auto", buttonTextClass)}
+        className={clsx("action-button w-full sm:w-auto", buttonTextClass)}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
@@ -72,10 +72,7 @@ export function AddMenu({ label, options, align = "right", className }: AddMenuP
                 key={option.id}
                 type="button"
                 role="menuitem"
-                className={clsx(
-                  "flex h-10 items-center px-3 text-left transition hover:bg-(--teal-soft)",
-                  labelTextClass,
-                )}
+                className={clsx("flex h-10 items-center px-3 text-left hover:bg-(--teal-soft)", labelTextClass)}
                 onClick={() => {
                   option.onSelect();
                   setOpen(false);

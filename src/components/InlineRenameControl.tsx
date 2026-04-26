@@ -53,7 +53,7 @@ export function InlineRenameControl({ value, onCancel, onCommit }: InlineRenameC
         }}
       />
       <button
-        className="flex items-center justify-center px-2 text-base font-bold text-(--teal) focus-visible:outline-none"
+        className="px-2 text-base font-bold text-(--teal) focus-visible:outline-none"
         type="submit"
         aria-label="Save name"
       >

@@ -42,7 +42,7 @@ export function ExpensesSection({
       title="Expenses"
       summary="Cash Out"
       actions={
-        <ActionButton className="w-full justify-center sm:w-auto" onClick={onAddExpense}>
+        <ActionButton className="w-full sm:w-auto" onClick={onAddExpense}>
           Add expense
         </ActionButton>
       }
