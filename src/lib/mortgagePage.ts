@@ -23,7 +23,6 @@ export function serializeMortgageSummary(scenario: MortgageScenario) {
   return {
     type: scenario.optionId,
     kind: scenario.kind,
-    typeLabel: scenario.typeLabel,
     isArm: scenario.isArm,
     rentGrowthRate: scenario.rentGrowthRate,
     homePrice: scenario.mortgage.homePrice,
@@ -45,10 +44,7 @@ export function serializeMortgageSummary(scenario: MortgageScenario) {
 
 export type MortgageSummary = ReturnType<typeof serializeMortgageSummary>;
 
-function findMortgageLoanYear(
-  summary: Pick<MortgageSummary, "yearlyLoan">,
-  year: number,
-) {
+function findMortgageLoanYear(summary: Pick<MortgageSummary, "yearlyLoan">, year: number) {
   return summary.yearlyLoan.find((row) => row.year === year + 1);
 }
 

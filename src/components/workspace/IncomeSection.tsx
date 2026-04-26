@@ -20,7 +20,6 @@ import {
 import { toDisplayValue, type Projection } from "../../lib/projectionState";
 import { smallCapsTextClass } from "../../lib/text";
 import { type TaxConfig } from "../../lib/taxConfig";
-import clsx from "clsx";
 
 type IncomeSectionProps = {
   income: Income;
@@ -241,7 +240,7 @@ export function IncomeSection({
         />
       }
     >
-      <div className="grid gap-4">
+      <div className="grid gap-2">
         {income.incomeItems.map((item) =>
           item.type === "salary" || item.type === "passive" ? (
             <RecurringIncomeRowItem
@@ -269,18 +268,17 @@ export function IncomeSection({
 
       <div className="mt-8">
         <WorkspaceMetricSplit
-          metrics={
-            {
-              primaryItem: { label: "Monthly take-home", value: usd(incomeResults.monthlyTakeHome) },
-              items: [
-                { label: "Annual income", value: usd(incomeResults.grossSalary + incomeResults.passiveIncome) },
-                { label: "Total taxes", value: usd(incomeResults.totalTaxes) },
-                { label: "Retirement saving", value: usd(retirementSavingTotal) },
-              ],
-            }
-          }
+          mainClassName="grid gap-4"
+          metrics={{
+            primaryItem: { label: "Monthly take-home", value: usd(incomeResults.monthlyTakeHome) },
+            items: [
+              { label: "Annual income", value: usd(incomeResults.grossSalary + incomeResults.passiveIncome) },
+              { label: "Total taxes", value: usd(incomeResults.totalTaxes) },
+              { label: "Retirement saving", value: usd(retirementSavingTotal) },
+            ],
+          }}
         >
-          <div className={clsx(smallCapsTextClass, "mb-4")}>Retirement saving</div>
+          <div className={smallCapsTextClass}>Retirement saving</div>
           <div className="grid gap-4">
             <SliderField
               id="employee401k"

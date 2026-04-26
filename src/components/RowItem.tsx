@@ -46,7 +46,7 @@ export function RowItem({
     >
       {onRemove ? (
         <button
-          className="absolute top-4 right-4 z-10 border-0 bg-transparent p-0 leading-none hover:text-(--ink) transition
+          className="absolute top-4 right-4 z-10 border-0 bg-transparent p-0 transition hover:text-(--ink)
             focus-visible:outline-none"
           type="button"
           aria-label="remove"

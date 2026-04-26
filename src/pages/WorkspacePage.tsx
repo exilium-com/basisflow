@@ -51,7 +51,7 @@ import {
   getMortgageYearPropertyTax,
   serializeMortgageSummary,
 } from "../lib/mortgagePage";
-import { buildMortgageScenario, type MortgageScenario } from "../lib/mortgageSchedule";
+import { buildMortgageScenario } from "../lib/mortgageSchedule";
 import { calculateProjection } from "../lib/projectionCalculation";
 import {
   DEFAULT_PROJECTION_STATE,
@@ -109,10 +109,7 @@ export function WorkspacePage() {
     setLongTermCapitalGains(JSON.stringify(taxConfig.longTermCapitalGains, null, 2));
   }, [taxConfig]);
 
-  const scenariosById = Object.fromEntries(
-    mortgageState.options.map((option) => [option.id, buildMortgageScenario(mortgageState, option.id)]),
-  ) as Record<string, MortgageScenario>;
-  const mortgageScenario = scenariosById[mortgageState.activeLoanId];
+  const mortgageScenario = buildMortgageScenario(mortgageState, mortgageState.activeLoanId);
   const mortgageSummary = serializeMortgageSummary(mortgageScenario);
   const annualPropertyTax = mortgageSummary.kind === "rent" ? 0 : getMortgageYearPropertyTax(mortgageSummary);
 
@@ -158,9 +155,7 @@ export function WorkspacePage() {
     name: bucket.name,
   }));
   const freeCashFlowOptions = projectionAssets.buckets
-    .filter(
-      (bucket) => bucket.id !== reserveCashBucketId && (incomeDirectedContributions[bucket.id] ?? 0) === 0,
-    )
+    .filter((bucket) => bucket.id !== reserveCashBucketId && (incomeDirectedContributions[bucket.id] ?? 0) === 0)
     .map((bucket) => ({
       id: bucket.id,
       name: bucket.name,
@@ -259,7 +254,11 @@ export function WorkspacePage() {
       Math.pow(1 + projection.incomeGrowthRate, projection.currentYear) +
     currentRow.rsuGross;
   const projectedAnnualTax =
-    projectedAnnualGrossIncome - annualRetirementContributions - currentRow.takeHome - currentRow.rsuNet + annualPropertyTax;
+    projectedAnnualGrossIncome -
+    annualRetirementContributions -
+    currentRow.takeHome -
+    currentRow.rsuNet +
+    annualPropertyTax;
 
   useEffect(() => {
     saveJson(MORTGAGE_SUMMARY_KEY, mortgageSummary);
@@ -361,45 +360,15 @@ export function WorkspacePage() {
     });
   }
 
-  function updateLoanName(optionId: string, name: string) {
+  function changeHousingKind(kind: MortgageOptionKind) {
     setMortgageState((draft) => {
-      const option = draft.options.find((entry) => entry.id === optionId);
-      if (option) {
-        option.name = name;
-      }
-    });
-  }
-
-  function selectLoan(optionId: string) {
-    setMortgageState((draft) => {
-      draft.activeLoanId = optionId;
-    });
-  }
-
-  function addMortgageOption(kind: MortgageOptionKind) {
-    setMortgageState((draft) => {
+      const currentOption = draft.options[0];
       const nextOption = createMortgageOption({
         kind,
-        name: `Scenario ${draft.options.length + 1}`,
+        id: currentOption?.id,
       });
-      draft.options.push(nextOption);
-    });
-  }
-
-  function removeMortgageOption(optionId: string) {
-    if (mortgageState.options.length <= 1) {
-      return;
-    }
-
-    const remainingOptionIds = mortgageState.options
-      .filter((option) => option.id !== optionId)
-      .map((option) => option.id);
-    const nextActiveLoanId =
-      mortgageState.activeLoanId === optionId ? remainingOptionIds[0] : mortgageState.activeLoanId;
-
-    setMortgageState((draft) => {
-      draft.options = draft.options.filter((option) => option.id !== optionId);
-      draft.activeLoanId = nextActiveLoanId;
+      draft.options = [nextOption];
+      draft.activeLoanId = nextOption.id;
     });
   }
 
@@ -411,9 +380,11 @@ export function WorkspacePage() {
         return;
       }
 
-      const derivedBucket = resolvePinnedBuckets(draft, incomeDirectedContributions, incomeSummary.rsuItems).state.buckets.find(
-        (entry) => entry.id === bucketId,
-      );
+      const derivedBucket = resolvePinnedBuckets(
+        draft,
+        incomeDirectedContributions,
+        incomeSummary.rsuItems,
+      ).state.buckets.find((entry) => entry.id === bucketId);
       if (derivedBucket) {
         draft.buckets.push({ ...derivedBucket, ...patch });
       }
@@ -506,7 +477,7 @@ export function WorkspacePage() {
   ];
 
   return (
-    <PageShell title="Basisflow">
+    <PageShell>
       <main className={surfaceClass}>
         <WorkspaceLayout
           summary={
@@ -545,18 +516,13 @@ export function WorkspacePage() {
 
           <MortgageSection
             assetOptions={assetOptions}
-            currentYear={projection.currentYear}
             mortgageScenario={mortgageScenario}
             mortgageFundingBucketId={effectiveMortgageFundingBucketId}
             mortgageState={mortgageState}
             monthlyHousingCost={monthlyHousingCost}
             mortgageSummaryItems={mortgageSummaryItems}
-            scenariosById={scenariosById}
-            onAddMortgageOption={addMortgageOption}
-            onRemoveLoan={removeMortgageOption}
-            onSelectLoan={selectLoan}
+            onChangeHousingKind={changeHousingKind}
             onUpdateLoanField={updateLoanField}
-            onUpdateLoanName={updateLoanName}
             onUpdateMortgageFundingBucketId={(mortgageFundingBucketId) =>
               updateProjectionState({ mortgageFundingBucketId })
             }

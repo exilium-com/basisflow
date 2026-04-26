@@ -54,14 +54,12 @@ export type MortgageArmDetails = {
 type MortgageLoan =
   | {
       id: string;
-      name: string;
       kind: "conventional";
       term: number;
       rate: number;
     }
   | {
       id: string;
-      name: string;
       kind: "arm";
       term: number;
       fixedYears: number;
@@ -70,7 +68,6 @@ type MortgageLoan =
     }
   | {
       id: string;
-      name: string;
       kind: "rent";
       rentPerMonth: number;
       rentGrowthRate: number;
@@ -80,7 +77,6 @@ export type MortgageScenario = {
   mortgage: MortgageState;
   optionId: string;
   kind: MortgageState["options"][number]["kind"];
-  typeLabel: string;
   isArm: boolean;
   primaryRate: number;
   rentGrowthRate: number;
@@ -256,7 +252,6 @@ function resolveLoanOption(option: MortgageState["options"][number]): MortgageLo
   if (option.kind === "rent") {
     return {
       id: option.id,
-      name: option.name || "Rent",
       kind: "rent",
       rentPerMonth: Math.max(0, option.rentPerMonth ?? 3500),
       rentGrowthRate: option.rentGrowthRate ?? 3,
@@ -268,7 +263,6 @@ function resolveLoanOption(option: MortgageState["options"][number]): MortgageLo
 
     return {
       id: option.id,
-      name: option.name || "ARM",
       kind: "arm",
       term: Math.max(1, Math.round(option.term ?? 30)),
       fixedYears: Math.max(1, Math.round(option.fixedYears ?? 7)),
@@ -279,7 +273,6 @@ function resolveLoanOption(option: MortgageState["options"][number]): MortgageLo
 
   return {
     id: option.id,
-    name: option.name || "Conventional",
     kind: "conventional",
     term: Math.max(1, Math.round(option.term ?? 30)),
     rate: option.rate ?? 6.475,
@@ -293,15 +286,14 @@ export function buildMortgageScenario(
   const options = mortgage.options.length > 0 ? mortgage.options : DEFAULT_MORTGAGE_STATE.options;
   const loanOption = resolveLoanOption(
     options.find((option) => option.id === selectedOptionId) ??
-    options.find((option) => option.id === mortgage.activeLoanId) ??
-    options[0],
+      options.find((option) => option.id === mortgage.activeLoanId) ??
+      options[0],
   );
   if (loanOption.kind === "rent") {
     return {
       mortgage,
       optionId: loanOption.id,
       kind: "rent",
-      typeLabel: loanOption.name,
       isArm: false,
       primaryRate: 0,
       rentGrowthRate: loanOption.rentGrowthRate,
@@ -366,7 +358,6 @@ export function buildMortgageScenario(
     mortgage,
     optionId: loanOption.id,
     kind: loanOption.kind,
-    typeLabel: loanOption.name,
     isArm,
     primaryRate,
     rentGrowthRate: 0,

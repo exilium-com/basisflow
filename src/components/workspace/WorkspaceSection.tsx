@@ -16,7 +16,7 @@ export function WorkspaceSection({ id, index, title, summary, actions = null, ch
       <header className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className={smallCapsTextClass}>{`${index} ${summary}`}</div>
-          <h2 className="font-serif text-3xl leading-none tracking-tight text-(--ink) sm:text-4xl">{title}</h2>
+          <h2 className="font-serif text-3xl text-(--ink) sm:text-4xl">{title}</h2>
         </div>
         {actions}
       </header>

@@ -255,27 +255,31 @@ describe("calculateProjection", () => {
 
   it("keeps ownership costs after the mortgage payoff year", () => {
     expect(
-      getMortgageAnnualHousingCost({
-        type: "loan",
-        kind: "conventional",
-        typeLabel: "Conventional",
-        isArm: false,
-        rentGrowthRate: 0,
-        homePrice: 600000,
-        currentEquity: 100000,
-        loanAmount: 500000,
-        totalMonthlyPayment: 2500,
-        principalInterest: 1950,
-        monthlyTax: 400,
-        monthlyInsurance: 100,
-        monthlyHoa: 50,
-        maintenanceRate: 0,
-        purchaseClosingCost: 0,
-        saleClosingCostMode: "percent",
-        saleClosingCostInput: 0,
-        totalInterest: 100000,
-        yearlyLoan: [{ year: 1, payment: 2500, principal: 1000, interest: 950, averageBalance: 250000, endingBalance: 0 }],
-      }, 2),
+      getMortgageAnnualHousingCost(
+        {
+          type: "loan",
+          kind: "conventional",
+          isArm: false,
+          rentGrowthRate: 0,
+          homePrice: 600000,
+          currentEquity: 100000,
+          loanAmount: 500000,
+          totalMonthlyPayment: 2500,
+          principalInterest: 1950,
+          monthlyTax: 400,
+          monthlyInsurance: 100,
+          monthlyHoa: 50,
+          maintenanceRate: 0,
+          purchaseClosingCost: 0,
+          saleClosingCostMode: "percent",
+          saleClosingCostInput: 0,
+          totalInterest: 100000,
+          yearlyLoan: [
+            { year: 1, payment: 2500, principal: 1000, interest: 950, averageBalance: 250000, endingBalance: 0 },
+          ],
+        },
+        2,
+      ),
     ).toBe(6600);
   });
 
@@ -283,7 +287,6 @@ describe("calculateProjection", () => {
     const mortgageSummary = {
       type: "loan",
       kind: "conventional" as const,
-      typeLabel: "Conventional",
       isArm: false,
       rentGrowthRate: 0,
       homePrice: 600000,
@@ -313,27 +316,31 @@ describe("calculateProjection", () => {
 
   it("includes principal, tax, insurance, and hoa in year-zero housing cost", () => {
     expect(
-      getMortgageAnnualHousingCost({
-        type: "loan",
-        kind: "conventional",
-        typeLabel: "Conventional",
-        isArm: false,
-        rentGrowthRate: 0,
-        homePrice: 600000,
-        currentEquity: 100000,
-        loanAmount: 500000,
-        totalMonthlyPayment: 3250,
-        principalInterest: 2700,
-        monthlyTax: 400,
-        monthlyInsurance: 100,
-        monthlyHoa: 50,
-        maintenanceRate: 0,
-        purchaseClosingCost: 0,
-        saleClosingCostMode: "percent",
-        saleClosingCostInput: 0,
-        totalInterest: 100000,
-        yearlyLoan: [{ year: 1, payment: 3250, principal: 1800, interest: 900, averageBalance: 510000, endingBalance: 500000 }],
-      }, 0),
+      getMortgageAnnualHousingCost(
+        {
+          type: "loan",
+          kind: "conventional",
+          isArm: false,
+          rentGrowthRate: 0,
+          homePrice: 600000,
+          currentEquity: 100000,
+          loanAmount: 500000,
+          totalMonthlyPayment: 3250,
+          principalInterest: 2700,
+          monthlyTax: 400,
+          monthlyInsurance: 100,
+          monthlyHoa: 50,
+          maintenanceRate: 0,
+          purchaseClosingCost: 0,
+          saleClosingCostMode: "percent",
+          saleClosingCostInput: 0,
+          totalInterest: 100000,
+          yearlyLoan: [
+            { year: 1, payment: 3250, principal: 1800, interest: 900, averageBalance: 510000, endingBalance: 500000 },
+          ],
+        },
+        0,
+      ),
     ).toBe(39000);
   });
 

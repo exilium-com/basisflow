@@ -20,7 +20,7 @@ export function AdvancedPanel({ id, defaultOpen = false, title, children }: Adva
     >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4">
         <span className={labelTextClass}>{title}</span>
-        <span className="flex-none text-sm leading-none font-extrabold text-(--teal)" aria-hidden="true">
+        <span className="flex-none text-sm font-extrabold text-(--teal)" aria-hidden="true">
           {open ? "−" : "+"}
         </span>
       </summary>
