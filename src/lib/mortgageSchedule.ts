@@ -39,13 +39,13 @@ type ArmScheduleParams = {
   monthlyHoa: number;
 };
 
-export type MortgageYearlyBreakdownRow = {
+type MortgageYearlyBreakdownRow = {
   year: number;
   principal: number;
   interest: number;
 };
 
-export type MortgageArmDetails = {
+type MortgageArmDetails = {
   resetYears: number;
   adjustedRate: number;
   resetPayment: number;

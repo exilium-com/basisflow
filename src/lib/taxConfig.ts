@@ -1,12 +1,12 @@
 import { readNumber, roundTo } from "./format";
 import type { ResolvedIncome } from "./incomeModel";
 
-export type TaxBracket = {
+type TaxBracket = {
   top: number | null;
   rate: number;
 };
 
-export type TaxDeductionMode = "standard" | "itemized";
+type TaxDeductionMode = "standard" | "itemized";
 
 export type TaxConfig = {
   employee401kLimit: number;

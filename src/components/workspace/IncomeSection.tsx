@@ -1,4 +1,3 @@
-import React from "react";
 import { AddMenu } from "../AddMenu";
 import { ProjectedValueDisplay } from "../ProjectedValueDisplay";
 import { RowItem } from "../RowItem";

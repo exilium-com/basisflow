@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createDefaultProfileDocument, readProfileStore, writeProfileStore } from "../profileStore";
+import { readProfileStore, writeProfileStore } from "../profileStore";
 
 class MemoryStorage implements Storage {
   private values = new Map<string, string>();
@@ -39,10 +39,7 @@ describe("profileStore", () => {
   });
 
   it("stores profiles under one localStorage key", () => {
-    writeProfileStore({
-      activeProfileName: "Profile",
-      profiles: [{ name: "Profile", document: createDefaultProfileDocument() }],
-    });
+    writeProfileStore(readProfileStore());
 
     expect(storageKeys(localStorage)).toEqual(["basisflow_profiles"]);
   });

@@ -1,4 +1,3 @@
-import React from "react";
 import { ActionButton } from "../ActionButton";
 import { NumberField, TextField } from "../Field";
 import { ProjectedValueDisplay } from "../ProjectedValueDisplay";

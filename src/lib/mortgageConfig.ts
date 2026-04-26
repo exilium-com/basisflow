@@ -1,11 +1,11 @@
 import { readNumber, roundTo } from "./format";
 
-export type DollarPercentMode = "percent" | "dollar";
-export type ValueModePair = {
+type DollarPercentMode = "percent" | "dollar";
+type ValueModePair = {
   mode: DollarPercentMode;
   value: number;
 };
-export type MortgageValueModeField = "downPayment" | "purchaseClosingCost" | "saleClosingCost";
+type MortgageValueModeField = "downPayment" | "purchaseClosingCost" | "saleClosingCost";
 export type MortgageOptionKind = "conventional" | "arm" | "rent";
 export type MortgageLoanField =
   | "rate"
@@ -74,7 +74,7 @@ const RENT_DEFAULTS = {
   rentGrowthRate: 3,
 };
 
-export const MORTGAGE_DEFAULTS = {
+const MORTGAGE_DEFAULTS = {
   homePrice: 800000,
   downPaymentPercent: 20,
   propertyTaxRate: 1.18,

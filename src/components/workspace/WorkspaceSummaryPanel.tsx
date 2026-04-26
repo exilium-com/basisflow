@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { AdvancedPanel } from "../AdvancedPanel";
 import { ChartPanel } from "../ChartPanel";
 import { CheckboxField, NumberField, SelectField, SliderField } from "../Field";

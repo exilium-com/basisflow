@@ -1,4 +1,3 @@
-import React from "react";
 import { PINNED_BUCKETS } from "../lib/assetsModel";
 import { buildAreaPath, buildLinePath, getChartFrame } from "../lib/chart";
 import { colorVars } from "../lib/colors";

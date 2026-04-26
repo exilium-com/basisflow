@@ -16,10 +16,6 @@ export function usd(value: number, digits = 0) {
   }).format(value || 0);
 }
 
-export function percent(value: number, digits = 1) {
-  return `${roundTo(value || 0, digits)}%`;
-}
-
 export function readNumber<T extends number | null>(value: unknown, fallback: T): T;
 export function readNumber(value: unknown, fallback?: number): number;
 export function readNumber(value: unknown, fallback: number | null = 0) {
@@ -33,12 +29,4 @@ export function readNumber(value: unknown, fallback: number | null = 0) {
   }
 
   return fallback;
-}
-
-export function escapeHtml(value: unknown) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
 }

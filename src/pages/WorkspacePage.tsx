@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { AssetsSection } from "../components/workspace/AssetsSection";
 import { ExpensesSection } from "../components/workspace/ExpensesSection";
 import { IncomeSection } from "../components/workspace/IncomeSection";

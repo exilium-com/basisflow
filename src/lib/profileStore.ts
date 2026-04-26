@@ -23,12 +23,12 @@ export type WorkspaceProfile = {
   document: WorkspaceProfileDocument;
 };
 
-export type ProfileStore = {
+type ProfileStore = {
   activeProfileName: string;
   profiles: WorkspaceProfile[];
 };
 
-export type ProfileStoreAction =
+type ProfileStoreAction =
   | { type: "create"; name: string }
   | { type: "select"; name: string }
   | { type: "duplicate"; sourceName: string }
@@ -89,7 +89,7 @@ function setProfileDocument(
   }
 }
 
-export function createDefaultProfileDocument(): WorkspaceProfileDocument {
+function createDefaultProfileDocument(): WorkspaceProfileDocument {
   return {
     income: structuredClone(DEFAULT_INCOME),
     mortgage: structuredClone(DEFAULT_MORTGAGE_STATE),
@@ -100,7 +100,7 @@ export function createDefaultProfileDocument(): WorkspaceProfileDocument {
   };
 }
 
-export function normalizeProfileDocument(rawDocument: unknown): WorkspaceProfileDocument {
+function normalizeProfileDocument(rawDocument: unknown): WorkspaceProfileDocument {
   const document = asRecord(rawDocument);
   const fallback = createDefaultProfileDocument();
 

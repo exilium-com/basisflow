@@ -80,39 +80,10 @@ export function getMortgageYearPropertyTax(summary: MortgageSummary) {
   return (summary.monthlyTax ?? 0) * 12;
 }
 
-export function getMortgageMonthlyPaymentForYear(scenario: MortgageScenario, year = 0) {
-  if (scenario.kind === "rent") {
-    const growthRate = scenario.rentGrowthRate / 100;
-    return scenario.totalMonthlyPayment * Math.pow(1 + growthRate, Math.max(year, 0));
-  }
-
-  return (
-    getMortgageScheduleRowForYear(scenario, year)?.payment ??
-    scenario.monthlyTax + scenario.monthlyInsurance + scenario.monthlyHoa
-  );
-}
-
-export function getMortgagePrincipalInterestForYear(scenario: MortgageScenario, year = 0) {
-  const row = getMortgageScheduleRowForYear(scenario, year);
-  return row ? row.principal + row.interest : 0;
-}
-
 export function getMortgagePrincipalForYear(scenario: MortgageScenario, year = 0) {
   return getMortgageScheduleRowForYear(scenario, year)?.principal ?? 0;
 }
 
 export function getMortgageInterestForYear(scenario: MortgageScenario, year = 0) {
   return getMortgageScheduleRowForYear(scenario, year)?.interest ?? 0;
-}
-
-export function getMortgageRateForYear(scenario: MortgageScenario, year = 0) {
-  if (scenario.kind === "rent") {
-    return 0;
-  }
-
-  if (!scenario.isArm || !scenario.armDetails) {
-    return scenario.primaryRate;
-  }
-
-  return year >= scenario.armDetails.resetYears ? scenario.armDetails.adjustedRate : scenario.primaryRate;
 }

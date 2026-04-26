@@ -1,4 +1,3 @@
-import React from "react";
 import { DollarPercentField, NumberField, SelectField } from "../Field";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { WorkspaceMetricSplit } from "./WorkspaceMetricSplit";

@@ -105,37 +105,6 @@
     display: none;
   }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.95rem;
-  }
-
-  th,
-  td {
-    padding: 10px 8px;
-    border-bottom: 1px solid var(--line-soft);
-    text-align: left;
-    vertical-align: top;
-  }
-
-  th {
-    color: var(--ink-soft);
-    font-size: 0.8rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  td:not(:first-child),
-  th:not(:first-child) {
-    text-align: right;
-  }
-
-  tbody tr:last-child td {
-    border-bottom: 0;
-  }
-
   input::placeholder,
   textarea::placeholder {
     color: var(--ink-soft);
@@ -168,10 +137,6 @@
 
   .action-button:focus-visible {
     outline: none;
-  }
-
-  .trim-last-table-row tbody tr:last-child td {
-    border-bottom: 0;
   }
 
   .hide-scrollbar {
