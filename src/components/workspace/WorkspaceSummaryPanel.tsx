@@ -5,10 +5,16 @@ import { CheckboxField, NumberField, SelectField, SliderField } from "../Field";
 import { MonthlyCashFlowPanel } from "../ProjectionCashFlowPanel";
 import { NetWorthChart } from "../ProjectionLineCharts";
 import { SegmentedToggle } from "../SegmentedToggle";
+import { MetricDelta } from "../MetricDelta";
 import { netWorthChartLegend } from "../../lib/colors";
 import { usd } from "../../lib/format";
 import { type ProjectionResults } from "../../lib/projectionCalculation";
-import { toDisplayValue, type Projection, type ProjectionDisplayMode, type ProjectionState } from "../../lib/projectionState";
+import {
+  toDisplayValue,
+  type Projection,
+  type ProjectionDisplayMode,
+  type ProjectionState,
+} from "../../lib/projectionState";
 import { type MonthlyCashFlow, type ProjectionRow } from "../../lib/projectionUtils";
 import { buttonTextClass, labelTextClass, smallCapsTextClass } from "../../lib/text";
 
@@ -23,12 +29,22 @@ type SummaryRow = {
   annualValue: number;
 };
 
+type SummaryComparison = {
+  netWorth: number;
+  profileName: string;
+  rows: SummaryRow[];
+};
+
 type WorkspaceSummaryPanelProps = {
+  comparisonMonthlyCashFlow?: MonthlyCashFlow | null;
+  comparisonProjection?: Projection | null;
+  comparisonProjectionResults?: ProjectionResults | null;
   currentRow: ProjectionRow;
   monthlyCashFlow: MonthlyCashFlow;
   projection: Projection;
   projectionResults: ProjectionResults;
   projectionState: ProjectionState;
+  summaryComparison?: SummaryComparison | null;
   selectedYearLabel: string;
   topLevelSummaryRows: SummaryRow[];
   matchRate: number;
@@ -39,35 +55,55 @@ type WorkspaceSummaryPanelProps = {
   onUpdateProjectionState: (patch: Partial<ProjectionState>) => void;
 };
 
-function SummaryLinkRow({ href, label, annualValue }: SummaryRow) {
+function SummaryLinkRow({
+  annualComparisonValue,
+  href,
+  label,
+  annualValue,
+}: SummaryRow & { annualComparisonValue?: number }) {
   const [period, setPeriod] = useState<"annual" | "monthly">("annual");
   const value = usd(period === "monthly" ? annualValue / 12 : annualValue);
+  const deltaValue =
+    annualComparisonValue == null
+      ? null
+      : period === "monthly"
+        ? (annualValue - annualComparisonValue) / 12
+        : annualValue - annualComparisonValue;
 
   return (
-    <div className="flex items-baseline gap-2 border-t border-(--line) py-4">
+    <div className="flex items-start gap-2 border-t border-(--line) py-4">
       <a href={href} className={`${labelTextClass} flex-1 hover:text-(--ink)`}>
         {label}
       </a>
-      <a href={href} className="font-bold">
-        {value}
-      </a>
-      <button
-        type="button"
-        className={`${labelTextClass} hover:text-(--ink) transition`}
-        onClick={() => setPeriod(period === "annual" ? "monthly" : "annual")}
-      >
-        {period === "monthly" ? "/ month" : "/ year"}
-      </button>
+      <div className="grid justify-items-end">
+        <div className="flex items-baseline gap-2">
+          <a href={href} className="font-bold">
+            {value}
+          </a>
+          <button
+            type="button"
+            className={`${labelTextClass} transition hover:text-(--ink)`}
+            onClick={() => setPeriod(period === "annual" ? "monthly" : "annual")}
+          >
+            {period === "monthly" ? "/ month" : "/ year"}
+          </button>
+        </div>
+        {deltaValue == null ? null : <MetricDelta value={deltaValue} />}
+      </div>
     </div>
   );
 }
 
 export function WorkspaceSummaryPanel({
+  comparisonMonthlyCashFlow,
+  comparisonProjection,
+  comparisonProjectionResults,
   currentRow,
   monthlyCashFlow,
   projection,
   projectionResults,
   projectionState,
+  summaryComparison,
   selectedYearLabel,
   topLevelSummaryRows,
   matchRate,
@@ -78,27 +114,47 @@ export function WorkspaceSummaryPanel({
   onUpdateProjectionState,
 }: WorkspaceSummaryPanelProps) {
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
+  const netWorth = toDisplayValue(currentRow.netWorth, projection.currentYear, projection);
+  const netWorthDelta = summaryComparison ? netWorth - summaryComparison.netWorth : null;
+  const comparisonRowsByHref = new Map((summaryComparison?.rows ?? []).map((row) => [row.href, row]));
   const cashFlowTitle =
     projection.currentYear === 0 ? "Monthly Cash Flow Today" : `Monthly Cash Flow in Year ${projection.currentYear}`;
 
   const summaryBody = (
     <>
       {topLevelSummaryRows.map((row) => (
-        <SummaryLinkRow key={row.href} {...row} />
+        <SummaryLinkRow
+          key={row.href}
+          {...row}
+          annualComparisonValue={summaryComparison ? (comparisonRowsByHref.get(row.href)?.annualValue ?? 0) : undefined}
+        />
       ))}
 
       <div className="grid gap-4 py-4">
         <ChartPanel title={cashFlowTitle}>
-          <MonthlyCashFlowPanel items={monthlyCashFlow.items} netFlow={monthlyCashFlow.netFlow} />
+          <MonthlyCashFlowPanel
+            comparison={comparisonMonthlyCashFlow}
+            items={monthlyCashFlow.items}
+            netFlow={monthlyCashFlow.netFlow}
+          />
         </ChartPanel>
 
         <ChartPanel
           title="Net worth"
-          legend={netWorthChartLegend.filter(
-            (item) => item.label !== "RSUs" || projection.includeVestedRsusInNetWorth,
-          )}
+          legend={[
+            ...netWorthChartLegend.filter((item) => item.label !== "RSUs" || projection.includeVestedRsusInNetWorth),
+            ...(comparisonProjectionResults ? [{ label: "Compare", color: "var(--clay)" }] : []),
+          ]}
         >
           <NetWorthChart
+            comparison={
+              comparisonProjection && comparisonProjectionResults
+                ? {
+                    projection: comparisonProjection,
+                    results: comparisonProjectionResults,
+                  }
+                : null
+            }
             projection={projection}
             results={projectionResults}
             currentYear={projection.currentYear}
@@ -106,11 +162,7 @@ export function WorkspaceSummaryPanel({
         </ChartPanel>
       </div>
 
-      <AdvancedPanel
-        id="workspaceParameters"
-        title="Parameters"
-        defaultOpen={false}
-      >
+      <AdvancedPanel id="workspaceParameters" title="Parameters" defaultOpen={false}>
         <div className="grid gap-4 sm:grid-cols-2">
           <NumberField
             label="Match rate"
@@ -192,9 +244,13 @@ export function WorkspaceSummaryPanel({
             <div className={smallCapsTextClass}>
               {`Net Worth ${selectedYearLabel === "Today" ? "Today" : `In ${selectedYearLabel}`}`}
             </div>
-            <strong className="font-serif text-3xl text-(--teal) sm:text-4xl">
-              {usd(toDisplayValue(currentRow.netWorth, projection.currentYear, projection))}
-            </strong>
+            <strong className="font-serif text-3xl text-(--teal) sm:text-4xl">{usd(netWorth)}</strong>
+            {summaryComparison && netWorthDelta !== null ? (
+              <div className="flex items-baseline gap-2">
+                <MetricDelta value={netWorthDelta} />
+                <span className={labelTextClass}>vs {summaryComparison.profileName}</span>
+              </div>
+            ) : null}
           </div>
           <div className="shrink-0 lg:hidden">
             <SegmentedToggle
@@ -248,7 +304,7 @@ export function WorkspaceSummaryPanel({
       </div>
 
       <div className="hidden lg:block">{summaryBody}</div>
-      {mobileSummaryOpen ? <div className="bg-(--white) border-b border-(--line) lg:hidden">{summaryBody}</div> : null}
+      {mobileSummaryOpen ? <div className="border-b border-(--line) bg-(--white) lg:hidden">{summaryBody}</div> : null}
     </div>
   );
 }

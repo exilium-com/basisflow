@@ -11,6 +11,7 @@ import { type ProjectionRow } from "../../lib/projectionUtils";
 import { labelTextClass } from "../../lib/text";
 
 type ExpensesSectionProps = {
+  comparisonValuesById?: Record<string, number>;
   expenseState: ExpensesState;
   expenseGrowthRate: number;
   expenseOverrides: Record<string, ProjectionExpenseOverride>;
@@ -24,6 +25,7 @@ type ExpensesSectionProps = {
 };
 
 export function ExpensesSection({
+  comparisonValuesById,
   expenseState,
   expenseGrowthRate,
   expenseOverrides,
@@ -35,6 +37,8 @@ export function ExpensesSection({
   onUpdateExpense,
   onUpdateExpenseOverride,
 }: ExpensesSectionProps) {
+  const hasComparisonValues = comparisonValuesById != null;
+
   return (
     <WorkspaceSection
       id="expenses"
@@ -53,6 +57,13 @@ export function ExpensesSection({
         {expenseState.expenses.map((expense) => {
           const override = expenseOverrides[expense.id];
           const showsGrowthOverride = expense.frequency !== "one_off";
+          const value = toDisplayValue(
+            currentRow.expenseSnapshotsById[expense.id]?.amount ?? expense.amount ?? 0,
+            projection.currentYear,
+            projection,
+          );
+          const comparisonValue =
+            hasComparisonValues && expense.id in comparisonValuesById ? comparisonValuesById[expense.id] : 0;
 
           return (
             <RowItem
@@ -114,14 +125,9 @@ export function ExpensesSection({
                 onValueChange={(value) => onUpdateExpense(expense.id, { amount: value })}
               />
               <ProjectedValueDisplay
+                deltaValue={hasComparisonValues ? value - comparisonValue : undefined}
                 label={selectedYearLabel}
-                value={usd(
-                  toDisplayValue(
-                    currentRow.expenseSnapshotsById[expense.id]?.amount ?? expense.amount ?? 0,
-                    projection.currentYear,
-                    projection,
-                  ),
-                )}
+                value={usd(value)}
               />
             </RowItem>
           );

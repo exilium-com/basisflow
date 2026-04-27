@@ -13,6 +13,13 @@ import { type TaxConfig } from "../../lib/taxConfig";
 import { labelTextClass, smallCapsTextClass } from "../../lib/text";
 
 type TaxesSectionProps = {
+  comparisonMetrics?: {
+    californiaTax: number;
+    federalTax: number;
+    ficaAndSdi: number;
+    propertyTax: number;
+    totalTaxWithProperty: number;
+  } | null;
   federalBrackets: string;
   income: ResolvedIncome;
   incomeResults: IncomeResults;
@@ -45,6 +52,7 @@ function TaxFieldGroup({ title, divided = false, children }: TaxFieldGroupProps)
 }
 
 export function TaxesSection({
+  comparisonMetrics,
   federalBrackets,
   income,
   incomeResults,
@@ -66,12 +74,34 @@ export function TaxesSection({
     <WorkspaceSection id="taxes" index="03" title="Taxes" summary="Deduction Logic">
       <WorkspaceMetricSplit
         metrics={{
-          primaryItem: { label: "Total tax", value: usd(totalTaxWithProperty) },
+          primaryItem: {
+            deltaValue: comparisonMetrics ? totalTaxWithProperty - comparisonMetrics.totalTaxWithProperty : undefined,
+            label: "Total tax",
+            value: usd(totalTaxWithProperty),
+          },
           items: [
-            { label: "Federal tax", value: usd(incomeResults.federalTax) },
-            { label: "California tax", value: usd(incomeResults.californiaTax) },
-            { label: "FICA + CA SDI", value: usd(incomeResults.fica.total + incomeResults.caSdi) },
-            { label: "Property tax", value: usd(income.propertyTax) },
+            {
+              deltaValue: comparisonMetrics ? incomeResults.federalTax - comparisonMetrics.federalTax : undefined,
+              label: "Federal tax",
+              value: usd(incomeResults.federalTax),
+            },
+            {
+              deltaValue: comparisonMetrics ? incomeResults.californiaTax - comparisonMetrics.californiaTax : undefined,
+              label: "California tax",
+              value: usd(incomeResults.californiaTax),
+            },
+            {
+              deltaValue: comparisonMetrics
+                ? incomeResults.fica.total + incomeResults.caSdi - comparisonMetrics.ficaAndSdi
+                : undefined,
+              label: "FICA + CA SDI",
+              value: usd(incomeResults.fica.total + incomeResults.caSdi),
+            },
+            {
+              deltaValue: comparisonMetrics ? income.propertyTax - comparisonMetrics.propertyTax : undefined,
+              label: "Property tax",
+              value: usd(income.propertyTax),
+            },
           ],
         }}
       >

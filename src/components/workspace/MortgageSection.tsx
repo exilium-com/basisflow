@@ -11,14 +11,19 @@ import {
 import { type MortgageScenario } from "../../lib/mortgageSchedule";
 import type { DraftStateSetter } from "../../lib/state";
 
-type MetricItem = { label: string; value: string };
+type MetricItem = { label: string; value: string; metricValue?: number };
 
 type MortgageSectionProps = {
   assetOptions: Array<{ id: string; name: string }>;
+  comparisonMetrics?: {
+    monthlyHousingCostValue: number;
+    summaryItems: MetricItem[];
+  } | null;
   mortgageScenario: MortgageScenario;
   mortgageFundingBucketId: string;
   mortgageState: MortgageState;
   monthlyHousingCost: string;
+  monthlyHousingCostValue: number;
   mortgageSummaryItems: MetricItem[];
   onChangeHousingKind: (kind: MortgageOptionKind) => void;
   onUpdateLoanField: (optionId: string, field: MortgageLoanField, value: number | null) => void;
@@ -28,10 +33,12 @@ type MortgageSectionProps = {
 
 export function MortgageSection({
   assetOptions,
+  comparisonMetrics,
   mortgageScenario,
   mortgageFundingBucketId,
   mortgageState,
   monthlyHousingCost,
+  monthlyHousingCostValue,
   mortgageSummaryItems,
   onChangeHousingKind,
   onUpdateLoanField,
@@ -42,6 +49,7 @@ export function MortgageSection({
   const housingMode = isRentScenario ? "rent" : "buy";
   const loanState = mortgageState.options[0];
   const mortgageType = mortgageScenario.kind === "arm" ? "arm" : "conventional";
+  const comparisonItemsByLabel = new Map((comparisonMetrics?.summaryItems ?? []).map((item) => [item.label, item]));
 
   function handleHousingModeChange(mode: "buy" | "rent") {
     onChangeHousingKind(mode === "rent" ? "rent" : mortgageType);
@@ -52,10 +60,23 @@ export function MortgageSection({
       <WorkspaceMetricSplit
         metrics={{
           primaryItem: {
+            deltaValue: comparisonMetrics
+              ? monthlyHousingCostValue - comparisonMetrics.monthlyHousingCostValue
+              : undefined,
             label: isRentScenario ? "Estimated monthly rent" : "Estimated monthly housing cost",
             value: monthlyHousingCost,
           },
-          items: mortgageSummaryItems,
+          items: mortgageSummaryItems.map((item) => {
+            const comparisonValue = comparisonMetrics
+              ? (comparisonItemsByLabel.get(item.label)?.metricValue ?? 0)
+              : null;
+
+            return {
+              ...item,
+              deltaValue:
+                item.metricValue != null && comparisonValue != null ? item.metricValue - comparisonValue : undefined,
+            };
+          }),
         }}
       >
         <div className="flex flex-wrap items-end gap-4">

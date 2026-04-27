@@ -4,7 +4,9 @@ import { InlineRenameControl } from "./InlineRenameControl";
 
 type ProfileTabsProps = {
   activeProfileName: string | null;
+  compareProfileName?: string | null;
   profiles: string[];
+  onCompareProfile: (name: string | null) => void;
   onCreateProfile: () => void;
   onDuplicateProfile: (name: string) => void;
   onRemoveProfile: (name: string) => void;
@@ -17,7 +19,9 @@ type ProfileTabsProps = {
 
 export function ProfileTabs({
   activeProfileName,
+  compareProfileName = null,
   profiles,
+  onCompareProfile,
   onCreateProfile,
   onDuplicateProfile,
   onRemoveProfile,
@@ -218,6 +222,19 @@ export function ProfileTabs({
           >
             Duplicate
           </button>
+          {menuProfileName !== activeProfileName ? (
+            <button
+              className="block w-full bg-transparent px-4 py-2 text-left text-sm font-bold text-(--ink-soft)
+                hover:bg-(--surface) hover:text-(--ink) focus-visible:outline-none"
+              type="button"
+              onClick={() => {
+                onCompareProfile(menuProfileName === compareProfileName ? null : menuProfileName);
+                closeMenu();
+              }}
+            >
+              {menuProfileName === compareProfileName ? "Stop comparing" : "Compare"}
+            </button>
+          ) : null}
           <button
             className="block w-full bg-transparent px-4 py-2 text-left text-sm font-bold text-(--ink-soft)
               hover:bg-(--surface) hover:text-(--ink) focus-visible:outline-none"
