@@ -1,4 +1,5 @@
 import { AddMenu } from "../AddMenu";
+import { metricDeltaBetween } from "../MetricDelta";
 import { ProjectedValueDisplay } from "../ProjectedValueDisplay";
 import { RowItem } from "../RowItem";
 import { SegmentedToggle } from "../SegmentedToggle";
@@ -21,6 +22,7 @@ import { smallCapsTextClass } from "../../lib/text";
 import { type TaxConfig } from "../../lib/taxConfig";
 
 type IncomeSectionProps = {
+  comparison?: IncomeComparison | null;
   income: Income;
   incomeResults: IncomeResults;
   projection: Projection;
@@ -39,7 +41,16 @@ type IncomeSectionProps = {
   onUpdateIncomeItem: (itemId: string, patch: Partial<IncomeItem>) => void;
 };
 
+type IncomeComparison = {
+  income: Income;
+  incomeResults: IncomeResults;
+  projection: Projection;
+  retirementSavingTotal: number;
+  rsuGrowthRateById: Record<string, number>;
+};
+
 type IncomeRowProps<T extends IncomeItem> = {
+  comparisonValue?: number | null;
   item: T;
   projection: Projection;
   rsuGrowthRateById: Record<string, number>;
@@ -89,6 +100,7 @@ function projectedIncomeValue(item: IncomeItem, projection: Projection, rsuGrowt
 }
 
 function RecurringIncomeRowItem({
+  comparisonValue,
   item,
   projection,
   rsuGrowthRateById,
@@ -98,6 +110,7 @@ function RecurringIncomeRowItem({
 }: IncomeRowProps<SalaryItem | PassiveIncomeItem>) {
   const annualizedSalary = getAnnualSalaryTotal([{ amount: item.amount ?? 0, frequency: item.frequency }]);
   const isPassive = item.type === "passive";
+  const value = projectedIncomeValue(item, projection, rsuGrowthRateById);
 
   return (
     <RowItem
@@ -134,14 +147,16 @@ function RecurringIncomeRowItem({
         onValueChange={(value) => onUpdateIncomeItem(item.id, { amount: value })}
       />
       <ProjectedValueDisplay
+        delta={metricDeltaBetween(value, comparisonValue)}
         label={selectedYearLabel}
-        value={usd(projectedIncomeValue(item, projection, rsuGrowthRateById))}
+        value={usd(value)}
       />
     </RowItem>
   );
 }
 
 function RsuRowItem({
+  comparisonValue,
   item,
   projection,
   rsuGrowthRateById,
@@ -149,6 +164,8 @@ function RsuRowItem({
   onRemoveIncomeItem,
   onUpdateIncomeItem,
 }: IncomeRowProps<RsuItem>) {
+  const value = projectedIncomeValue(item, projection, rsuGrowthRateById);
+
   return (
     <RowItem
       onRemove={(event) => {
@@ -199,14 +216,16 @@ function RsuRowItem({
         onValueChange={(value) => onUpdateIncomeItem(item.id, { grantAmount: value })}
       />
       <ProjectedValueDisplay
+        delta={metricDeltaBetween(value, comparisonValue)}
         label={selectedYearLabel}
-        value={usd(projectedIncomeValue(item, projection, rsuGrowthRateById))}
+        value={usd(value)}
       />
     </RowItem>
   );
 }
 
 export function IncomeSection({
+  comparison,
   income,
   incomeResults,
   projection,
@@ -221,6 +240,22 @@ export function IncomeSection({
   onUpdateIncomeField,
   onUpdateIncomeItem,
 }: IncomeSectionProps) {
+  const comparisonItemsById = new Map((comparison?.income.incomeItems ?? []).map((item) => [item.id, item]));
+  const annualIncome = incomeResults.grossSalary + incomeResults.passiveIncome;
+
+  function comparisonIncomeValue(item: IncomeItem) {
+    if (!comparison) {
+      return null;
+    }
+
+    const comparisonItem = comparisonItemsById.get(item.id);
+    if (item.type !== comparisonItem?.type) {
+      return 0;
+    }
+
+    return projectedIncomeValue(comparisonItem, comparison.projection, comparison.rsuGrowthRateById);
+  }
+
   return (
     <WorkspaceSection
       id="income"
@@ -244,6 +279,7 @@ export function IncomeSection({
           item.type === "salary" || item.type === "passive" ? (
             <RecurringIncomeRowItem
               key={item.id}
+              comparisonValue={comparisonIncomeValue(item)}
               item={item}
               projection={projection}
               rsuGrowthRateById={rsuGrowthRateById}
@@ -254,6 +290,7 @@ export function IncomeSection({
           ) : (
             <RsuRowItem
               key={item.id}
+              comparisonValue={comparisonIncomeValue(item)}
               item={item}
               projection={projection}
               rsuGrowthRateById={rsuGrowthRateById}
@@ -268,11 +305,32 @@ export function IncomeSection({
       <div className="mt-8">
         <WorkspaceMetricSplit
           metrics={{
-            primaryItem: { label: "Monthly take-home", value: usd(incomeResults.monthlyTakeHome) },
+            primaryItem: {
+              delta: metricDeltaBetween(incomeResults.monthlyTakeHome, comparison?.incomeResults.monthlyTakeHome),
+              label: "Monthly take-home",
+              value: usd(incomeResults.monthlyTakeHome),
+            },
             items: [
-              { label: "Annual income", value: usd(incomeResults.grossSalary + incomeResults.passiveIncome) },
-              { label: "Total taxes", value: usd(incomeResults.totalTaxes) },
-              { label: "Retirement saving", value: usd(retirementSavingTotal) },
+              {
+                delta: metricDeltaBetween(
+                  annualIncome,
+                  comparison
+                    ? comparison.incomeResults.grossSalary + comparison.incomeResults.passiveIncome
+                    : undefined,
+                ),
+                label: "Annual income",
+                value: usd(annualIncome),
+              },
+              {
+                delta: metricDeltaBetween(incomeResults.totalTaxes, comparison?.incomeResults.totalTaxes, "lower"),
+                label: "Total taxes",
+                value: usd(incomeResults.totalTaxes),
+              },
+              {
+                delta: metricDeltaBetween(retirementSavingTotal, comparison?.retirementSavingTotal),
+                label: "Retirement saving",
+                value: usd(retirementSavingTotal),
+              },
             ],
           }}
         >

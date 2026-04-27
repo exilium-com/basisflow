@@ -170,12 +170,18 @@ export function writeProfileStore(store: ProfileStore) {
 }
 
 export function updateProfileStore(store: ProfileStore, action: ProfileStoreAction): ProfileStore {
+  const createdDocument = action.type === "create" ? structuredClone(getActiveProfile(store).document) : null;
+  const duplicatedDocument =
+    action.type === "duplicate"
+      ? structuredClone(store.profiles.find((profile) => profile.name === action.sourceName)?.document ?? null)
+      : null;
+
   return produce(store, (draft) => {
     switch (action.type) {
       case "create":
         draft.profiles.push({
           name: action.name,
-          document: structuredClone(getActiveProfile(draft).document),
+          document: createdDocument ?? createDefaultProfileDocument(),
         });
         draft.activeProfileName = action.name;
         break;
@@ -187,12 +193,11 @@ export function updateProfileStore(store: ProfileStore, action: ProfileStoreActi
         break;
 
       case "duplicate": {
-        const source = draft.profiles.find((profile) => profile.name === action.sourceName);
-        if (source) {
+        if (duplicatedDocument) {
           const nextName = nextProfileName(`${action.sourceName} copy`, getProfileNames(draft));
           draft.profiles.push({
             name: nextName,
-            document: structuredClone(source.document),
+            document: duplicatedDocument,
           });
           draft.activeProfileName = nextName;
         }

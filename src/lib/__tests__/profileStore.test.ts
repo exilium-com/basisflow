@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { readProfileStore, writeProfileStore } from "../profileStore";
+import { readProfileStore, updateProfileStore, writeProfileStore } from "../profileStore";
 
 class MemoryStorage implements Storage {
   private values = new Map<string, string>();
@@ -50,5 +50,14 @@ describe("profileStore", () => {
     expect(store.activeProfileName).toBe("Profile");
     expect(store.profiles.map((profile) => profile.name)).toEqual(["Profile"]);
     expect(storageKeys(localStorage)).toEqual([]);
+  });
+
+  it("clones profile documents when creating and duplicating profiles", () => {
+    const store = updateProfileStore(readProfileStore(), { type: "create", name: "Copy" });
+    const duplicated = updateProfileStore(store, { type: "duplicate", sourceName: "Copy" });
+
+    expect(duplicated.profiles.map((profile) => profile.name)).toEqual(["Profile", "Copy", "Copy copy"]);
+    expect(duplicated.profiles[0].document).not.toBe(duplicated.profiles[1].document);
+    expect(duplicated.profiles[1].document).not.toBe(duplicated.profiles[2].document);
   });
 });

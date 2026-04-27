@@ -1,3 +1,4 @@
+import { metricDeltaBetween } from "../MetricDelta";
 import { DollarPercentField, NumberField, SelectField } from "../Field";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { WorkspaceMetricSplit } from "./WorkspaceMetricSplit";
@@ -11,14 +12,19 @@ import {
 import { type MortgageScenario } from "../../lib/mortgageSchedule";
 import type { DraftStateSetter } from "../../lib/state";
 
-type MetricItem = { label: string; value: string };
+type MetricItem = { label: string; value: string; metricValue?: number };
 
 type MortgageSectionProps = {
   assetOptions: Array<{ id: string; name: string }>;
+  comparisonMetrics?: {
+    monthlyHousingCostValue: number;
+    summaryItems: MetricItem[];
+  } | null;
   mortgageScenario: MortgageScenario;
   mortgageFundingBucketId: string;
   mortgageState: MortgageState;
   monthlyHousingCost: string;
+  monthlyHousingCostValue: number;
   mortgageSummaryItems: MetricItem[];
   onChangeHousingKind: (kind: MortgageOptionKind) => void;
   onUpdateLoanField: (optionId: string, field: MortgageLoanField, value: number | null) => void;
@@ -28,10 +34,12 @@ type MortgageSectionProps = {
 
 export function MortgageSection({
   assetOptions,
+  comparisonMetrics,
   mortgageScenario,
   mortgageFundingBucketId,
   mortgageState,
   monthlyHousingCost,
+  monthlyHousingCostValue,
   mortgageSummaryItems,
   onChangeHousingKind,
   onUpdateLoanField,
@@ -42,9 +50,19 @@ export function MortgageSection({
   const housingMode = isRentScenario ? "rent" : "buy";
   const loanState = mortgageState.options[0];
   const mortgageType = mortgageScenario.kind === "arm" ? "arm" : "conventional";
+  const comparisonItemsByLabel = new Map((comparisonMetrics?.summaryItems ?? []).map((item) => [item.label, item]));
 
   function handleHousingModeChange(mode: "buy" | "rent") {
     onChangeHousingKind(mode === "rent" ? "rent" : mortgageType);
+  }
+
+  function addLowerIsBetterDelta(item: MetricItem) {
+    const comparisonValue = comparisonMetrics ? (comparisonItemsByLabel.get(item.label)?.metricValue ?? 0) : null;
+
+    return {
+      ...item,
+      delta: item.metricValue == null ? undefined : metricDeltaBetween(item.metricValue, comparisonValue, "lower"),
+    };
   }
 
   return (
@@ -52,10 +70,11 @@ export function MortgageSection({
       <WorkspaceMetricSplit
         metrics={{
           primaryItem: {
+            delta: metricDeltaBetween(monthlyHousingCostValue, comparisonMetrics?.monthlyHousingCostValue, "lower"),
             label: isRentScenario ? "Estimated monthly rent" : "Estimated monthly housing cost",
             value: monthlyHousingCost,
           },
-          items: mortgageSummaryItems,
+          items: mortgageSummaryItems.map(addLowerIsBetterDelta),
         }}
       >
         <div className="flex flex-wrap items-end gap-4">

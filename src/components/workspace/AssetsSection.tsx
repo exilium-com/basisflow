@@ -1,9 +1,15 @@
 import { ActionButton } from "../ActionButton";
 import { CheckboxField, NumberField, SelectField, TextField } from "../Field";
+import { metricDeltaBetween } from "../MetricDelta";
 import { ProjectedValueDisplay } from "../ProjectedValueDisplay";
 import { RowItem } from "../RowItem";
 import { WorkspaceSection } from "./WorkspaceSection";
-import { PINNED_BUCKETS, type AssetBucketState, type DerivedAssetsState, type AssetTaxTreatment } from "../../lib/assetsModel";
+import {
+  PINNED_BUCKETS,
+  type AssetBucketState,
+  type DerivedAssetsState,
+  type AssetTaxTreatment,
+} from "../../lib/assetsModel";
 import { usd } from "../../lib/format";
 import { toDisplayValue, type Projection, type ProjectionAssetOverride } from "../../lib/projectionState";
 import { type ProjectionRow } from "../../lib/projectionUtils";
@@ -12,6 +18,10 @@ type AssetsSectionProps = {
   assetsView: DerivedAssetsState;
   assetGrowthRate: number;
   assetOverrides: Record<string, ProjectionAssetOverride>;
+  comparison?: {
+    currentRow: ProjectionRow;
+    projection: Projection;
+  } | null;
   currentRow: ProjectionRow;
   projection: Projection;
   selectedYearLabel: string;
@@ -25,6 +35,7 @@ export function AssetsSection({
   assetsView,
   assetGrowthRate,
   assetOverrides,
+  comparison,
   currentRow,
   projection,
   selectedYearLabel,
@@ -59,6 +70,18 @@ export function AssetsSection({
           ]
             .filter(Boolean)
             .join(" • ");
+          const value = toDisplayValue(
+            bucket.linkedRsuId
+              ? (currentRow.vestedRsuBalanceById[bucket.linkedRsuId] ?? 0)
+              : (currentRow.bucketSnapshotsById[bucket.id]?.balance ?? bucket.current ?? 0),
+            projection.currentYear,
+            projection,
+          );
+          const comparisonBalance = bucket.linkedRsuId
+            ? (comparison?.currentRow.vestedRsuBalanceById[bucket.linkedRsuId] ?? 0)
+            : (comparison?.currentRow.bucketSnapshotsById[bucket.id]?.balance ?? 0);
+          const comparisonValue =
+            comparison && toDisplayValue(comparisonBalance, comparison.projection.currentYear, comparison.projection);
 
           return (
             <RowItem
@@ -135,16 +158,9 @@ export function AssetsSection({
                 onValueChange={(value) => onUpdateAssetBucket(bucket.id, { current: value })}
               />
               <ProjectedValueDisplay
+                delta={metricDeltaBetween(value, comparisonValue)}
                 label={selectedYearLabel}
-                value={usd(
-                  toDisplayValue(
-                    bucket.linkedRsuId
-                      ? (currentRow.vestedRsuBalanceById[bucket.linkedRsuId] ?? 0)
-                      : (currentRow.bucketSnapshotsById[bucket.id]?.balance ?? (bucket.current ?? 0)),
-                    projection.currentYear,
-                    projection,
-                  ),
-                )}
+                value={usd(value)}
               />
             </RowItem>
           );

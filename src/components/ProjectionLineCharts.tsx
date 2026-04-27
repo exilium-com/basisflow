@@ -1,6 +1,6 @@
 import { PINNED_BUCKETS } from "../lib/assetsModel";
 import { buildAreaPath, buildLinePath, getChartFrame } from "../lib/chart";
-import { colorVars } from "../lib/colors";
+import { colors } from "../lib/colors";
 import { clamp, usd } from "../lib/format";
 import { toDisplayValue, type Projection } from "../lib/projectionState";
 import { type ProjectionResults } from "../lib/projectionCalculation";
@@ -27,6 +27,10 @@ type ProjectionLineChartProps = {
 };
 
 type ProjectionChartProps = {
+  comparison?: {
+    projection: Projection;
+    results: ProjectionResults;
+  } | null;
   projection: Projection;
   results: ProjectionResults;
   currentYear: number;
@@ -161,7 +165,7 @@ function ProjectionLineChart({
   );
 }
 
-export function NetWorthChart({ projection, results, currentYear }: ProjectionChartProps) {
+export function NetWorthChart({ comparison, projection, results, currentYear }: ProjectionChartProps) {
   const rows = results.projection;
 
   if (!rows.length) {
@@ -170,8 +174,17 @@ export function NetWorthChart({ projection, results, currentYear }: ProjectionCh
 
   const { height, innerWidth, innerHeight, plotLeft, plotTop, plotRight, plotBottom } = getChartFrame();
   const totalYears = rows.length;
+  const comparisonRows =
+    comparison?.results.projection.map((row) => ({
+      year: row.year,
+      netWorth: toDisplayValue(row.netWorth, row.year, comparison.projection),
+    })) ?? [];
   const stackedRows = rows.map((row) => {
-    const cash = toDisplayValue(row.bucketSnapshotsById[PINNED_BUCKETS.reserveCashBucketId.id]?.balance ?? 0, row.year, projection);
+    const cash = toDisplayValue(
+      row.bucketSnapshotsById[PINNED_BUCKETS.reserveCashBucketId.id]?.balance ?? 0,
+      row.year,
+      projection,
+    );
     const retirement = toDisplayValue(
       Object.values(row.bucketSnapshotsById).reduce(
         (sum, bucket) => sum + (RETIREMENT_BUCKET_IDS.has(bucket.id) ? bucket.balance : 0),
@@ -193,7 +206,11 @@ export function NetWorthChart({ projection, results, currentYear }: ProjectionCh
       projection,
     );
     const homeEquity = toDisplayValue(row.homeEquity, row.year, projection);
-    const rsus = toDisplayValue(projection.includeVestedRsusInNetWorth ? row.vestedRsuBalance : 0, row.year, projection);
+    const rsus = toDisplayValue(
+      projection.includeVestedRsusInNetWorth ? row.vestedRsuBalance : 0,
+      row.year,
+      projection,
+    );
 
     return {
       year: row.year,
@@ -205,7 +222,9 @@ export function NetWorthChart({ projection, results, currentYear }: ProjectionCh
       netWorth: toDisplayValue(row.netWorth, row.year, projection),
     };
   });
-  const maxValue = getRoundedAxisMax(Math.max(...stackedRows.map((row) => row.netWorth), 1));
+  const maxValue = getRoundedAxisMax(
+    Math.max(...stackedRows.map((row) => row.netWorth), ...comparisonRows.map((row) => row.netWorth), 1),
+  );
 
   function pointFor(value: number, index: number) {
     return {
@@ -217,16 +236,20 @@ export function NetWorthChart({ projection, results, currentYear }: ProjectionCh
   const markerX = plotLeft + (currentYear / Math.max(projection.horizonYears, 1)) * innerWidth;
   const cashPoints = stackedRows.map((row, index) => pointFor(row.cash, index));
   const retirementPoints = stackedRows.map((row, index) => pointFor(row.cash + row.retirement, index));
-  const otherAssetPoints = stackedRows.map(
-    (row, index) => pointFor(row.cash + row.retirement + row.otherAssets, index),
+  const otherAssetPoints = stackedRows.map((row, index) =>
+    pointFor(row.cash + row.retirement + row.otherAssets, index),
   );
-  const homeEquityPoints = stackedRows.map(
-    (row, index) => pointFor(row.cash + row.retirement + row.otherAssets + row.homeEquity, index),
+  const homeEquityPoints = stackedRows.map((row, index) =>
+    pointFor(row.cash + row.retirement + row.otherAssets + row.homeEquity, index),
   );
-  const rsuPoints = stackedRows.map(
-    (row, index) => pointFor(row.cash + row.retirement + row.otherAssets + row.homeEquity + row.rsus, index),
+  const rsuPoints = stackedRows.map((row, index) =>
+    pointFor(row.cash + row.retirement + row.otherAssets + row.homeEquity + row.rsus, index),
   );
   const netWorthLine = stackedRows.map((row, index) => pointFor(row.netWorth, index));
+  const comparisonLine = comparisonRows.map((row) => ({
+    x: plotLeft + (row.year / Math.max(projection.horizonYears, 1)) * innerWidth,
+    y: plotTop + ((maxValue - row.netWorth) / maxValue) * innerHeight,
+  }));
 
   return (
     <svg className="h-auto w-full" viewBox="0 0 720 320" role="img" aria-label="Net worth over time chart">
@@ -250,20 +273,31 @@ export function NetWorthChart({ projection, results, currentYear }: ProjectionCh
           </g>
         );
       })}
-      <path d={buildAreaPath(rsuPoints, plotBottom)} fill={colorVars.chartRsus} />
-      <path d={buildAreaPath(homeEquityPoints, plotBottom)} fill={colorVars.chartHomeEquity} />
-      <path d={buildAreaPath(otherAssetPoints, plotBottom)} fill={colorVars.chartOtherAssets} />
-      <path d={buildAreaPath(retirementPoints, plotBottom)} fill={colorVars.chartRetirement} />
-      <path d={buildAreaPath(cashPoints, plotBottom)} fill={colorVars.chartCash} />
+      <path d={buildAreaPath(rsuPoints, plotBottom)} fill={colors.chartRsus} />
+      <path d={buildAreaPath(homeEquityPoints, plotBottom)} fill={colors.chartHomeEquity} />
+      <path d={buildAreaPath(otherAssetPoints, plotBottom)} fill={colors.chartOtherAssets} />
+      <path d={buildAreaPath(retirementPoints, plotBottom)} fill={colors.chartRetirement} />
+      <path d={buildAreaPath(cashPoints, plotBottom)} fill={colors.chartCash} />
       <line x1={markerX} y1={plotTop} x2={markerX} y2={plotBottom} stroke="var(--line)" strokeDasharray="5 6" />
       <path
         d={buildLinePath(netWorthLine)}
         fill="none"
-        stroke={colorVars.chartNetWorth}
+        stroke={colors.chartNetWorth}
         strokeWidth="4"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+      {comparisonLine.length ? (
+        <path
+          d={buildLinePath(comparisonLine)}
+          fill="none"
+          stroke="var(--ink)"
+          strokeWidth="3"
+          strokeDasharray="1 8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ) : null}
       <line x1={plotLeft} y1={plotBottom} x2={plotRight} y2={plotBottom} stroke="var(--line)" />
       <line x1={plotLeft} y1={plotTop} x2={plotLeft} y2={plotBottom} stroke="var(--line)" />
       {stackedRows.map((row, index: number) => {

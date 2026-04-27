@@ -15,9 +15,14 @@ import { WorkspacePage } from "./WorkspacePage";
 
 export function WorkspaceProfileShell() {
   const [profileStore, setProfileStore] = useState(readProfileStore);
+  const [compareProfileName, setCompareProfileName] = useState<string | null>(null);
   const [profileToRename, setProfileToRename] = useState<string | null>(null);
   const profileNames = getProfileNames(profileStore);
   const activeProfile = getActiveProfile(profileStore);
+  const compareProfile =
+    profileStore.profiles.find(
+      (profile) => profile.name === compareProfileName && profile.name !== activeProfile.name,
+    ) ?? null;
 
   useEffect(() => {
     writeProfileStore(profileStore);
@@ -35,6 +40,9 @@ export function WorkspaceProfileShell() {
 
   function handleSelectProfile(name: string) {
     setProfileStore((store) => updateProfileStore(store, { type: "select", name }));
+    if (name === compareProfileName) {
+      setCompareProfileName(null);
+    }
   }
 
   function handleDuplicateProfile(name: string) {
@@ -43,10 +51,17 @@ export function WorkspaceProfileShell() {
 
   function handleRemoveProfile(name: string) {
     setProfileStore((store) => updateProfileStore(store, { type: "remove", name }));
+    if (name === activeProfile.name || name === compareProfileName) {
+      setCompareProfileName(null);
+    }
   }
 
   function handleRenameProfile(currentName: string, nextName: string) {
+    const normalizedName = nextName.trim();
     setProfileStore((store) => updateProfileStore(store, { type: "rename", currentName, nextName }));
+    if (currentName === compareProfileName && normalizedName && !profileNames.includes(normalizedName)) {
+      setCompareProfileName(normalizedName);
+    }
   }
 
   function handleResetProfile(name: string) {
@@ -66,7 +81,9 @@ export function WorkspaceProfileShell() {
           </Link>
           <ProfileTabs
             activeProfileName={profileStore.activeProfileName}
+            compareProfileName={compareProfileName}
             profiles={profileNames}
+            onCompareProfile={setCompareProfileName}
             onCreateProfile={handleCreateProfile}
             onDuplicateProfile={handleDuplicateProfile}
             onRemoveProfile={handleRemoveProfile}
@@ -79,7 +96,7 @@ export function WorkspaceProfileShell() {
         </div>
       </header>
 
-      <WorkspacePage profile={activeProfile} setProfileDocument={setProfileDocument} />
+      <WorkspacePage compareProfile={compareProfile} profile={activeProfile} setProfileDocument={setProfileDocument} />
     </div>
   );
 }

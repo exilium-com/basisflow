@@ -1,4 +1,4 @@
-import { colorVars } from "./colors";
+import { colors } from "./colors";
 import { type ProjectedBucketValues } from "./assetsModel";
 import { type ExpenseSnapshot } from "./expensesModel";
 import { type IncomeSummary } from "./incomeModel";
@@ -43,7 +43,7 @@ export function buildMonthlyCashFlow({
 }) {
   const growthFactor = Math.pow(1 + projection.incomeGrowthRate, projection.currentYear);
   const grossIncome = toDisplayValue(
-    ((incomeSummary.grossSalary ?? 0) + (incomeSummary.passiveIncome ?? 0)) * growthFactor / 12,
+    (((incomeSummary.grossSalary ?? 0) + (incomeSummary.passiveIncome ?? 0)) * growthFactor) / 12,
     projection.currentYear,
     projection,
   );
@@ -59,40 +59,44 @@ export function buildMonthlyCashFlow({
   const takeHome = toDisplayValue(currentRow.takeHome / 12, projection.currentYear, projection);
   const propertyTax = toDisplayValue(annualPropertyTax / 12, projection.currentYear, projection);
   const taxes = grossIncome - retirementSaving - takeHome + propertyTax;
-  const mortgage = toDisplayValue((currentRow.mortgageLineItem - annualPropertyTax) / 12, projection.currentYear, projection);
+  const mortgage = toDisplayValue(
+    (currentRow.mortgageLineItem - annualPropertyTax) / 12,
+    projection.currentYear,
+    projection,
+  );
   const expenses = toDisplayValue(currentRow.nonHousingExpenses / 12, projection.currentYear, projection);
   const netFlow = grossIncome - taxes - retirementSaving - mortgage - expenses;
   const items: MonthlyCashFlowItem[] = [
     {
       label: "Taxes",
       value: taxes,
-      color: colorVars.chartTaxes,
+      color: colors.chartTaxes,
     },
     {
       label: "Retirement",
       value: retirementSaving,
-      color: colorVars.chartRetirementSavings,
+      color: colors.chartRetirementSavings,
     },
     {
       label: "Housing",
       value: mortgage,
-      color: colorVars.chartHousing,
+      color: colors.chartHousing,
     },
     {
       label: "Expenses",
       value: expenses,
-      color: colorVars.chartExpenses,
+      color: colors.chartExpenses,
     },
     netFlow > 0
       ? {
           label: "Excess",
           value: netFlow,
-          color: colorVars.chartExcess,
+          color: colors.chartExcess,
         }
       : {
           label: "Shortfall",
           value: -netFlow,
-          color: colorVars.chartShortfall,
+          color: colors.chartShortfall,
         },
   ].filter((item) => item.value !== 0);
 
