@@ -24,22 +24,19 @@ const displayModeOptions: Array<{ value: ProjectionDisplayMode; label: string }>
 ];
 
 type SummaryRow = {
+  better: "higher" | "lower";
   href: string;
   label: string;
   annualValue: number;
 };
 
-type SummaryComparison = {
-  netWorth: number;
-  profileName: string;
-  rows: SummaryRow[];
-};
-
 type WorkspaceSummaryComparison = {
+  currentRow: ProjectionRow;
   monthlyCashFlow: MonthlyCashFlow;
+  profileName: string;
   projection: Projection;
   projectionResults: ProjectionResults;
-  summary: SummaryComparison;
+  topLevelSummaryRows: SummaryRow[];
 };
 
 type WorkspaceSummaryPanelProps = {
@@ -61,6 +58,7 @@ type WorkspaceSummaryPanelProps = {
 
 function SummaryLinkRow({
   annualComparisonValue,
+  better,
   href,
   label,
   annualValue,
@@ -69,7 +67,7 @@ function SummaryLinkRow({
   const displayValue = period === "monthly" ? annualValue / 12 : annualValue;
   const comparisonValue =
     annualComparisonValue == null ? null : period === "monthly" ? annualComparisonValue / 12 : annualComparisonValue;
-  const delta = metricDeltaBetween(displayValue, comparisonValue, href === "#income" ? "higher" : "lower");
+  const delta = metricDeltaBetween(displayValue, comparisonValue, better);
 
   return (
     <div className="flex items-start gap-2 border-t border-(--line) py-4">
@@ -113,8 +111,11 @@ export function WorkspaceSummaryPanel({
 }: WorkspaceSummaryPanelProps) {
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
   const netWorth = toDisplayValue(currentRow.netWorth, projection.currentYear, projection);
-  const netWorthDelta = metricDeltaBetween(netWorth, comparison?.summary.netWorth);
-  const comparisonRowsByHref = new Map((comparison?.summary.rows ?? []).map((row) => [row.href, row]));
+  const comparisonNetWorth = comparison
+    ? toDisplayValue(comparison.currentRow.netWorth, comparison.projection.currentYear, comparison.projection)
+    : undefined;
+  const netWorthDelta = metricDeltaBetween(netWorth, comparisonNetWorth);
+  const comparisonRowsByHref = new Map((comparison?.topLevelSummaryRows ?? []).map((row) => [row.href, row]));
   const cashFlowTitle =
     projection.currentYear === 0 ? "Monthly Cash Flow Today" : `Monthly Cash Flow in Year ${projection.currentYear}`;
 
@@ -141,7 +142,7 @@ export function WorkspaceSummaryPanel({
           title="Net worth"
           legend={[
             ...netWorthChartLegend.filter((item) => item.label !== "RSUs" || projection.includeVestedRsusInNetWorth),
-            ...(comparison ? [{ label: `vs "${comparison.summary.profileName}"`, color: "var(--ink)" }] : []),
+            ...(comparison ? [{ label: `vs "${comparison.profileName}"`, color: "var(--ink)" }] : []),
           ]}
         >
           <NetWorthChart
@@ -246,7 +247,7 @@ export function WorkspaceSummaryPanel({
             {comparison && netWorthDelta ? (
               <div className="flex items-baseline gap-2">
                 <MetricDelta delta={netWorthDelta} />
-                <span className={labelTextClass}>vs {comparison.summary.profileName}</span>
+                <span className={labelTextClass}>vs {comparison.profileName}</span>
               </div>
             ) : null}
           </div>

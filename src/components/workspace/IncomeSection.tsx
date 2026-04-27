@@ -43,13 +43,9 @@ type IncomeSectionProps = {
 
 type IncomeComparison = {
   income: Income;
-  metrics: {
-    annualIncome: number;
-    monthlyTakeHome: number;
-    retirementSavingTotal: number;
-    totalTaxes: number;
-  };
+  incomeResults: IncomeResults;
   projection: Projection;
+  retirementSavingTotal: number;
   rsuGrowthRateById: Record<string, number>;
 };
 
@@ -310,23 +306,28 @@ export function IncomeSection({
         <WorkspaceMetricSplit
           metrics={{
             primaryItem: {
-              delta: metricDeltaBetween(incomeResults.monthlyTakeHome, comparison?.metrics.monthlyTakeHome),
+              delta: metricDeltaBetween(incomeResults.monthlyTakeHome, comparison?.incomeResults.monthlyTakeHome),
               label: "Monthly take-home",
               value: usd(incomeResults.monthlyTakeHome),
             },
             items: [
               {
-                delta: metricDeltaBetween(annualIncome, comparison?.metrics.annualIncome),
+                delta: metricDeltaBetween(
+                  annualIncome,
+                  comparison
+                    ? comparison.incomeResults.grossSalary + comparison.incomeResults.passiveIncome
+                    : undefined,
+                ),
                 label: "Annual income",
                 value: usd(annualIncome),
               },
               {
-                delta: metricDeltaBetween(incomeResults.totalTaxes, comparison?.metrics.totalTaxes, "lower"),
+                delta: metricDeltaBetween(incomeResults.totalTaxes, comparison?.incomeResults.totalTaxes, "lower"),
                 label: "Total taxes",
                 value: usd(incomeResults.totalTaxes),
               },
               {
-                delta: metricDeltaBetween(retirementSavingTotal, comparison?.metrics.retirementSavingTotal),
+                delta: metricDeltaBetween(retirementSavingTotal, comparison?.retirementSavingTotal),
                 label: "Retirement saving",
                 value: usd(retirementSavingTotal),
               },

@@ -15,11 +15,8 @@ import { labelTextClass, smallCapsTextClass } from "../../lib/text";
 
 type TaxesSectionProps = {
   comparisonMetrics?: {
-    californiaTax: number;
-    federalTax: number;
-    ficaAndSdi: number;
-    propertyTax: number;
-    totalTaxWithProperty: number;
+    income: ResolvedIncome;
+    incomeResults: IncomeResults;
   } | null;
   federalBrackets: string;
   income: ResolvedIncome;
@@ -71,34 +68,44 @@ export function TaxesSection({
 }: TaxesSectionProps) {
   const totalTaxWithProperty = incomeResults.totalTaxes + income.propertyTax;
   const ficaAndSdi = incomeResults.fica.total + incomeResults.caSdi;
+  const comparisonTotalTaxWithProperty = comparisonMetrics
+    ? comparisonMetrics.incomeResults.totalTaxes + comparisonMetrics.income.propertyTax
+    : undefined;
+  const comparisonFicaAndSdi = comparisonMetrics
+    ? comparisonMetrics.incomeResults.fica.total + comparisonMetrics.incomeResults.caSdi
+    : undefined;
 
   return (
     <WorkspaceSection id="taxes" index="03" title="Taxes" summary="Deduction Logic">
       <WorkspaceMetricSplit
         metrics={{
           primaryItem: {
-            delta: metricDeltaBetween(totalTaxWithProperty, comparisonMetrics?.totalTaxWithProperty, "lower"),
+            delta: metricDeltaBetween(totalTaxWithProperty, comparisonTotalTaxWithProperty, "lower"),
             label: "Total tax",
             value: usd(totalTaxWithProperty),
           },
           items: [
             {
-              delta: metricDeltaBetween(incomeResults.federalTax, comparisonMetrics?.federalTax, "lower"),
+              delta: metricDeltaBetween(incomeResults.federalTax, comparisonMetrics?.incomeResults.federalTax, "lower"),
               label: "Federal tax",
               value: usd(incomeResults.federalTax),
             },
             {
-              delta: metricDeltaBetween(incomeResults.californiaTax, comparisonMetrics?.californiaTax, "lower"),
+              delta: metricDeltaBetween(
+                incomeResults.californiaTax,
+                comparisonMetrics?.incomeResults.californiaTax,
+                "lower",
+              ),
               label: "California tax",
               value: usd(incomeResults.californiaTax),
             },
             {
-              delta: metricDeltaBetween(ficaAndSdi, comparisonMetrics?.ficaAndSdi, "lower"),
+              delta: metricDeltaBetween(ficaAndSdi, comparisonFicaAndSdi, "lower"),
               label: "FICA + CA SDI",
               value: usd(ficaAndSdi),
             },
             {
-              delta: metricDeltaBetween(income.propertyTax, comparisonMetrics?.propertyTax, "lower"),
+              delta: metricDeltaBetween(income.propertyTax, comparisonMetrics?.income.propertyTax, "lower"),
               label: "Property tax",
               value: usd(income.propertyTax),
             },

@@ -56,8 +56,6 @@ type BuildWorkspaceModelOptions = {
   horizonYears?: number;
 };
 
-type WorkspaceModel = ReturnType<typeof buildWorkspaceModel>;
-
 function buildWorkspaceModel(profileDocument: WorkspaceProfileDocument, options: BuildWorkspaceModelOptions = {}) {
   const income = profileDocument.income;
   const mortgageState = profileDocument.mortgage;
@@ -226,21 +224,25 @@ function buildWorkspaceModel(profileDocument: WorkspaceProfileDocument, options:
     annualPropertyTax;
   const topLevelSummaryRows = [
     {
+      better: "higher" as const,
       href: "#income",
       label: "Gross income",
       annualValue: toDisplayValue(projectedAnnualGrossIncome, projection.currentYear, projection),
     },
     {
+      better: "lower" as const,
       href: "#mortgage",
       label: "Housing cost",
       annualValue: toDisplayValue(annualHousingCost, projection.currentYear, projection),
     },
     {
+      better: "lower" as const,
       href: "#taxes",
       label: "Tax",
       annualValue: toDisplayValue(projectedAnnualTax, projection.currentYear, projection),
     },
     {
+      better: "lower" as const,
       href: "#expenses",
       label: "Spending",
       annualValue: toDisplayValue(currentRow.nonHousingExpenses, projection.currentYear, projection),
@@ -270,74 +272,6 @@ function buildWorkspaceModel(profileDocument: WorkspaceProfileDocument, options:
     rsuGrowthRateById,
     selectedYearLabel,
     topLevelSummaryRows,
-  };
-}
-
-function buildWorkspaceComparison(compareProfile: WorkspaceProfile | null | undefined, workspace: WorkspaceModel) {
-  if (!compareProfile) {
-    return null;
-  }
-
-  const comparisonWorkspace = buildWorkspaceModel(compareProfile.document, {
-    currentYear: workspace.projection.currentYear,
-    displayMode: workspace.projection.displayMode,
-    horizonYears: workspace.projection.horizonYears,
-  });
-  const comparisonProjection = comparisonWorkspace.projection;
-  const displayValue = (value: number) =>
-    toDisplayValue(value, comparisonProjection.currentYear, comparisonProjection);
-
-  return {
-    summaryPanel: {
-      monthlyCashFlow: comparisonWorkspace.monthlyCashFlow,
-      projection: comparisonProjection,
-      projectionResults: comparisonWorkspace.projectionResults,
-      summary: {
-        netWorth: displayValue(comparisonWorkspace.currentRow.netWorth),
-        profileName: compareProfile.name,
-        rows: comparisonWorkspace.topLevelSummaryRows,
-      },
-    },
-    income: {
-      income: compareProfile.document.income,
-      metrics: {
-        annualIncome: comparisonWorkspace.incomeResults.grossSalary + comparisonWorkspace.incomeResults.passiveIncome,
-        monthlyTakeHome: comparisonWorkspace.incomeResults.monthlyTakeHome,
-        retirementSavingTotal: comparisonWorkspace.retirementSavingTotal,
-        totalTaxes: comparisonWorkspace.incomeResults.totalTaxes,
-      },
-      projection: comparisonProjection,
-      rsuGrowthRateById: comparisonWorkspace.rsuGrowthRateById,
-    },
-    mortgage: {
-      monthlyHousingCostValue: comparisonWorkspace.monthlyHousingCostValue,
-      summaryItems: comparisonWorkspace.mortgageSummaryItems,
-    },
-    taxes: {
-      californiaTax: comparisonWorkspace.incomeResults.californiaTax,
-      federalTax: comparisonWorkspace.incomeResults.federalTax,
-      ficaAndSdi: comparisonWorkspace.incomeResults.fica.total + comparisonWorkspace.incomeResults.caSdi,
-      propertyTax: comparisonWorkspace.resolvedIncome.propertyTax,
-      totalTaxWithProperty: comparisonWorkspace.incomeResults.totalTaxes + comparisonWorkspace.resolvedIncome.propertyTax,
-    },
-    expenseValuesById: Object.fromEntries(
-      Object.values(comparisonWorkspace.currentRow.expenseSnapshotsById).map((expense) => [
-        expense.id,
-        displayValue(expense.amount),
-      ]),
-    ),
-    assetValuesById: Object.fromEntries(
-      Object.values(comparisonWorkspace.currentRow.bucketSnapshotsById).map((bucket) => [
-        bucket.id,
-        displayValue(bucket.balance),
-      ]),
-    ),
-    vestedRsuBalanceById: Object.fromEntries(
-      Object.entries(comparisonWorkspace.currentRow.vestedRsuBalanceById).map(([rsuId, balance]) => [
-        rsuId,
-        displayValue(balance),
-      ]),
-    ),
   };
 }
 
@@ -393,7 +327,19 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
     selectedYearLabel,
     topLevelSummaryRows,
   } = workspace;
-  const comparison = buildWorkspaceComparison(compareProfile, workspace);
+  const comparisonWorkspace = compareProfile
+    ? buildWorkspaceModel(compareProfile.document, {
+        currentYear: projection.currentYear,
+        displayMode: projection.displayMode,
+        horizonYears: projection.horizonYears,
+      })
+    : null;
+  const comparisonProjectionRow = comparisonWorkspace
+    ? {
+        currentRow: comparisonWorkspace.currentRow,
+        projection: comparisonWorkspace.projection,
+      }
+    : null;
 
   function updateTaxConfig(patch: Partial<TaxConfig>) {
     setTaxEditorStatus("");
@@ -589,7 +535,18 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
       <WorkspaceLayout
         summary={
           <WorkspaceSummaryPanel
-            comparison={comparison?.summaryPanel}
+            comparison={
+              comparisonWorkspace && compareProfile
+                ? {
+                    currentRow: comparisonWorkspace.currentRow,
+                    monthlyCashFlow: comparisonWorkspace.monthlyCashFlow,
+                    profileName: compareProfile.name,
+                    projection: comparisonWorkspace.projection,
+                    projectionResults: comparisonWorkspace.projectionResults,
+                    topLevelSummaryRows: comparisonWorkspace.topLevelSummaryRows,
+                  }
+                : null
+            }
             currentRow={currentRow}
             monthlyCashFlow={monthlyCashFlow}
             projection={projection}
@@ -607,7 +564,17 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
         }
       >
         <IncomeSection
-          comparison={comparison?.income}
+          comparison={
+            comparisonWorkspace && compareProfile
+              ? {
+                  income: compareProfile.document.income,
+                  incomeResults: comparisonWorkspace.incomeResults,
+                  projection: comparisonWorkspace.projection,
+                  retirementSavingTotal: comparisonWorkspace.retirementSavingTotal,
+                  rsuGrowthRateById: comparisonWorkspace.rsuGrowthRateById,
+                }
+              : null
+          }
           income={income}
           incomeResults={incomeResults}
           projection={projection}
@@ -625,7 +592,14 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
 
         <MortgageSection
           assetOptions={assetOptions}
-          comparisonMetrics={comparison?.mortgage}
+          comparisonMetrics={
+            comparisonWorkspace
+              ? {
+                  monthlyHousingCostValue: comparisonWorkspace.monthlyHousingCostValue,
+                  summaryItems: comparisonWorkspace.mortgageSummaryItems,
+                }
+              : null
+          }
           mortgageScenario={mortgageScenario}
           mortgageFundingBucketId={effectiveMortgageFundingBucketId}
           mortgageState={mortgageState}
@@ -641,7 +615,14 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
         />
 
         <TaxesSection
-          comparisonMetrics={comparison?.taxes}
+          comparisonMetrics={
+            comparisonWorkspace
+              ? {
+                  income: comparisonWorkspace.resolvedIncome,
+                  incomeResults: comparisonWorkspace.incomeResults,
+                }
+              : null
+          }
           federalBrackets={federalBrackets}
           income={resolvedIncome}
           incomeResults={incomeResults}
@@ -662,7 +643,7 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
           expenseState={expenseState}
           expenseGrowthRate={projectionState.expenseGrowthRate}
           expenseOverrides={projectionState.expenseOverrides}
-          comparisonValuesById={comparison?.expenseValuesById}
+          comparison={comparisonProjectionRow}
           currentRow={currentRow}
           projection={projection}
           selectedYearLabel={selectedYearLabel}
@@ -676,8 +657,7 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
           assetsView={assetsView}
           assetGrowthRate={projectionState.assetGrowthRate}
           assetOverrides={projectionState.assetOverrides}
-          comparisonValuesById={comparison?.assetValuesById}
-          comparisonVestedRsuBalanceById={comparison?.vestedRsuBalanceById}
+          comparison={comparisonProjectionRow}
           currentRow={currentRow}
           projection={projection}
           selectedYearLabel={selectedYearLabel}

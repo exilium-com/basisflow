@@ -12,7 +12,10 @@ import { type ProjectionRow } from "../../lib/projectionUtils";
 import { labelTextClass } from "../../lib/text";
 
 type ExpensesSectionProps = {
-  comparisonValuesById?: Record<string, number>;
+  comparison?: {
+    currentRow: ProjectionRow;
+    projection: Projection;
+  } | null;
   expenseState: ExpensesState;
   expenseGrowthRate: number;
   expenseOverrides: Record<string, ProjectionExpenseOverride>;
@@ -26,7 +29,7 @@ type ExpensesSectionProps = {
 };
 
 export function ExpensesSection({
-  comparisonValuesById,
+  comparison,
   expenseState,
   expenseGrowthRate,
   expenseOverrides,
@@ -61,7 +64,13 @@ export function ExpensesSection({
             projection.currentYear,
             projection,
           );
-          const comparisonValue = comparisonValuesById && (comparisonValuesById[expense.id] ?? 0);
+          const comparisonValue =
+            comparison &&
+            toDisplayValue(
+              comparison.currentRow.expenseSnapshotsById[expense.id]?.amount ?? 0,
+              comparison.projection.currentYear,
+              comparison.projection,
+            );
 
           return (
             <RowItem

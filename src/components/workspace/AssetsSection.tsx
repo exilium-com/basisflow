@@ -18,8 +18,10 @@ type AssetsSectionProps = {
   assetsView: DerivedAssetsState;
   assetGrowthRate: number;
   assetOverrides: Record<string, ProjectionAssetOverride>;
-  comparisonValuesById?: Record<string, number>;
-  comparisonVestedRsuBalanceById?: Record<string, number>;
+  comparison?: {
+    currentRow: ProjectionRow;
+    projection: Projection;
+  } | null;
   currentRow: ProjectionRow;
   projection: Projection;
   selectedYearLabel: string;
@@ -33,8 +35,7 @@ export function AssetsSection({
   assetsView,
   assetGrowthRate,
   assetOverrides,
-  comparisonValuesById,
-  comparisonVestedRsuBalanceById,
+  comparison,
   currentRow,
   projection,
   selectedYearLabel,
@@ -76,9 +77,11 @@ export function AssetsSection({
             projection.currentYear,
             projection,
           );
-          const comparisonValue = bucket.linkedRsuId
-            ? comparisonVestedRsuBalanceById && (comparisonVestedRsuBalanceById[bucket.linkedRsuId] ?? 0)
-            : comparisonValuesById && (comparisonValuesById[bucket.id] ?? 0);
+          const comparisonBalance = bucket.linkedRsuId
+            ? (comparison?.currentRow.vestedRsuBalanceById[bucket.linkedRsuId] ?? 0)
+            : (comparison?.currentRow.bucketSnapshotsById[bucket.id]?.balance ?? 0);
+          const comparisonValue =
+            comparison && toDisplayValue(comparisonBalance, comparison.projection.currentYear, comparison.projection);
 
           return (
             <RowItem
