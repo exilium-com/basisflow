@@ -1,3 +1,4 @@
+import { metricDeltaBetween } from "../MetricDelta";
 import { DollarPercentField, NumberField, SelectField } from "../Field";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { WorkspaceMetricSplit } from "./WorkspaceMetricSplit";
@@ -55,28 +56,25 @@ export function MortgageSection({
     onChangeHousingKind(mode === "rent" ? "rent" : mortgageType);
   }
 
+  function addLowerIsBetterDelta(item: MetricItem) {
+    const comparisonValue = comparisonMetrics ? (comparisonItemsByLabel.get(item.label)?.metricValue ?? 0) : null;
+
+    return {
+      ...item,
+      delta: item.metricValue == null ? undefined : metricDeltaBetween(item.metricValue, comparisonValue, "lower"),
+    };
+  }
+
   return (
     <WorkspaceSection id="mortgage" index="02" title="Home & Mortgage" summary="Housing Cost">
       <WorkspaceMetricSplit
         metrics={{
           primaryItem: {
-            deltaValue: comparisonMetrics
-              ? monthlyHousingCostValue - comparisonMetrics.monthlyHousingCostValue
-              : undefined,
+            delta: metricDeltaBetween(monthlyHousingCostValue, comparisonMetrics?.monthlyHousingCostValue, "lower"),
             label: isRentScenario ? "Estimated monthly rent" : "Estimated monthly housing cost",
             value: monthlyHousingCost,
           },
-          items: mortgageSummaryItems.map((item) => {
-            const comparisonValue = comparisonMetrics
-              ? (comparisonItemsByLabel.get(item.label)?.metricValue ?? 0)
-              : null;
-
-            return {
-              ...item,
-              deltaValue:
-                item.metricValue != null && comparisonValue != null ? item.metricValue - comparisonValue : undefined,
-            };
-          }),
+          items: mortgageSummaryItems.map(addLowerIsBetterDelta),
         }}
       >
         <div className="flex flex-wrap items-end gap-4">

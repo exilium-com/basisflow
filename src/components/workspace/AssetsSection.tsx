@@ -1,5 +1,6 @@
 import { ActionButton } from "../ActionButton";
 import { CheckboxField, NumberField, SelectField, TextField } from "../Field";
+import { metricDeltaBetween } from "../MetricDelta";
 import { ProjectedValueDisplay } from "../ProjectedValueDisplay";
 import { RowItem } from "../RowItem";
 import { WorkspaceSection } from "./WorkspaceSection";
@@ -43,7 +44,6 @@ export function AssetsSection({
   onUpdateAssetOverride,
 }: AssetsSectionProps) {
   const reserveCashBucketId = PINNED_BUCKETS.reserveCashBucketId.id;
-  const hasComparisonValues = comparisonValuesById != null || comparisonVestedRsuBalanceById != null;
 
   return (
     <WorkspaceSection
@@ -77,8 +77,8 @@ export function AssetsSection({
             projection,
           );
           const comparisonValue = bucket.linkedRsuId
-            ? (comparisonVestedRsuBalanceById?.[bucket.linkedRsuId] ?? 0)
-            : (comparisonValuesById?.[bucket.id] ?? 0);
+            ? comparisonVestedRsuBalanceById && (comparisonVestedRsuBalanceById[bucket.linkedRsuId] ?? 0)
+            : comparisonValuesById && (comparisonValuesById[bucket.id] ?? 0);
 
           return (
             <RowItem
@@ -155,7 +155,7 @@ export function AssetsSection({
                 onValueChange={(value) => onUpdateAssetBucket(bucket.id, { current: value })}
               />
               <ProjectedValueDisplay
-                deltaValue={hasComparisonValues ? value - comparisonValue : undefined}
+                delta={metricDeltaBetween(value, comparisonValue)}
                 label={selectedYearLabel}
                 value={usd(value)}
               />

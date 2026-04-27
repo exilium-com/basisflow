@@ -56,6 +56,8 @@ type BuildWorkspaceModelOptions = {
   horizonYears?: number;
 };
 
+type WorkspaceModel = ReturnType<typeof buildWorkspaceModel>;
+
 function buildWorkspaceModel(profileDocument: WorkspaceProfileDocument, options: BuildWorkspaceModelOptions = {}) {
   const income = profileDocument.income;
   const mortgageState = profileDocument.mortgage;
@@ -271,6 +273,74 @@ function buildWorkspaceModel(profileDocument: WorkspaceProfileDocument, options:
   };
 }
 
+function buildWorkspaceComparison(compareProfile: WorkspaceProfile | null | undefined, workspace: WorkspaceModel) {
+  if (!compareProfile) {
+    return null;
+  }
+
+  const comparisonWorkspace = buildWorkspaceModel(compareProfile.document, {
+    currentYear: workspace.projection.currentYear,
+    displayMode: workspace.projection.displayMode,
+    horizonYears: workspace.projection.horizonYears,
+  });
+  const comparisonProjection = comparisonWorkspace.projection;
+  const displayValue = (value: number) =>
+    toDisplayValue(value, comparisonProjection.currentYear, comparisonProjection);
+
+  return {
+    summaryPanel: {
+      monthlyCashFlow: comparisonWorkspace.monthlyCashFlow,
+      projection: comparisonProjection,
+      projectionResults: comparisonWorkspace.projectionResults,
+      summary: {
+        netWorth: displayValue(comparisonWorkspace.currentRow.netWorth),
+        profileName: compareProfile.name,
+        rows: comparisonWorkspace.topLevelSummaryRows,
+      },
+    },
+    income: {
+      income: compareProfile.document.income,
+      metrics: {
+        annualIncome: comparisonWorkspace.incomeResults.grossSalary + comparisonWorkspace.incomeResults.passiveIncome,
+        monthlyTakeHome: comparisonWorkspace.incomeResults.monthlyTakeHome,
+        retirementSavingTotal: comparisonWorkspace.retirementSavingTotal,
+        totalTaxes: comparisonWorkspace.incomeResults.totalTaxes,
+      },
+      projection: comparisonProjection,
+      rsuGrowthRateById: comparisonWorkspace.rsuGrowthRateById,
+    },
+    mortgage: {
+      monthlyHousingCostValue: comparisonWorkspace.monthlyHousingCostValue,
+      summaryItems: comparisonWorkspace.mortgageSummaryItems,
+    },
+    taxes: {
+      californiaTax: comparisonWorkspace.incomeResults.californiaTax,
+      federalTax: comparisonWorkspace.incomeResults.federalTax,
+      ficaAndSdi: comparisonWorkspace.incomeResults.fica.total + comparisonWorkspace.incomeResults.caSdi,
+      propertyTax: comparisonWorkspace.resolvedIncome.propertyTax,
+      totalTaxWithProperty: comparisonWorkspace.incomeResults.totalTaxes + comparisonWorkspace.resolvedIncome.propertyTax,
+    },
+    expenseValuesById: Object.fromEntries(
+      Object.values(comparisonWorkspace.currentRow.expenseSnapshotsById).map((expense) => [
+        expense.id,
+        displayValue(expense.amount),
+      ]),
+    ),
+    assetValuesById: Object.fromEntries(
+      Object.values(comparisonWorkspace.currentRow.bucketSnapshotsById).map((bucket) => [
+        bucket.id,
+        displayValue(bucket.balance),
+      ]),
+    ),
+    vestedRsuBalanceById: Object.fromEntries(
+      Object.entries(comparisonWorkspace.currentRow.vestedRsuBalanceById).map(([rsuId, balance]) => [
+        rsuId,
+        displayValue(balance),
+      ]),
+    ),
+  };
+}
+
 export function WorkspacePage({ compareProfile, profile, setProfileDocument }: WorkspacePageProps) {
   const { document: profileDocument, name: profileName } = profile;
   const income = profileDocument.income;
@@ -323,72 +393,7 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
     selectedYearLabel,
     topLevelSummaryRows,
   } = workspace;
-  const compareWorkspace = compareProfile
-    ? buildWorkspaceModel(compareProfile.document, {
-        currentYear: projection.currentYear,
-        displayMode: projection.displayMode,
-        horizonYears: projection.horizonYears,
-      })
-    : null;
-  const summaryComparison =
-    compareProfile && compareWorkspace
-      ? {
-          netWorth: toDisplayValue(
-            compareWorkspace.currentRow.netWorth,
-            compareWorkspace.projection.currentYear,
-            compareWorkspace.projection,
-          ),
-          profileName: compareProfile.name,
-          rows: compareWorkspace.topLevelSummaryRows,
-        }
-      : null;
-  const incomeComparison = compareWorkspace
-    ? {
-        annualIncome: compareWorkspace.incomeResults.grossSalary + compareWorkspace.incomeResults.passiveIncome,
-        monthlyTakeHome: compareWorkspace.incomeResults.monthlyTakeHome,
-        retirementSavingTotal: compareWorkspace.retirementSavingTotal,
-        totalTaxes: compareWorkspace.incomeResults.totalTaxes,
-      }
-    : null;
-  const mortgageComparison = compareWorkspace
-    ? {
-        monthlyHousingCostValue: compareWorkspace.monthlyHousingCostValue,
-        summaryItems: compareWorkspace.mortgageSummaryItems,
-      }
-    : null;
-  const taxComparison = compareWorkspace
-    ? {
-        californiaTax: compareWorkspace.incomeResults.californiaTax,
-        federalTax: compareWorkspace.incomeResults.federalTax,
-        ficaAndSdi: compareWorkspace.incomeResults.fica.total + compareWorkspace.incomeResults.caSdi,
-        propertyTax: compareWorkspace.resolvedIncome.propertyTax,
-        totalTaxWithProperty: compareWorkspace.incomeResults.totalTaxes + compareWorkspace.resolvedIncome.propertyTax,
-      }
-    : null;
-  const comparisonExpenseValuesById = compareWorkspace
-    ? Object.fromEntries(
-        Object.values(compareWorkspace.currentRow.expenseSnapshotsById).map((expense) => [
-          expense.id,
-          toDisplayValue(expense.amount, compareWorkspace.projection.currentYear, compareWorkspace.projection),
-        ]),
-      )
-    : undefined;
-  const comparisonAssetValuesById = compareWorkspace
-    ? Object.fromEntries(
-        Object.values(compareWorkspace.currentRow.bucketSnapshotsById).map((bucket) => [
-          bucket.id,
-          toDisplayValue(bucket.balance, compareWorkspace.projection.currentYear, compareWorkspace.projection),
-        ]),
-      )
-    : undefined;
-  const comparisonVestedRsuBalanceById = compareWorkspace
-    ? Object.fromEntries(
-        Object.entries(compareWorkspace.currentRow.vestedRsuBalanceById).map(([rsuId, balance]) => [
-          rsuId,
-          toDisplayValue(balance, compareWorkspace.projection.currentYear, compareWorkspace.projection),
-        ]),
-      )
-    : undefined;
+  const comparison = buildWorkspaceComparison(compareProfile, workspace);
 
   function updateTaxConfig(patch: Partial<TaxConfig>) {
     setTaxEditorStatus("");
@@ -584,15 +589,12 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
       <WorkspaceLayout
         summary={
           <WorkspaceSummaryPanel
-            comparisonMonthlyCashFlow={compareWorkspace?.monthlyCashFlow}
-            comparisonProjection={compareWorkspace?.projection}
-            comparisonProjectionResults={compareWorkspace?.projectionResults}
+            comparison={comparison?.summaryPanel}
             currentRow={currentRow}
             monthlyCashFlow={monthlyCashFlow}
             projection={projection}
             projectionResults={projectionResults}
             projectionState={projectionState}
-            summaryComparison={summaryComparison}
             selectedYearLabel={selectedYearLabel}
             topLevelSummaryRows={topLevelSummaryRows}
             matchRate={income.matchRate}
@@ -605,10 +607,7 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
         }
       >
         <IncomeSection
-          comparisonIncome={compareProfile?.document.income}
-          comparisonMetrics={incomeComparison}
-          comparisonRsuGrowthRateById={compareWorkspace?.rsuGrowthRateById}
-          comparisonProjection={compareWorkspace?.projection}
+          comparison={comparison?.income}
           income={income}
           incomeResults={incomeResults}
           projection={projection}
@@ -626,7 +625,7 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
 
         <MortgageSection
           assetOptions={assetOptions}
-          comparisonMetrics={mortgageComparison}
+          comparisonMetrics={comparison?.mortgage}
           mortgageScenario={mortgageScenario}
           mortgageFundingBucketId={effectiveMortgageFundingBucketId}
           mortgageState={mortgageState}
@@ -642,7 +641,7 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
         />
 
         <TaxesSection
-          comparisonMetrics={taxComparison}
+          comparisonMetrics={comparison?.taxes}
           federalBrackets={federalBrackets}
           income={resolvedIncome}
           incomeResults={incomeResults}
@@ -663,7 +662,7 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
           expenseState={expenseState}
           expenseGrowthRate={projectionState.expenseGrowthRate}
           expenseOverrides={projectionState.expenseOverrides}
-          comparisonValuesById={comparisonExpenseValuesById}
+          comparisonValuesById={comparison?.expenseValuesById}
           currentRow={currentRow}
           projection={projection}
           selectedYearLabel={selectedYearLabel}
@@ -677,8 +676,8 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
           assetsView={assetsView}
           assetGrowthRate={projectionState.assetGrowthRate}
           assetOverrides={projectionState.assetOverrides}
-          comparisonValuesById={comparisonAssetValuesById}
-          comparisonVestedRsuBalanceById={comparisonVestedRsuBalanceById}
+          comparisonValuesById={comparison?.assetValuesById}
+          comparisonVestedRsuBalanceById={comparison?.vestedRsuBalanceById}
           currentRow={currentRow}
           projection={projection}
           selectedYearLabel={selectedYearLabel}

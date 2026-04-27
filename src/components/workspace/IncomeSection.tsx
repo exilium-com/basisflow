@@ -1,4 +1,5 @@
 import { AddMenu } from "../AddMenu";
+import { metricDeltaBetween } from "../MetricDelta";
 import { ProjectedValueDisplay } from "../ProjectedValueDisplay";
 import { RowItem } from "../RowItem";
 import { SegmentedToggle } from "../SegmentedToggle";
@@ -21,15 +22,7 @@ import { smallCapsTextClass } from "../../lib/text";
 import { type TaxConfig } from "../../lib/taxConfig";
 
 type IncomeSectionProps = {
-  comparisonIncome?: Income | null;
-  comparisonMetrics?: {
-    annualIncome: number;
-    monthlyTakeHome: number;
-    retirementSavingTotal: number;
-    totalTaxes: number;
-  } | null;
-  comparisonProjection?: Projection | null;
-  comparisonRsuGrowthRateById?: Record<string, number> | null;
+  comparison?: IncomeComparison | null;
   income: Income;
   incomeResults: IncomeResults;
   projection: Projection;
@@ -48,10 +41,20 @@ type IncomeSectionProps = {
   onUpdateIncomeItem: (itemId: string, patch: Partial<IncomeItem>) => void;
 };
 
+type IncomeComparison = {
+  income: Income;
+  metrics: {
+    annualIncome: number;
+    monthlyTakeHome: number;
+    retirementSavingTotal: number;
+    totalTaxes: number;
+  };
+  projection: Projection;
+  rsuGrowthRateById: Record<string, number>;
+};
+
 type IncomeRowProps<T extends IncomeItem> = {
-  comparisonItem?: T | null;
-  comparisonProjection?: Projection | null;
-  comparisonRsuGrowthRateById?: Record<string, number> | null;
+  comparisonValue?: number | null;
   item: T;
   projection: Projection;
   rsuGrowthRateById: Record<string, number>;
@@ -100,18 +103,8 @@ function projectedIncomeValue(item: IncomeItem, projection: Projection, rsuGrowt
   );
 }
 
-function getComparisonRecurringIncomeItem(item: IncomeItem | undefined) {
-  return item?.type === "salary" || item?.type === "passive" ? item : undefined;
-}
-
-function getComparisonRsuItem(item: IncomeItem | undefined) {
-  return item?.type === "rsu" ? item : undefined;
-}
-
 function RecurringIncomeRowItem({
-  comparisonItem,
-  comparisonProjection,
-  comparisonRsuGrowthRateById,
+  comparisonValue,
   item,
   projection,
   rsuGrowthRateById,
@@ -122,12 +115,6 @@ function RecurringIncomeRowItem({
   const annualizedSalary = getAnnualSalaryTotal([{ amount: item.amount ?? 0, frequency: item.frequency }]);
   const isPassive = item.type === "passive";
   const value = projectedIncomeValue(item, projection, rsuGrowthRateById);
-  const comparisonValue =
-    comparisonProjection && comparisonRsuGrowthRateById
-      ? comparisonItem
-        ? projectedIncomeValue(comparisonItem, comparisonProjection, comparisonRsuGrowthRateById)
-        : 0
-      : null;
 
   return (
     <RowItem
@@ -164,7 +151,7 @@ function RecurringIncomeRowItem({
         onValueChange={(value) => onUpdateIncomeItem(item.id, { amount: value })}
       />
       <ProjectedValueDisplay
-        deltaValue={comparisonValue == null ? undefined : value - comparisonValue}
+        delta={metricDeltaBetween(value, comparisonValue)}
         label={selectedYearLabel}
         value={usd(value)}
       />
@@ -173,9 +160,7 @@ function RecurringIncomeRowItem({
 }
 
 function RsuRowItem({
-  comparisonItem,
-  comparisonProjection,
-  comparisonRsuGrowthRateById,
+  comparisonValue,
   item,
   projection,
   rsuGrowthRateById,
@@ -184,12 +169,6 @@ function RsuRowItem({
   onUpdateIncomeItem,
 }: IncomeRowProps<RsuItem>) {
   const value = projectedIncomeValue(item, projection, rsuGrowthRateById);
-  const comparisonValue =
-    comparisonProjection && comparisonRsuGrowthRateById
-      ? comparisonItem
-        ? projectedIncomeValue(comparisonItem, comparisonProjection, comparisonRsuGrowthRateById)
-        : 0
-      : null;
 
   return (
     <RowItem
@@ -241,7 +220,7 @@ function RsuRowItem({
         onValueChange={(value) => onUpdateIncomeItem(item.id, { grantAmount: value })}
       />
       <ProjectedValueDisplay
-        deltaValue={comparisonValue == null ? undefined : value - comparisonValue}
+        delta={metricDeltaBetween(value, comparisonValue)}
         label={selectedYearLabel}
         value={usd(value)}
       />
@@ -250,10 +229,7 @@ function RsuRowItem({
 }
 
 export function IncomeSection({
-  comparisonIncome,
-  comparisonMetrics,
-  comparisonProjection,
-  comparisonRsuGrowthRateById,
+  comparison,
   income,
   incomeResults,
   projection,
@@ -268,7 +244,21 @@ export function IncomeSection({
   onUpdateIncomeField,
   onUpdateIncomeItem,
 }: IncomeSectionProps) {
-  const comparisonItemsById = new Map((comparisonIncome?.incomeItems ?? []).map((item) => [item.id, item]));
+  const comparisonItemsById = new Map((comparison?.income.incomeItems ?? []).map((item) => [item.id, item]));
+  const annualIncome = incomeResults.grossSalary + incomeResults.passiveIncome;
+
+  function comparisonIncomeValue(item: IncomeItem) {
+    if (!comparison) {
+      return null;
+    }
+
+    const comparisonItem = comparisonItemsById.get(item.id);
+    if (item.type !== comparisonItem?.type) {
+      return 0;
+    }
+
+    return projectedIncomeValue(comparisonItem, comparison.projection, comparison.rsuGrowthRateById);
+  }
 
   return (
     <WorkspaceSection
@@ -293,9 +283,7 @@ export function IncomeSection({
           item.type === "salary" || item.type === "passive" ? (
             <RecurringIncomeRowItem
               key={item.id}
-              comparisonItem={getComparisonRecurringIncomeItem(comparisonItemsById.get(item.id))}
-              comparisonProjection={comparisonProjection}
-              comparisonRsuGrowthRateById={comparisonRsuGrowthRateById}
+              comparisonValue={comparisonIncomeValue(item)}
               item={item}
               projection={projection}
               rsuGrowthRateById={rsuGrowthRateById}
@@ -306,9 +294,7 @@ export function IncomeSection({
           ) : (
             <RsuRowItem
               key={item.id}
-              comparisonItem={getComparisonRsuItem(comparisonItemsById.get(item.id))}
-              comparisonProjection={comparisonProjection}
-              comparisonRsuGrowthRateById={comparisonRsuGrowthRateById}
+              comparisonValue={comparisonIncomeValue(item)}
               item={item}
               projection={projection}
               rsuGrowthRateById={rsuGrowthRateById}
@@ -324,29 +310,23 @@ export function IncomeSection({
         <WorkspaceMetricSplit
           metrics={{
             primaryItem: {
-              deltaValue: comparisonMetrics
-                ? incomeResults.monthlyTakeHome - comparisonMetrics.monthlyTakeHome
-                : undefined,
+              delta: metricDeltaBetween(incomeResults.monthlyTakeHome, comparison?.metrics.monthlyTakeHome),
               label: "Monthly take-home",
               value: usd(incomeResults.monthlyTakeHome),
             },
             items: [
               {
-                deltaValue: comparisonMetrics
-                  ? incomeResults.grossSalary + incomeResults.passiveIncome - comparisonMetrics.annualIncome
-                  : undefined,
+                delta: metricDeltaBetween(annualIncome, comparison?.metrics.annualIncome),
                 label: "Annual income",
-                value: usd(incomeResults.grossSalary + incomeResults.passiveIncome),
+                value: usd(annualIncome),
               },
               {
-                deltaValue: comparisonMetrics ? incomeResults.totalTaxes - comparisonMetrics.totalTaxes : undefined,
+                delta: metricDeltaBetween(incomeResults.totalTaxes, comparison?.metrics.totalTaxes, "lower"),
                 label: "Total taxes",
                 value: usd(incomeResults.totalTaxes),
               },
               {
-                deltaValue: comparisonMetrics
-                  ? retirementSavingTotal - comparisonMetrics.retirementSavingTotal
-                  : undefined,
+                delta: metricDeltaBetween(retirementSavingTotal, comparison?.metrics.retirementSavingTotal),
                 label: "Retirement saving",
                 value: usd(retirementSavingTotal),
               },

@@ -1,4 +1,4 @@
-export const colorVars = {
+export const colors = {
   ink: "var(--ink)",
   inkSoft: "var(--ink-soft)",
   line: "var(--line)",
@@ -9,7 +9,7 @@ export const colorVars = {
   tealSoft: "var(--teal-soft)",
   clay: "var(--clay)",
   claySoft: "var(--clay-soft)",
-  danger: "var(--danger)",
+  destructive: "var(--destructive)",
   chartNetWorth: "var(--chart-net-worth)",
   chartRetirement: "var(--chart-retirement)",
   chartCash: "var(--chart-cash)",
@@ -25,10 +25,10 @@ export const colorVars = {
 } as const;
 
 export const netWorthChartLegend = [
-  { label: "Net worth", color: colorVars.chartNetWorth },
-  { label: "Retirement", color: colorVars.chartRetirement },
-  { label: "Cash", color: colorVars.chartCash },
-  { label: "RSUs", color: colorVars.chartRsus },
-  { label: "Other assets", color: colorVars.chartOtherAssets },
-  { label: "Home equity", color: colorVars.chartHomeEquity },
+  { label: "Net worth", color: colors.chartNetWorth },
+  { label: "Retirement", color: colors.chartRetirement },
+  { label: "Cash", color: colors.chartCash },
+  { label: "RSUs", color: colors.chartRsus },
+  { label: "Other assets", color: colors.chartOtherAssets },
+  { label: "Home equity", color: colors.chartHomeEquity },
 ] as const;

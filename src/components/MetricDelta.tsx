@@ -1,17 +1,48 @@
+import clsx from "clsx";
 import { usd } from "../lib/format";
 
-type MetricDeltaProps = {
+export type MetricDeltaValue = {
+  good: boolean | null;
   value: number;
 };
 
+type MetricDeltaProps = {
+  delta: MetricDeltaValue;
+};
+
 export function formatMetricDelta(value: number) {
-  return value < 0 ? `(${usd(Math.abs(value))})` : usd(value);
+  if (value === 0) {
+    return usd(0);
+  }
+
+  return `${value > 0 ? "+" : "-"}${usd(Math.abs(value))}`;
 }
 
-export function MetricDelta({ value }: MetricDeltaProps) {
+export function metricDeltaBetween(
+  value: number,
+  comparisonValue: number | null | undefined,
+  better: "higher" | "lower" = "higher",
+) {
+  if (comparisonValue == null) {
+    return undefined;
+  }
+
+  const good =
+    value === comparisonValue ? null : better === "higher" ? value > comparisonValue : value < comparisonValue;
+  return { value: value - comparisonValue, good };
+}
+
+export function MetricDelta({ delta }: MetricDeltaProps) {
   return (
-    <span className={`text-xs font-bold ${value >= 0 ? "text-(--teal)" : "text-(--destructive)"}`}>
-      {formatMetricDelta(value)}
+    <span
+      className={clsx(
+        "text-xs font-bold",
+        delta.good === null && "text-(--ink-soft)",
+        delta.good === true && "text-(--teal)",
+        delta.good === false && "text-(--destructive)",
+      )}
+    >
+      {formatMetricDelta(delta.value)}
     </span>
   );
 }

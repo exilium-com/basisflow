@@ -1,6 +1,6 @@
 import { PINNED_BUCKETS } from "../lib/assetsModel";
 import { buildAreaPath, buildLinePath, getChartFrame } from "../lib/chart";
-import { colorVars } from "../lib/colors";
+import { colors } from "../lib/colors";
 import { clamp, usd } from "../lib/format";
 import { toDisplayValue, type Projection } from "../lib/projectionState";
 import { type ProjectionResults } from "../lib/projectionCalculation";
@@ -273,16 +273,16 @@ export function NetWorthChart({ comparison, projection, results, currentYear }: 
           </g>
         );
       })}
-      <path d={buildAreaPath(rsuPoints, plotBottom)} fill={colorVars.chartRsus} />
-      <path d={buildAreaPath(homeEquityPoints, plotBottom)} fill={colorVars.chartHomeEquity} />
-      <path d={buildAreaPath(otherAssetPoints, plotBottom)} fill={colorVars.chartOtherAssets} />
-      <path d={buildAreaPath(retirementPoints, plotBottom)} fill={colorVars.chartRetirement} />
-      <path d={buildAreaPath(cashPoints, plotBottom)} fill={colorVars.chartCash} />
+      <path d={buildAreaPath(rsuPoints, plotBottom)} fill={colors.chartRsus} />
+      <path d={buildAreaPath(homeEquityPoints, plotBottom)} fill={colors.chartHomeEquity} />
+      <path d={buildAreaPath(otherAssetPoints, plotBottom)} fill={colors.chartOtherAssets} />
+      <path d={buildAreaPath(retirementPoints, plotBottom)} fill={colors.chartRetirement} />
+      <path d={buildAreaPath(cashPoints, plotBottom)} fill={colors.chartCash} />
       <line x1={markerX} y1={plotTop} x2={markerX} y2={plotBottom} stroke="var(--line)" strokeDasharray="5 6" />
       <path
         d={buildLinePath(netWorthLine)}
         fill="none"
-        stroke={colorVars.chartNetWorth}
+        stroke={colors.chartNetWorth}
         strokeWidth="4"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -291,9 +291,9 @@ export function NetWorthChart({ comparison, projection, results, currentYear }: 
         <path
           d={buildLinePath(comparisonLine)}
           fill="none"
-          stroke="var(--clay)"
+          stroke="var(--ink)"
           strokeWidth="3"
-          strokeDasharray="8 8"
+          strokeDasharray="1 8"
           strokeLinecap="round"
           strokeLinejoin="round"
         />

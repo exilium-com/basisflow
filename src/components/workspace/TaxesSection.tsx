@@ -2,6 +2,7 @@ import React from "react";
 import { AdvancedPanel } from "../AdvancedPanel";
 import { ActionButton } from "../ActionButton";
 import { NumberField, TextAreaField } from "../Field";
+import { metricDeltaBetween } from "../MetricDelta";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { WorkspaceMetricSplit } from "./WorkspaceMetricSplit";
 import { WorkspaceSection } from "./WorkspaceSection";
@@ -69,36 +70,35 @@ export function TaxesSection({
   onUpdateTaxConfig,
 }: TaxesSectionProps) {
   const totalTaxWithProperty = incomeResults.totalTaxes + income.propertyTax;
+  const ficaAndSdi = incomeResults.fica.total + incomeResults.caSdi;
 
   return (
     <WorkspaceSection id="taxes" index="03" title="Taxes" summary="Deduction Logic">
       <WorkspaceMetricSplit
         metrics={{
           primaryItem: {
-            deltaValue: comparisonMetrics ? totalTaxWithProperty - comparisonMetrics.totalTaxWithProperty : undefined,
+            delta: metricDeltaBetween(totalTaxWithProperty, comparisonMetrics?.totalTaxWithProperty, "lower"),
             label: "Total tax",
             value: usd(totalTaxWithProperty),
           },
           items: [
             {
-              deltaValue: comparisonMetrics ? incomeResults.federalTax - comparisonMetrics.federalTax : undefined,
+              delta: metricDeltaBetween(incomeResults.federalTax, comparisonMetrics?.federalTax, "lower"),
               label: "Federal tax",
               value: usd(incomeResults.federalTax),
             },
             {
-              deltaValue: comparisonMetrics ? incomeResults.californiaTax - comparisonMetrics.californiaTax : undefined,
+              delta: metricDeltaBetween(incomeResults.californiaTax, comparisonMetrics?.californiaTax, "lower"),
               label: "California tax",
               value: usd(incomeResults.californiaTax),
             },
             {
-              deltaValue: comparisonMetrics
-                ? incomeResults.fica.total + incomeResults.caSdi - comparisonMetrics.ficaAndSdi
-                : undefined,
+              delta: metricDeltaBetween(ficaAndSdi, comparisonMetrics?.ficaAndSdi, "lower"),
               label: "FICA + CA SDI",
-              value: usd(incomeResults.fica.total + incomeResults.caSdi),
+              value: usd(ficaAndSdi),
             },
             {
-              deltaValue: comparisonMetrics ? income.propertyTax - comparisonMetrics.propertyTax : undefined,
+              delta: metricDeltaBetween(income.propertyTax, comparisonMetrics?.propertyTax, "lower"),
               label: "Property tax",
               value: usd(income.propertyTax),
             },

@@ -1,5 +1,6 @@
 import { ActionButton } from "../ActionButton";
 import { NumberField, TextField } from "../Field";
+import { metricDeltaBetween } from "../MetricDelta";
 import { ProjectedValueDisplay } from "../ProjectedValueDisplay";
 import { RowItem } from "../RowItem";
 import { SegmentedToggle } from "../SegmentedToggle";
@@ -37,8 +38,6 @@ export function ExpensesSection({
   onUpdateExpense,
   onUpdateExpenseOverride,
 }: ExpensesSectionProps) {
-  const hasComparisonValues = comparisonValuesById != null;
-
   return (
     <WorkspaceSection
       id="expenses"
@@ -62,8 +61,7 @@ export function ExpensesSection({
             projection.currentYear,
             projection,
           );
-          const comparisonValue =
-            hasComparisonValues && expense.id in comparisonValuesById ? comparisonValuesById[expense.id] : 0;
+          const comparisonValue = comparisonValuesById && (comparisonValuesById[expense.id] ?? 0);
 
           return (
             <RowItem
@@ -125,7 +123,7 @@ export function ExpensesSection({
                 onValueChange={(value) => onUpdateExpense(expense.id, { amount: value })}
               />
               <ProjectedValueDisplay
-                deltaValue={hasComparisonValues ? value - comparisonValue : undefined}
+                delta={metricDeltaBetween(value, comparisonValue, "lower")}
                 label={selectedYearLabel}
                 value={usd(value)}
               />

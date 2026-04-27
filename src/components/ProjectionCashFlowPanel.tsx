@@ -1,7 +1,8 @@
 import clsx from "clsx";
-import { formatMetricDelta, MetricDelta } from "./MetricDelta";
+import { formatMetricDelta, metricDeltaBetween, MetricDelta } from "./MetricDelta";
 import { usd } from "../lib/format";
 import { labelTextClass } from "../lib/text";
+import { colors } from "../lib/colors";
 
 type MonthlyCashFlowItem = {
   label: string;
@@ -48,6 +49,10 @@ function describeDonutSlice(
   ].join(" ");
 }
 
+function deltaColor(good: boolean | null) {
+  return good == null ? "var(--ink-soft)" : good ? "var(--teal)" : "var(--destructive)";
+}
+
 export function MonthlyCashFlowPanel({ comparison, items, netFlow }: MonthlyCashFlowPanelProps) {
   const cx = 112;
   const cy = 112;
@@ -55,7 +60,7 @@ export function MonthlyCashFlowPanel({ comparison, items, netFlow }: MonthlyCash
   const innerRadius = 50;
   const sliceTotal = items.reduce((sum, item) => sum + item.value, 0);
   const comparisonItemsByLabel = new Map((comparison?.items ?? []).map((item) => [item.label, item]));
-  const netFlowDelta = comparison ? netFlow - comparison.netFlow : null;
+  const netFlowDelta = metricDeltaBetween(netFlow, comparison?.netFlow);
   let currentAngle = -Math.PI / 2;
 
   function getComparisonValue(item: MonthlyCashFlowItem) {
@@ -70,12 +75,20 @@ export function MonthlyCashFlowPanel({ comparison, items, netFlow }: MonthlyCash
     return comparisonItemsByLabel.get(item.label)?.value ?? 0;
   }
 
-  function getDeltaValue(item: MonthlyCashFlowItem, comparisonValue: number) {
-    if (comparison && (item.label === "Excess" || item.label === "Shortfall")) {
-      return netFlow - comparison.netFlow;
+  function betterDirection(item: MonthlyCashFlowItem) {
+    return item.label === "Retirement" || item.label === "Excess" || item.label === "Shortfall" ? "higher" : "lower";
+  }
+
+  function getItemDelta(item: MonthlyCashFlowItem) {
+    const comparisonValue = getComparisonValue(item);
+
+    if (comparisonValue == null) {
+      return undefined;
     }
 
-    return item.value - comparisonValue;
+    return item.label === "Excess" || item.label === "Shortfall"
+      ? metricDeltaBetween(netFlow, comparison?.netFlow, "higher")
+      : metricDeltaBetween(item.value, comparisonValue, betterDirection(item));
   }
 
   return (
@@ -114,7 +127,7 @@ export function MonthlyCashFlowPanel({ comparison, items, netFlow }: MonthlyCash
             x={cx}
             y={netFlowDelta == null ? cy + 10 : cy + 6}
             textAnchor="middle"
-            fill={netFlow >= 0 ? "var(--ink)" : "var(--danger)"}
+            fill={netFlow >= 0 ? colors.teal : colors.destructive}
             fontSize="18"
             fontWeight="700"
           >
@@ -125,18 +138,18 @@ export function MonthlyCashFlowPanel({ comparison, items, netFlow }: MonthlyCash
               x={cx}
               y={cy + 18}
               textAnchor="middle"
-              fill={netFlowDelta >= 0 ? "var(--teal)" : "var(--destructive)"}
+              fill={deltaColor(netFlowDelta.good)}
               fontSize="10"
               fontWeight="700"
             >
-              {formatMetricDelta(netFlowDelta)}
+              {formatMetricDelta(netFlowDelta.value)}
             </text>
           )}
         </svg>
       </div>
       <div className="grid min-w-0 flex-1 gap-2">
         {items.map((item: MonthlyCashFlowItem, index: number) => {
-          const comparisonValue = getComparisonValue(item);
+          const delta = getItemDelta(item);
 
           return (
             <div
@@ -152,7 +165,7 @@ export function MonthlyCashFlowPanel({ comparison, items, netFlow }: MonthlyCash
               </div>
               <span className="grid justify-items-end">
                 <strong>{usd(item.value)}</strong>
-                {comparisonValue == null ? null : <MetricDelta value={getDeltaValue(item, comparisonValue)} />}
+                {delta == null ? null : <MetricDelta delta={delta} />}
               </span>
             </div>
           );

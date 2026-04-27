@@ -5,7 +5,7 @@ import { CheckboxField, NumberField, SelectField, SliderField } from "../Field";
 import { MonthlyCashFlowPanel } from "../ProjectionCashFlowPanel";
 import { NetWorthChart } from "../ProjectionLineCharts";
 import { SegmentedToggle } from "../SegmentedToggle";
-import { MetricDelta } from "../MetricDelta";
+import { metricDeltaBetween, MetricDelta } from "../MetricDelta";
 import { netWorthChartLegend } from "../../lib/colors";
 import { usd } from "../../lib/format";
 import { type ProjectionResults } from "../../lib/projectionCalculation";
@@ -35,16 +35,20 @@ type SummaryComparison = {
   rows: SummaryRow[];
 };
 
+type WorkspaceSummaryComparison = {
+  monthlyCashFlow: MonthlyCashFlow;
+  projection: Projection;
+  projectionResults: ProjectionResults;
+  summary: SummaryComparison;
+};
+
 type WorkspaceSummaryPanelProps = {
-  comparisonMonthlyCashFlow?: MonthlyCashFlow | null;
-  comparisonProjection?: Projection | null;
-  comparisonProjectionResults?: ProjectionResults | null;
+  comparison?: WorkspaceSummaryComparison | null;
   currentRow: ProjectionRow;
   monthlyCashFlow: MonthlyCashFlow;
   projection: Projection;
   projectionResults: ProjectionResults;
   projectionState: ProjectionState;
-  summaryComparison?: SummaryComparison | null;
   selectedYearLabel: string;
   topLevelSummaryRows: SummaryRow[];
   matchRate: number;
@@ -62,13 +66,10 @@ function SummaryLinkRow({
   annualValue,
 }: SummaryRow & { annualComparisonValue?: number }) {
   const [period, setPeriod] = useState<"annual" | "monthly">("annual");
-  const value = usd(period === "monthly" ? annualValue / 12 : annualValue);
-  const deltaValue =
-    annualComparisonValue == null
-      ? null
-      : period === "monthly"
-        ? (annualValue - annualComparisonValue) / 12
-        : annualValue - annualComparisonValue;
+  const displayValue = period === "monthly" ? annualValue / 12 : annualValue;
+  const comparisonValue =
+    annualComparisonValue == null ? null : period === "monthly" ? annualComparisonValue / 12 : annualComparisonValue;
+  const delta = metricDeltaBetween(displayValue, comparisonValue, href === "#income" ? "higher" : "lower");
 
   return (
     <div className="flex items-start gap-2 border-t border-(--line) py-4">
@@ -78,7 +79,7 @@ function SummaryLinkRow({
       <div className="grid justify-items-end">
         <div className="flex items-baseline gap-2">
           <a href={href} className="font-bold">
-            {value}
+            {usd(displayValue)}
           </a>
           <button
             type="button"
@@ -88,22 +89,19 @@ function SummaryLinkRow({
             {period === "monthly" ? "/ month" : "/ year"}
           </button>
         </div>
-        {deltaValue == null ? null : <MetricDelta value={deltaValue} />}
+        {delta == null ? null : <MetricDelta delta={delta} />}
       </div>
     </div>
   );
 }
 
 export function WorkspaceSummaryPanel({
-  comparisonMonthlyCashFlow,
-  comparisonProjection,
-  comparisonProjectionResults,
+  comparison,
   currentRow,
   monthlyCashFlow,
   projection,
   projectionResults,
   projectionState,
-  summaryComparison,
   selectedYearLabel,
   topLevelSummaryRows,
   matchRate,
@@ -115,8 +113,8 @@ export function WorkspaceSummaryPanel({
 }: WorkspaceSummaryPanelProps) {
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
   const netWorth = toDisplayValue(currentRow.netWorth, projection.currentYear, projection);
-  const netWorthDelta = summaryComparison ? netWorth - summaryComparison.netWorth : null;
-  const comparisonRowsByHref = new Map((summaryComparison?.rows ?? []).map((row) => [row.href, row]));
+  const netWorthDelta = metricDeltaBetween(netWorth, comparison?.summary.netWorth);
+  const comparisonRowsByHref = new Map((comparison?.summary.rows ?? []).map((row) => [row.href, row]));
   const cashFlowTitle =
     projection.currentYear === 0 ? "Monthly Cash Flow Today" : `Monthly Cash Flow in Year ${projection.currentYear}`;
 
@@ -126,14 +124,14 @@ export function WorkspaceSummaryPanel({
         <SummaryLinkRow
           key={row.href}
           {...row}
-          annualComparisonValue={summaryComparison ? (comparisonRowsByHref.get(row.href)?.annualValue ?? 0) : undefined}
+          annualComparisonValue={comparison ? (comparisonRowsByHref.get(row.href)?.annualValue ?? 0) : undefined}
         />
       ))}
 
       <div className="grid gap-4 py-4">
         <ChartPanel title={cashFlowTitle}>
           <MonthlyCashFlowPanel
-            comparison={comparisonMonthlyCashFlow}
+            comparison={comparison?.monthlyCashFlow}
             items={monthlyCashFlow.items}
             netFlow={monthlyCashFlow.netFlow}
           />
@@ -143,15 +141,15 @@ export function WorkspaceSummaryPanel({
           title="Net worth"
           legend={[
             ...netWorthChartLegend.filter((item) => item.label !== "RSUs" || projection.includeVestedRsusInNetWorth),
-            ...(comparisonProjectionResults ? [{ label: "Compare", color: "var(--clay)" }] : []),
+            ...(comparison ? [{ label: `vs "${comparison.summary.profileName}"`, color: "var(--ink)" }] : []),
           ]}
         >
           <NetWorthChart
             comparison={
-              comparisonProjection && comparisonProjectionResults
+              comparison
                 ? {
-                    projection: comparisonProjection,
-                    results: comparisonProjectionResults,
+                    projection: comparison.projection,
+                    results: comparison.projectionResults,
                   }
                 : null
             }
@@ -245,10 +243,10 @@ export function WorkspaceSummaryPanel({
               {`Net Worth ${selectedYearLabel === "Today" ? "Today" : `In ${selectedYearLabel}`}`}
             </div>
             <strong className="font-serif text-3xl text-(--teal) sm:text-4xl">{usd(netWorth)}</strong>
-            {summaryComparison && netWorthDelta !== null ? (
+            {comparison && netWorthDelta ? (
               <div className="flex items-baseline gap-2">
-                <MetricDelta value={netWorthDelta} />
-                <span className={labelTextClass}>vs {summaryComparison.profileName}</span>
+                <MetricDelta delta={netWorthDelta} />
+                <span className={labelTextClass}>vs {comparison.summary.profileName}</span>
               </div>
             ) : null}
           </div>

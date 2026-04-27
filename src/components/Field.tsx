@@ -74,14 +74,7 @@ function useInputId(htmlFor?: string) {
   return htmlFor ?? resolvedId;
 }
 
-export function Field({
-  label,
-  htmlFor,
-  className,
-  labelClassName,
-  reserveLabelSpace = false,
-  children,
-}: FieldProps) {
+export function Field({ label, htmlFor, className, labelClassName, reserveLabelSpace = false, children }: FieldProps) {
   return (
     <div className={clsx("grid min-w-0 gap-1", className)}>
       {label || reserveLabelSpace ? (
@@ -97,19 +90,13 @@ export function Field({
   );
 }
 
-export function InputFrame({
-  prefix = null,
-  suffix = null,
-  invalid = false,
-  className,
-  children,
-}: InputFrameProps) {
+export function InputFrame({ prefix = null, suffix = null, invalid = false, className, children }: InputFrameProps) {
   return (
     <div
       className={clsx(
         `flex min-h-10 items-center border border-l-4 border-(--line) border-l-(--teal-soft) bg-(--white) px-4
         transition-colors focus-within:border-(--teal)`,
-        invalid && "border-(--danger) border-l-(--danger)",
+        invalid && "border-(--destructive) border-l-(--destructive)",
         className,
       )}
     >
@@ -308,14 +295,7 @@ export function TextAreaField({
   );
 }
 
-export function SliderField({
-  id,
-  label,
-  valueLabel,
-  className,
-  labelClassName,
-  ...inputProps
-}: SliderFieldProps) {
+export function SliderField({ id, label, valueLabel, className, labelClassName, ...inputProps }: SliderFieldProps) {
   const inputId = useInputId(id);
 
   return (
