@@ -142,7 +142,7 @@ export function WorkspaceSummaryPanel({
           title="Net worth"
           legend={[
             ...netWorthChartLegend.filter((item) => item.label !== "RSUs" || projection.includeVestedRsusInNetWorth),
-            ...(comparison ? [{ label: `vs "${comparison.profileName}"`, color: "var(--ink)" }] : []),
+            ...(comparison ? [{ label: `"${comparison.profileName}"`, color: "var(--ink)" }] : []),
           ]}
         >
           <NetWorthChart
@@ -245,9 +245,9 @@ export function WorkspaceSummaryPanel({
             </div>
             <strong className="font-serif text-3xl text-(--teal) sm:text-4xl">{usd(netWorth)}</strong>
             {comparison && netWorthDelta ? (
-              <div className="flex items-baseline gap-2">
+              <div>
                 <MetricDelta delta={netWorthDelta} />
-                <span className={labelTextClass}>vs {comparison.profileName}</span>
+                <span className={labelTextClass}> compared to {comparison.profileName}</span>
               </div>
             ) : null}
           </div>
