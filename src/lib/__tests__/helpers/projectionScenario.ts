@@ -57,6 +57,7 @@ export type ProjectionScenarioOptions = {
   incomeGrowthRate?: number;
   homeAppreciationRate?: number;
   includeVestedRsusInNetWorth?: boolean;
+  rsuGrowthRateById?: Record<string, number>;
   mortgageFundingBucketId?: string;
   targetCash?: number;
   taxConfig?: Partial<TaxConfig>;
@@ -391,6 +392,7 @@ export function runProjectionScenario({
   incomeGrowthRate = 0,
   homeAppreciationRate = 0,
   includeVestedRsusInNetWorth = false,
+  rsuGrowthRateById: providedRsuGrowthRateById,
   mortgageFundingBucketId = "",
   targetCash = 0,
   taxConfig = DEFAULT_CONFIG,
@@ -450,11 +452,13 @@ export function runProjectionScenario({
   const assets = createAssets(assetsState, projectionState.assetGrowthRate);
   const expenses = createExpenses(expensesState, projectionState.expenseGrowthRate);
   const projection = createProjection(projectionState);
-  const rsuGrowthRateById = Object.fromEntries(
-    assetsState.buckets
-      .filter((bucket) => bucket.linkedRsuId)
-      .map((bucket) => [bucket.linkedRsuId as string, (bucket.growth ?? projectionState.assetGrowthRate) / 100]),
-  ) as Record<string, number>;
+  const rsuGrowthRateById =
+    providedRsuGrowthRateById ??
+    (Object.fromEntries(
+      assetsState.buckets
+        .filter((bucket) => bucket.linkedRsuId)
+        .map((bucket) => [bucket.linkedRsuId as string, (bucket.growth ?? projectionState.assetGrowthRate) / 100]),
+    ) as Record<string, number>);
   const results = calculateProjection({
     incomeSummary: scenario.incomeSummary,
     mortgageSummary: scenario.mortgageSummary as MortgageSummary,

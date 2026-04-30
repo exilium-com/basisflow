@@ -7,30 +7,28 @@ import { SegmentedToggle } from "../SegmentedToggle";
 import { WorkspaceMetricSplit } from "./WorkspaceMetricSplit";
 import { WorkspaceSection } from "./WorkspaceSection";
 import { usd } from "../../lib/format";
-import { type IncomeResults, type ResolvedIncome } from "../../lib/incomeModel";
-import { type MortgageState } from "../../lib/mortgageConfig";
-import type { DraftStateSetter } from "../../lib/state";
+import { toDisplayValue, type Projection } from "../../lib/projectionState";
+import { type ProjectionRow } from "../../lib/projectionUtils";
 import { type TaxConfig } from "../../lib/taxConfig";
 import { labelTextClass, smallCapsTextClass } from "../../lib/text";
 
 type TaxesSectionProps = {
   comparisonMetrics?: {
-    income: ResolvedIncome;
-    incomeResults: IncomeResults;
+    currentRow: ProjectionRow;
+    projection: Projection;
   } | null;
+  currentRow: ProjectionRow;
   federalBrackets: string;
-  income: ResolvedIncome;
-  incomeResults: IncomeResults;
   longTermCapitalGains: string;
-  mortgageState: MortgageState;
+  projection: Projection;
   stateBrackets: string;
+  selectedYearLabel: string;
   taxConfig: TaxConfig;
   taxEditorStatus: string;
   onApplyTaxTables: () => void;
   onSetFederalBrackets: (value: string) => void;
   onSetLongTermCapitalGains: (value: string) => void;
   onSetStateBrackets: (value: string) => void;
-  setMortgageState: DraftStateSetter<MortgageState>;
   onUpdateTaxConfig: (patch: Partial<TaxConfig>) => void;
 };
 
@@ -51,28 +49,69 @@ function TaxFieldGroup({ title, divided = false, children }: TaxFieldGroupProps)
 
 export function TaxesSection({
   comparisonMetrics,
+  currentRow,
   federalBrackets,
-  income,
-  incomeResults,
   longTermCapitalGains,
-  mortgageState,
+  projection,
   stateBrackets,
+  selectedYearLabel,
   taxConfig,
   taxEditorStatus,
   onApplyTaxTables,
   onSetFederalBrackets,
   onSetLongTermCapitalGains,
   onSetStateBrackets,
-  setMortgageState,
   onUpdateTaxConfig,
 }: TaxesSectionProps) {
-  const totalTaxWithProperty = incomeResults.totalTaxes + income.propertyTax;
-  const ficaAndSdi = incomeResults.fica.total + incomeResults.caSdi;
-  const comparisonTotalTaxWithProperty = comparisonMetrics
-    ? comparisonMetrics.incomeResults.totalTaxes + comparisonMetrics.income.propertyTax
+  const totalTax = toDisplayValue(currentRow.totalTax, projection.currentYear, projection);
+  const federalTax = toDisplayValue(currentRow.federalTax, projection.currentYear, projection);
+  const californiaTax = toDisplayValue(currentRow.californiaTax, projection.currentYear, projection);
+  const ficaAndSdi = toDisplayValue(currentRow.ficaAndSdi, projection.currentYear, projection);
+  const cashFlowTax = toDisplayValue(currentRow.cashFlowTax, projection.currentYear, projection);
+  const rsuSellToCoverTax = toDisplayValue(currentRow.rsuSellToCoverTax, projection.currentYear, projection);
+  const showRsuSellToCoverTax =
+    currentRow.rsuSellToCoverTax !== 0 || (comparisonMetrics?.currentRow.rsuSellToCoverTax ?? 0) !== 0;
+  const comparisonTotalTax = comparisonMetrics
+    ? toDisplayValue(
+        comparisonMetrics.currentRow.totalTax,
+        comparisonMetrics.projection.currentYear,
+        comparisonMetrics.projection,
+      )
+    : undefined;
+  const comparisonCashFlowTax = comparisonMetrics
+    ? toDisplayValue(
+        comparisonMetrics.currentRow.cashFlowTax,
+        comparisonMetrics.projection.currentYear,
+        comparisonMetrics.projection,
+      )
+    : undefined;
+  const comparisonRsuSellToCoverTax = comparisonMetrics
+    ? toDisplayValue(
+        comparisonMetrics.currentRow.rsuSellToCoverTax,
+        comparisonMetrics.projection.currentYear,
+        comparisonMetrics.projection,
+      )
+    : undefined;
+  const comparisonFederalTax = comparisonMetrics
+    ? toDisplayValue(
+        comparisonMetrics.currentRow.federalTax,
+        comparisonMetrics.projection.currentYear,
+        comparisonMetrics.projection,
+      )
+    : undefined;
+  const comparisonCaliforniaTax = comparisonMetrics
+    ? toDisplayValue(
+        comparisonMetrics.currentRow.californiaTax,
+        comparisonMetrics.projection.currentYear,
+        comparisonMetrics.projection,
+      )
     : undefined;
   const comparisonFicaAndSdi = comparisonMetrics
-    ? comparisonMetrics.incomeResults.fica.total + comparisonMetrics.incomeResults.caSdi
+    ? toDisplayValue(
+        comparisonMetrics.currentRow.ficaAndSdi,
+        comparisonMetrics.projection.currentYear,
+        comparisonMetrics.projection,
+      )
     : undefined;
 
   return (
@@ -80,34 +119,39 @@ export function TaxesSection({
       <WorkspaceMetricSplit
         metrics={{
           primaryItem: {
-            delta: metricDeltaBetween(totalTaxWithProperty, comparisonTotalTaxWithProperty, "lower"),
-            label: "Total tax",
-            value: usd(totalTaxWithProperty),
+            delta: metricDeltaBetween(totalTax, comparisonTotalTax, "lower"),
+            label: selectedYearLabel === "Today" ? "Total tax today" : `Total tax in ${selectedYearLabel}`,
+            value: usd(totalTax),
           },
           items: [
             {
-              delta: metricDeltaBetween(incomeResults.federalTax, comparisonMetrics?.incomeResults.federalTax, "lower"),
+              delta: metricDeltaBetween(cashFlowTax, comparisonCashFlowTax, "lower"),
+              label: "Cash-flow tax",
+              value: usd(cashFlowTax),
+            },
+            ...(showRsuSellToCoverTax
+              ? [
+                  {
+                    delta: metricDeltaBetween(rsuSellToCoverTax, comparisonRsuSellToCoverTax, "lower"),
+                    label: "RSU sell-to-cover",
+                    value: usd(rsuSellToCoverTax),
+                  },
+                ]
+              : []),
+            {
+              delta: metricDeltaBetween(federalTax, comparisonFederalTax, "lower"),
               label: "Federal tax",
-              value: usd(incomeResults.federalTax),
+              value: usd(federalTax),
             },
             {
-              delta: metricDeltaBetween(
-                incomeResults.californiaTax,
-                comparisonMetrics?.incomeResults.californiaTax,
-                "lower",
-              ),
+              delta: metricDeltaBetween(californiaTax, comparisonCaliforniaTax, "lower"),
               label: "California tax",
-              value: usd(incomeResults.californiaTax),
+              value: usd(californiaTax),
             },
             {
               delta: metricDeltaBetween(ficaAndSdi, comparisonFicaAndSdi, "lower"),
               label: "FICA + CA SDI",
               value: usd(ficaAndSdi),
-            },
-            {
-              delta: metricDeltaBetween(income.propertyTax, comparisonMetrics?.income.propertyTax, "lower"),
-              label: "Property tax",
-              value: usd(income.propertyTax),
             },
           ],
         }}
@@ -132,17 +176,6 @@ export function TaxesSection({
                 step="0.5"
                 value={taxConfig.caSdiRate}
                 onValueChange={(value) => onUpdateTaxConfig({ caSdiRate: value ?? 0 })}
-              />
-              <NumberField
-                label="Property tax"
-                suffix="%"
-                value={mortgageState.propertyTaxRate}
-                step="0.1"
-                onValueChange={(value) =>
-                  setMortgageState((draft) => {
-                    draft.propertyTaxRate = value ?? 0;
-                  })
-                }
               />
             </TaxFieldGroup>
             <TaxFieldGroup title="Contribution Limits" divided>

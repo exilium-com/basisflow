@@ -145,7 +145,7 @@ function buildWorkspaceModel(profileDocument: WorkspaceProfileDocument, options:
   const currentRow =
     projectionResults.projection.find((row) => row.year === projection.currentYear) ?? projectionResults.ending;
   const selectedYearLabel = projection.currentYear === 0 ? "Today" : `Year ${projection.currentYear}`;
-  const annualHousingCost = currentRow.mortgageLineItem - annualPropertyTax;
+  const annualHousingCost = currentRow.mortgageLineItem;
   const monthlyHousingCostValue = toDisplayValue(annualHousingCost / 12, projection.currentYear, projection);
   const mortgageSummaryItems =
     mortgageScenario.kind === "rent"
@@ -163,7 +163,8 @@ function buildWorkspaceModel(profileDocument: WorkspaceProfileDocument, options:
       : (() => {
           const monthlyPrincipal = getMortgagePrincipalForYear(mortgageScenario, projection.currentYear);
           const monthlyInterest = getMortgageInterestForYear(mortgageScenario, projection.currentYear);
-          const monthlyUpkeep = annualHousingCost / 12 - monthlyPrincipal - monthlyInterest;
+          const monthlyPropertyTax = annualPropertyTax / 12;
+          const monthlyUpkeep = annualHousingCost / 12 - monthlyPrincipal - monthlyInterest - monthlyPropertyTax;
           const monthlyLabelSuffix = projection.currentYear > 0 ? `in year ${projection.currentYear}` : "today";
 
           return [
@@ -184,8 +185,8 @@ function buildWorkspaceModel(profileDocument: WorkspaceProfileDocument, options:
             },
             {
               label: "Monthly property tax",
-              value: usd(toDisplayValue(annualPropertyTax / 12, projection.currentYear, projection)),
-              metricValue: toDisplayValue(annualPropertyTax / 12, projection.currentYear, projection),
+              value: usd(toDisplayValue(monthlyPropertyTax, projection.currentYear, projection)),
+              metricValue: toDisplayValue(monthlyPropertyTax, projection.currentYear, projection),
             },
             {
               label: "Total interest",
@@ -199,7 +200,6 @@ function buildWorkspaceModel(profileDocument: WorkspaceProfileDocument, options:
     incomeSummary,
     projection,
     currentRow,
-    annualPropertyTax,
   });
   const retirementSavingTotal =
     resolvedIncome.employee401k +
@@ -207,21 +207,10 @@ function buildWorkspaceModel(profileDocument: WorkspaceProfileDocument, options:
     resolvedIncome.iraContribution +
     incomeResults.megaBackdoor +
     resolvedIncome.hsaContribution;
-  const annualRetirementContributions =
-    resolvedIncome.employee401k +
-    resolvedIncome.iraContribution +
-    incomeResults.megaBackdoor +
-    resolvedIncome.hsaContribution;
   const projectedAnnualGrossIncome =
     (resolvedIncome.grossSalary + resolvedIncome.passiveIncome) *
       Math.pow(1 + projection.incomeGrowthRate, projection.currentYear) +
     currentRow.rsuGross;
-  const projectedAnnualTax =
-    projectedAnnualGrossIncome -
-    annualRetirementContributions -
-    currentRow.takeHome -
-    currentRow.rsuNet +
-    annualPropertyTax;
   const topLevelSummaryRows = [
     {
       better: "higher" as const,
@@ -239,7 +228,7 @@ function buildWorkspaceModel(profileDocument: WorkspaceProfileDocument, options:
       better: "lower" as const,
       href: "#taxes",
       label: "Tax",
-      annualValue: toDisplayValue(projectedAnnualTax, projection.currentYear, projection),
+      annualValue: toDisplayValue(currentRow.totalTax, projection.currentYear, projection),
     },
     {
       better: "lower" as const,
@@ -267,7 +256,6 @@ function buildWorkspaceModel(profileDocument: WorkspaceProfileDocument, options:
     projection,
     projectionResults,
     reserveCashBucketId,
-    resolvedIncome,
     retirementSavingTotal,
     rsuGrowthRateById,
     selectedYearLabel,
@@ -321,7 +309,6 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
     projection,
     projectionResults,
     reserveCashBucketId,
-    resolvedIncome,
     retirementSavingTotal,
     rsuGrowthRateById,
     selectedYearLabel,
@@ -567,6 +554,7 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
           comparison={
             comparisonWorkspace && compareProfile
               ? {
+                  currentRow: comparisonWorkspace.currentRow,
                   income: compareProfile.document.income,
                   incomeResults: comparisonWorkspace.incomeResults,
                   projection: comparisonWorkspace.projection,
@@ -575,6 +563,7 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
                 }
               : null
           }
+          currentRow={currentRow}
           income={income}
           incomeResults={incomeResults}
           projection={projection}
@@ -618,24 +607,23 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
           comparisonMetrics={
             comparisonWorkspace
               ? {
-                  income: comparisonWorkspace.resolvedIncome,
-                  incomeResults: comparisonWorkspace.incomeResults,
+                  currentRow: comparisonWorkspace.currentRow,
+                  projection: comparisonWorkspace.projection,
                 }
               : null
           }
+          currentRow={currentRow}
           federalBrackets={federalBrackets}
-          income={resolvedIncome}
-          incomeResults={incomeResults}
           longTermCapitalGains={longTermCapitalGains}
-          mortgageState={mortgageState}
+          projection={projection}
           stateBrackets={stateBrackets}
+          selectedYearLabel={selectedYearLabel}
           taxConfig={taxConfig}
           taxEditorStatus={taxEditorStatus}
           onApplyTaxTables={applyTaxTables}
           onSetFederalBrackets={setFederalBrackets}
           onSetLongTermCapitalGains={setLongTermCapitalGains}
           onSetStateBrackets={setStateBrackets}
-          setMortgageState={setMortgageState}
           onUpdateTaxConfig={updateTaxConfig}
         />
 

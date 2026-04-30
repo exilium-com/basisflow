@@ -173,6 +173,18 @@ export function MortgageSection({
             />
             <NumberField
               className="sm:col-span-3"
+              label="Property tax"
+              suffix="%"
+              value={mortgageState.propertyTaxRate}
+              step="0.1"
+              onValueChange={(value) =>
+                setMortgageState((draft) => {
+                  draft.propertyTaxRate = value ?? 0;
+                })
+              }
+            />
+            <NumberField
+              className="sm:col-span-3"
               label="Maintenance"
               suffix="% / year"
               step="0.1"

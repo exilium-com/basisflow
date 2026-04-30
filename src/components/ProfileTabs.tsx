@@ -69,9 +69,20 @@ export function ProfileTabs({
 
     const containerRect = containerElement.getBoundingClientRect();
     const tabRect = tabElement.getBoundingClientRect();
+    const menuWidth = 192;
+
+    if (window.matchMedia("(max-width: 639px)").matches) {
+      return {
+        position: "fixed",
+        top: containerRect.bottom + 4,
+        right: 16,
+        left: 16,
+      };
+    }
+
     return {
       top: "100%",
-      right: containerRect.right - tabRect.right,
+      right: Math.min(Math.max(0, containerRect.right - tabRect.right), Math.max(0, containerRect.width - menuWidth)),
     };
   }
 
@@ -80,6 +91,34 @@ export function ProfileTabs({
       startRename(renameProfileName);
     }
   }, [renameProfileName, visibleProfiles]);
+
+  React.useEffect(() => {
+    if (!menuProfileName) {
+      return undefined;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (containerRef.current?.contains(event.target as Node)) {
+        return;
+      }
+
+      closeMenu();
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        closeMenu();
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [menuProfileName]);
 
   React.useEffect(() => {
     const tabListElement = tabListRef.current;
@@ -210,7 +249,11 @@ export function ProfileTabs({
         </button>
       </nav>
       {menuProfileName ? (
-        <div className="absolute z-50 mt-1 border border-(--line) bg-(--white) py-1 shadow-sm" style={menuPosition}>
+        <div
+          className="absolute z-50 mt-1 w-48 max-w-[calc(100vw-2rem)] border border-(--line) bg-(--white) py-1
+            shadow-sm"
+          style={menuPosition}
+        >
           <button
             className="block w-full bg-transparent px-4 py-2 text-left text-sm font-bold text-(--ink-soft)
               hover:bg-(--surface) hover:text-(--ink) focus-visible:outline-none"

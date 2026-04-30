@@ -61,7 +61,8 @@ export function RowItem({
             {children}
             {hasDetails ? (
               <button
-                className="inline-flex items-center gap-2 text-xs text-(--ink) focus-visible:outline-none"
+                className="inline-flex w-max items-center gap-2 text-xs whitespace-nowrap text-(--ink)
+                  focus-visible:outline-none"
                 type="button"
                 aria-controls={detailsId}
                 aria-expanded={detailsOpen}
@@ -73,7 +74,7 @@ export function RowItem({
                 <span aria-hidden="true" className="text-(--teal)">
                   {detailsOpen ? "−" : "+"}
                 </span>
-                <span>{detailsTitle}</span>
+                <span className="shrink-0">{detailsTitle}</span>
                 {detailsSummary ? <span className={labelTextClass}>{detailsSummary}</span> : null}
               </button>
             ) : null}

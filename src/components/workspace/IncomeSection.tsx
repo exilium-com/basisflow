@@ -18,11 +18,13 @@ import {
   type SalaryItem,
 } from "../../lib/incomeModel";
 import { toDisplayValue, type Projection } from "../../lib/projectionState";
+import { type ProjectionRow } from "../../lib/projectionUtils";
 import { smallCapsTextClass } from "../../lib/text";
 import { type TaxConfig } from "../../lib/taxConfig";
 
 type IncomeSectionProps = {
   comparison?: IncomeComparison | null;
+  currentRow: ProjectionRow;
   income: Income;
   incomeResults: IncomeResults;
   projection: Projection;
@@ -42,6 +44,7 @@ type IncomeSectionProps = {
 };
 
 type IncomeComparison = {
+  currentRow: ProjectionRow;
   income: Income;
   incomeResults: IncomeResults;
   projection: Projection;
@@ -226,6 +229,7 @@ function RsuRowItem({
 
 export function IncomeSection({
   comparison,
+  currentRow,
   income,
   incomeResults,
   projection,
@@ -242,6 +246,10 @@ export function IncomeSection({
 }: IncomeSectionProps) {
   const comparisonItemsById = new Map((comparison?.income.incomeItems ?? []).map((item) => [item.id, item]));
   const annualIncome = incomeResults.grossSalary + incomeResults.passiveIncome;
+  const totalTax = toDisplayValue(currentRow.totalTax, projection.currentYear, projection);
+  const comparisonTotalTax =
+    comparison &&
+    toDisplayValue(comparison.currentRow.totalTax, comparison.projection.currentYear, comparison.projection);
 
   function comparisonIncomeValue(item: IncomeItem) {
     if (!comparison) {
@@ -322,9 +330,9 @@ export function IncomeSection({
                 value: usd(annualIncome),
               },
               {
-                delta: metricDeltaBetween(incomeResults.totalTaxes, comparison?.incomeResults.totalTaxes, "lower"),
+                delta: metricDeltaBetween(totalTax, comparisonTotalTax, "lower"),
                 label: "Total taxes",
-                value: usd(incomeResults.totalTaxes),
+                value: usd(totalTax),
               },
               {
                 delta: metricDeltaBetween(retirementSavingTotal, comparison?.retirementSavingTotal),

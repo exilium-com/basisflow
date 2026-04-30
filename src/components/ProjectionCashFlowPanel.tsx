@@ -159,7 +159,7 @@ export function MonthlyCashFlowPanel({ comparison, items, netFlow }: MonthlyCash
                 index < items.length - 1 && "border-b border-(--line)",
               )}
             >
-              <div className="flex items-center gap-4">
+              <div className="flex min-w-0 items-center gap-4">
                 <i className="size-4" style={{ background: item.color }} />
                 <span className={labelTextClass}>{item.label}</span>
               </div>
