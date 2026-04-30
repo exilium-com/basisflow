@@ -615,6 +615,7 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
           currentRow={currentRow}
           federalBrackets={federalBrackets}
           longTermCapitalGains={longTermCapitalGains}
+          mortgageState={mortgageState}
           projection={projection}
           stateBrackets={stateBrackets}
           selectedYearLabel={selectedYearLabel}
@@ -624,6 +625,7 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
           onSetFederalBrackets={setFederalBrackets}
           onSetLongTermCapitalGains={setLongTermCapitalGains}
           onSetStateBrackets={setStateBrackets}
+          setMortgageState={setMortgageState}
           onUpdateTaxConfig={updateTaxConfig}
         />
 

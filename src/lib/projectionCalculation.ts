@@ -81,8 +81,6 @@ type ProjectionYearContext = {
   federalTax: number;
   californiaTax: number;
   ficaAndSdi: number;
-  cashFlowTax: number;
-  rsuSellToCoverTax: number;
   totalTax: number;
   housingCost: number;
   nonHousingExpenses: number;
@@ -261,9 +259,7 @@ function getHomeEquity(base: ProjectionBase, year: number) {
     base.mortgage.saleClosingCostMode === "percent"
       ? (homeValue * base.mortgage.saleClosingCostInput) / 100
       : base.mortgage.saleClosingCostInput;
-  return (
-    homeValue - saleClosingCost - getMortgageEndingBalance(base.mortgageSummary, year) - base.mortgage.equityShortfall
-  );
+  return homeValue - saleClosingCost - getMortgageEndingBalance(base.mortgageSummary, year) - base.mortgage.equityShortfall;
 }
 
 function advanceProjectedBucketWithNetContribution(
@@ -344,7 +340,9 @@ function rebalanceTargetCash(
     .map((bucketState, index) => ({ bucketState, index }))
     .filter(
       ({ bucketState }) =>
-        bucketState.id !== base.reserveCashBucketId && !bucketState.illiquid && bucketState.balance > 0,
+        bucketState.id !== base.reserveCashBucketId &&
+        !bucketState.illiquid &&
+        bucketState.balance > 0,
     )
     .sort((left, right) => {
       const leftIsCustom = !pinnedBucketIds.has(left.bucketState.id);
@@ -478,7 +476,7 @@ function createProjectionSimulation({
     },
     reserveCashBucketId,
   };
-  const equityAmount = mortgageSummary.kind === "rent" ? 0 : (mortgageSummary.currentEquity ?? 0);
+  const equityAmount = mortgageSummary.kind === "rent" ? 0 : mortgageSummary.currentEquity ?? 0;
   const initialBucketStates = base.assets.buckets.map((bucket) => ({
     ...bucket,
     balance: bucket.current,
@@ -518,8 +516,6 @@ function createProjectionSimulation({
         federalTax: yearZeroContext.federalTax,
         californiaTax: yearZeroContext.californiaTax,
         ficaAndSdi: yearZeroContext.ficaAndSdi,
-        cashFlowTax: yearZeroContext.cashFlowTax,
-        rsuSellToCoverTax: yearZeroContext.rsuSellToCoverTax,
         totalTax: yearZeroContext.totalTax,
         housingCost: yearZeroContext.housingCost,
         nonHousingExpenses: yearZeroContext.nonHousingExpenses,
@@ -579,8 +575,6 @@ function buildProjectionRow({
   federalTax,
   californiaTax,
   ficaAndSdi,
-  cashFlowTax,
-  rsuSellToCoverTax,
   totalTax,
   housingCost,
   nonHousingExpenses,
@@ -598,8 +592,6 @@ function buildProjectionRow({
   federalTax: number;
   californiaTax: number;
   ficaAndSdi: number;
-  cashFlowTax: number;
-  rsuSellToCoverTax: number;
   totalTax: number;
   housingCost: number;
   nonHousingExpenses: number;
@@ -617,8 +609,6 @@ function buildProjectionRow({
     federalTax,
     californiaTax,
     ficaAndSdi,
-    cashFlowTax,
-    rsuSellToCoverTax,
     totalTax,
     nonHousingExpenses,
     mortgageLineItem: housingCost,
@@ -664,7 +654,6 @@ function buildProjectionYearContext(base: ProjectionBase, year: number): Project
   const rsuGross = Object.values(rsuGrossById).reduce((sum, value) => sum + value, 0);
   const rsuNet = roundTo(computeIncrementalTakeHome(income, base.taxConfig, rsuGross), 2);
   const takeHome = calculateIncome(income, base.taxConfig).annualTakeHome;
-  const cashFlowTaxes = computeAnnualTaxes(income, base.taxConfig, 0);
   const taxes = computeAnnualTaxes(income, base.taxConfig, rsuGross);
   const nonHousingExpenses = roundTo(getAnnualNonHousingExpenses(base.expenses.expenses, year), 2);
   const ordinaryIncome = income.grossSalary + income.passiveIncome;
@@ -685,8 +674,6 @@ function buildProjectionYearContext(base: ProjectionBase, year: number): Project
     federalTax: taxes.federalTax,
     californiaTax: taxes.californiaTax,
     ficaAndSdi: roundTo(taxes.fica.total + taxes.caSdi, 2),
-    cashFlowTax: cashFlowTaxes.totalTaxes,
-    rsuSellToCoverTax: roundTo(taxes.totalTaxes - cashFlowTaxes.totalTaxes, 2),
     totalTax: taxes.totalTaxes,
     housingCost,
     nonHousingExpenses,
@@ -728,7 +715,9 @@ function allocateFreeCash(
     extraContributionByBucket,
     reserveCashFlow:
       yearContext.freeCashBeforeAllocation >= 0
-        ? reserveCashTopUp + (base.assetPlan.freeCashFlowBucket ? 0 : investableCash) + extraDeductionTaxSavings
+        ? reserveCashTopUp +
+          (base.assetPlan.freeCashFlowBucket ? 0 : investableCash) +
+          extraDeductionTaxSavings
         : yearContext.freeCashBeforeAllocation,
   };
 }
@@ -790,7 +779,10 @@ function advanceProjectionYear(simulation: ProjectionSimulation, year: number) {
     Object.values(vestedRsuBalanceById).reduce((sum, balance) => sum + balance, 0),
     2,
   );
-  const homeEquity = base.mortgageSummary.kind === "rent" ? 0 : getHomeEquity(base, year);
+  const homeEquity =
+    base.mortgageSummary.kind === "rent"
+      ? 0
+      : getHomeEquity(base, year);
   const yearContext = buildProjectionYearContext(base, year);
   const snapshot = buildProjectionSnapshot({
     base,
@@ -812,8 +804,6 @@ function advanceProjectionYear(simulation: ProjectionSimulation, year: number) {
       federalTax: yearContext.federalTax,
       californiaTax: yearContext.californiaTax,
       ficaAndSdi: yearContext.ficaAndSdi,
-      cashFlowTax: yearContext.cashFlowTax,
-      rsuSellToCoverTax: yearContext.rsuSellToCoverTax,
       totalTax: yearContext.totalTax,
       housingCost: yearContext.housingCost,
       nonHousingExpenses: yearContext.nonHousingExpenses,

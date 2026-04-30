@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { AdvancedPanel } from "../AdvancedPanel";
 import { ChartPanel } from "../ChartPanel";
 import { CheckboxField, NumberField, SelectField, SliderField } from "../Field";
@@ -64,36 +64,14 @@ function SummaryLinkRow({
   annualValue,
 }: SummaryRow & { annualComparisonValue?: number }) {
   const [period, setPeriod] = useState<"annual" | "monthly">("annual");
-  const rowRef = useRef<HTMLDivElement | null>(null);
-  const [compactPeriod, setCompactPeriod] = useState(false);
   const displayValue = period === "monthly" ? annualValue / 12 : annualValue;
   const comparisonValue =
     annualComparisonValue == null ? null : period === "monthly" ? annualComparisonValue / 12 : annualComparisonValue;
   const delta = metricDeltaBetween(displayValue, comparisonValue, better);
-  const periodLabel = period === "monthly" ? (compactPeriod ? "/m" : "/ month") : compactPeriod ? "/y" : "/ year";
-
-  useEffect(() => {
-    const element = rowRef.current;
-    if (!element || typeof ResizeObserver === "undefined") {
-      return undefined;
-    }
-
-    function update(width: number) {
-      setCompactPeriod(width < 300);
-    }
-
-    update(element.getBoundingClientRect().width);
-
-    const observer = new ResizeObserver(([entry]) => {
-      update(entry.contentRect.width);
-    });
-    observer.observe(element);
-
-    return () => observer.disconnect();
-  }, []);
+  const periodLabel = period === "monthly" ? "/m" : "/y";
 
   return (
-    <div ref={rowRef} className="flex min-w-0 items-start gap-2 border-t border-(--line) py-4">
+    <div className="flex min-w-0 items-start gap-2 border-t border-(--line) py-4">
       <a href={href} className={`${labelTextClass} min-w-0 flex-1 hover:text-(--ink)`}>
         {label}
       </a>

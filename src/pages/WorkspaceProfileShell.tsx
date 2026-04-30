@@ -74,8 +74,8 @@ export function WorkspaceProfileShell() {
 
   return (
     <div className="mx-auto mb-8 flex min-h-screen w-full max-w-screen-2xl flex-col px-4">
-      <header className="sticky top-0 z-40 -mx-4 mb-4 border-b border-(--line) bg-(--paper) px-4">
-        <div className="flex min-w-0 flex-col gap-2 py-3 sm:h-16 sm:flex-row sm:gap-4 sm:py-0">
+      <header className="sticky top-0 z-40 -mx-4 mb-4 h-16 border-b border-(--line) bg-(--paper) px-4">
+        <div className="flex h-full min-w-0 gap-4">
           <Link to="/" className="flex shrink-0 items-center no-underline">
             <h1 className="font-serif text-3xl text-(--ink) sm:text-4xl">Basisflow</h1>
           </Link>

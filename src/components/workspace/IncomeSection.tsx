@@ -64,7 +64,7 @@ type IncomeRowProps<T extends IncomeItem> = {
 
 function renderIncomeSummary(item: IncomeItem, annualizedSalary: number) {
   if (item.type === "salary" || item.type === "passive") {
-    return item.frequency === "monthly" ? `${usd(annualizedSalary)} / year` : "Annual";
+    return item.frequency === "monthly" ? `${usd(annualizedSalary)} /y` : "Annual";
   }
 
   const vestYears = Math.max(1, Math.round(item.vestingYears ?? 4));

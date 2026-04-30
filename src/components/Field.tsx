@@ -13,7 +13,7 @@ type FieldProps = {
 
 type InputFrameProps = {
   prefix?: React.ReactNode;
-  suffix?: AffixContent;
+  suffix?: React.ReactNode;
   invalid?: boolean;
   className?: string;
   children: React.ReactNode;
@@ -32,10 +32,8 @@ type NativeFieldProps<T> = BaseFieldProps & Omit<T, "className" | "label">;
 type FramedFieldProps<T> = NativeFieldProps<T> & { invalid?: boolean };
 type AffixedFieldProps<T> = FramedFieldProps<T> & {
   prefix?: React.ReactNode;
-  suffix?: AffixContent;
+  suffix?: React.ReactNode;
 };
-
-type AffixContent = React.ReactNode | ((options: { compact: boolean }) => React.ReactNode);
 
 type TextFieldProps = AffixedFieldProps<Omit<React.InputHTMLAttributes<HTMLInputElement>, "prefix" | "suffix">>;
 
@@ -76,57 +74,6 @@ function useInputId(htmlFor?: string) {
   return htmlFor ?? resolvedId;
 }
 
-function compactPeriodSuffix(suffix: React.ReactNode, compact: boolean) {
-  if (!compact || typeof suffix !== "string") {
-    return suffix;
-  }
-
-  switch (suffix) {
-    case "/ year":
-      return "/y";
-    case "/ month":
-      return "/m";
-    case "% / year":
-      return "%/y";
-    default:
-      return suffix;
-  }
-}
-
-function renderAffixContent(content: AffixContent, compact: boolean) {
-  if (typeof content === "function") {
-    return content({ compact });
-  }
-
-  return compactPeriodSuffix(content, compact);
-}
-
-function useIsNarrow(elementRef: React.RefObject<HTMLElement | null>, threshold: number) {
-  const [isNarrow, setIsNarrow] = React.useState(false);
-
-  React.useEffect(() => {
-    const element = elementRef.current;
-    if (!element || typeof ResizeObserver === "undefined") {
-      return undefined;
-    }
-
-    function update(width: number) {
-      setIsNarrow(width < threshold);
-    }
-
-    update(element.getBoundingClientRect().width);
-
-    const observer = new ResizeObserver(([entry]) => {
-      update(entry.contentRect.width);
-    });
-    observer.observe(element);
-
-    return () => observer.disconnect();
-  }, [elementRef, threshold]);
-
-  return isNarrow;
-}
-
 export function Field({ label, htmlFor, className, labelClassName, reserveLabelSpace = false, children }: FieldProps) {
   return (
     <div className={clsx("grid min-w-0 gap-1", className)}>
@@ -143,13 +90,15 @@ export function Field({ label, htmlFor, className, labelClassName, reserveLabelS
   );
 }
 
-export function InputFrame({ prefix = null, suffix = null, invalid = false, className, children }: InputFrameProps) {
-  const frameRef = React.useRef<HTMLDivElement | null>(null);
-  const isNarrow = useIsNarrow(frameRef, 176);
-
+export function InputFrame({
+  prefix = null,
+  suffix = null,
+  invalid = false,
+  className,
+  children,
+}: InputFrameProps) {
   return (
     <div
-      ref={frameRef}
       className={clsx(
         `flex min-h-10 items-center border border-l-4 border-(--line) border-l-(--teal-soft) bg-(--white) px-4
         transition-colors focus-within:border-(--teal)`,
@@ -159,11 +108,7 @@ export function InputFrame({ prefix = null, suffix = null, invalid = false, clas
     >
       {prefix ? <span className={clsx("flex-none", labelTextClass, "mr-2")}>{prefix}</span> : null}
       {children}
-      {suffix ? (
-        <span className={clsx("flex-none whitespace-nowrap", labelTextClass, "ml-2")}>
-          {renderAffixContent(suffix, isNarrow)}
-        </span>
-      ) : null}
+      {suffix ? <span className={clsx("flex-none whitespace-nowrap", labelTextClass, "ml-2")}>{suffix}</span> : null}
     </div>
   );
 }
@@ -256,7 +201,12 @@ export function NumberField({
 
   return (
     <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
-      <InputFrame prefix={prefix} suffix={suffix} invalid={invalid} className={clsx(compact && "px-2", frameClassName)}>
+      <InputFrame
+        prefix={prefix}
+        suffix={suffix}
+        invalid={invalid}
+        className={clsx(compact && "px-2", frameClassName)}
+      >
         <input
           id={inputId}
           type="number"

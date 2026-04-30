@@ -70,19 +70,12 @@ export function ProfileTabs({
     const containerRect = containerElement.getBoundingClientRect();
     const tabRect = tabElement.getBoundingClientRect();
     const menuWidth = 192;
-
-    if (window.matchMedia("(max-width: 639px)").matches) {
-      return {
-        position: "fixed",
-        top: containerRect.bottom + 4,
-        right: 16,
-        left: 16,
-      };
-    }
+    const maxLeft = Math.max(0, containerRect.width - menuWidth);
+    const preferredLeft = tabRect.right - containerRect.left - menuWidth;
 
     return {
       top: "100%",
-      right: Math.min(Math.max(0, containerRect.right - tabRect.right), Math.max(0, containerRect.width - menuWidth)),
+      left: Math.min(Math.max(0, preferredLeft), maxLeft),
     };
   }
 
@@ -250,8 +243,7 @@ export function ProfileTabs({
       </nav>
       {menuProfileName ? (
         <div
-          className="absolute z-50 mt-1 w-48 max-w-[calc(100vw-2rem)] border border-(--line) bg-(--white) py-1
-            shadow-sm"
+          className="absolute z-50 mt-1 w-48 border border-(--line) bg-(--white) py-1 shadow-sm"
           style={menuPosition}
         >
           <button

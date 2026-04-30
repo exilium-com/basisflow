@@ -106,7 +106,7 @@ export function MortgageSection({
             <NumberField
               label="Rent"
               prefix="$"
-              suffix="/ month"
+              suffix="/m"
               value={loanState?.rentPerMonth}
               step="50"
               onValueChange={(value) => onUpdateLoanField(mortgageScenario.optionId, "rentPerMonth", value)}
@@ -173,20 +173,8 @@ export function MortgageSection({
             />
             <NumberField
               className="sm:col-span-3"
-              label="Property tax"
-              suffix="%"
-              value={mortgageState.propertyTaxRate}
-              step="0.1"
-              onValueChange={(value) =>
-                setMortgageState((draft) => {
-                  draft.propertyTaxRate = value ?? 0;
-                })
-              }
-            />
-            <NumberField
-              className="sm:col-span-3"
               label="Maintenance"
-              suffix="% / year"
+              suffix="%/y"
               step="0.1"
               value={mortgageState.maintenanceRate}
               onValueChange={(value) =>
@@ -199,7 +187,7 @@ export function MortgageSection({
               className="sm:col-span-2"
               label="Home insurance"
               prefix="$"
-              suffix="/ year"
+              suffix="/y"
               value={mortgageState.insurancePerYear}
               step="50"
               onValueChange={(value) =>
@@ -212,7 +200,7 @@ export function MortgageSection({
               className="sm:col-span-2"
               label="HOA"
               prefix="$"
-              suffix="/ month"
+              suffix="/m"
               value={mortgageState.hoaPerMonth}
               step="50"
               onValueChange={(value) =>

@@ -11,8 +11,6 @@ import { toDisplayValue, type Projection, type ProjectionExpenseOverride } from 
 import { type ProjectionRow } from "../../lib/projectionUtils";
 import { labelTextClass } from "../../lib/text";
 
-type RecurringExpenseFrequency = Extract<ExpenseStateItem["frequency"], "annual" | "monthly">;
-
 type ExpensesSectionProps = {
   comparison?: {
     currentRow: ProjectionRow;
@@ -29,34 +27,6 @@ type ExpensesSectionProps = {
   onUpdateExpense: (expenseId: string, patch: Partial<ExpenseStateItem>) => void;
   onUpdateExpenseOverride: (expenseId: string, patch: ProjectionExpenseOverride) => void;
 };
-
-function ExpensePeriodButton({
-  compact,
-  expense,
-  onChangeFrequency,
-}: {
-  compact: boolean;
-  expense: ExpenseStateItem;
-  onChangeFrequency: (frequency: RecurringExpenseFrequency) => void;
-}) {
-  if (expense.frequency === "one_off") {
-    return null;
-  }
-
-  const nextFrequency = expense.frequency === "annual" ? "monthly" : "annual";
-  const label = expense.frequency === "annual" ? (compact ? "/y" : "/ year") : compact ? "/m" : "/ month";
-
-  return (
-    <button
-      type="button"
-      className="bg-transparent p-0 text-(--ink-soft) transition hover:text-(--ink) focus-visible:outline-none"
-      aria-label={`Switch ${expense.name || "expense"} to ${nextFrequency}`}
-      onClick={() => onChangeFrequency(nextFrequency)}
-    >
-      {label}
-    </button>
-  );
-}
 
 export function ExpensesSection({
   comparison,
@@ -101,6 +71,7 @@ export function ExpensesSection({
               comparison.projection.currentYear,
               comparison.projection,
             );
+          const nextFrequency = expense.frequency === "annual" ? "monthly" : "annual";
 
           return (
             <RowItem
@@ -156,15 +127,19 @@ export function ExpensesSection({
                 label="Amount"
                 prefix="$"
                 suffix={
-                  expense.frequency === "one_off"
-                    ? ""
-                    : ({ compact }) => (
-                        <ExpensePeriodButton
-                          compact={compact}
-                          expense={expense}
-                          onChangeFrequency={(frequency) => onUpdateExpense(expense.id, { frequency })}
-                        />
-                      )
+                  expense.frequency === "one_off" ? (
+                    ""
+                  ) : (
+                    <button
+                      type="button"
+                      className="bg-transparent p-0 text-(--ink-soft) transition hover:text-(--ink)
+                        focus-visible:outline-none"
+                      aria-label={`Switch ${expense.name || "expense"} to ${nextFrequency}`}
+                      onClick={() => onUpdateExpense(expense.id, { frequency: nextFrequency })}
+                    >
+                      {expense.frequency === "annual" ? "/y" : "/m"}
+                    </button>
+                  )
                 }
                 step="50"
                 placeholder="0"

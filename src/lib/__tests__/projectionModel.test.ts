@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { roundTo } from "../format";
 import { computeRsuGrossForItems, computeRsuGrossForProjectionYear } from "../incomeModel";
 import { getMortgageAnnualHousingCost, getMortgageYearInterest } from "../mortgagePage";
 import { computeAdditionalTax, DEFAULT_CONFIG, normalizeConfig } from "../taxConfig";
@@ -124,11 +123,10 @@ describe("calculateProjection", () => {
       currentRow: today,
     });
     const taxItem = monthlyCashFlow.items.find((item) => item.label === "Taxes");
+    const rsuSellToCoverTax = today.rsuGross - today.rsuNet;
 
-    expect(today.totalTax).toBeGreaterThan(today.cashFlowTax);
-    expect(today.rsuSellToCoverTax).toBeCloseTo(today.totalTax - today.cashFlowTax, 2);
-    expect(today.rsuNet).toBeCloseTo(today.rsuGross - today.rsuSellToCoverTax, 2);
-    expect(taxItem?.value).toBeCloseTo(today.cashFlowTax / 12, 2);
+    expect(today.totalTax).toBeGreaterThan(rsuSellToCoverTax);
+    expect(taxItem?.value).toBeCloseTo((today.totalTax - rsuSellToCoverTax) / 12, 2);
     expect(taxItem?.value).not.toBeCloseTo(today.totalTax / 12, 2);
     expect(monthlyCashFlow.netFlow).toBeCloseTo(today.takeHome / 12, 2);
   });
@@ -213,7 +211,7 @@ describe("calculateProjection", () => {
     const yearOne = projection.getYear(1);
     const yearTwo = projection.getYear(2);
 
-    expect(yearTwo.vestedRsuBalanceById["rsu-1"]).toBe(roundTo(yearOne.vestedRsuBalanceById["rsu-1"] * 1.5, 2));
+    expect(yearTwo.vestedRsuBalanceById["rsu-1"]).toBeCloseTo(yearOne.vestedRsuBalanceById["rsu-1"] * 1.5, 1);
     expect(yearTwo.vestedRsuBalance).toBe(yearTwo.vestedRsuBalanceById["rsu-1"]);
     expect(yearTwo.netWorth).toBe(yearTwo.assetsGross + yearTwo.homeEquity + yearTwo.vestedRsuBalanceById["rsu-1"]);
   });

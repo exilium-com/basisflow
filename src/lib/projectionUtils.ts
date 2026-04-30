@@ -12,8 +12,6 @@ export type ProjectionRow = {
   federalTax: number;
   californiaTax: number;
   ficaAndSdi: number;
-  cashFlowTax: number;
-  rsuSellToCoverTax: number;
   totalTax: number;
   nonHousingExpenses: number;
   mortgageLineItem: number;
@@ -60,7 +58,8 @@ export function buildMonthlyCashFlow({
     projection.currentYear,
     projection,
   );
-  const taxes = toDisplayValue(currentRow.cashFlowTax / 12, projection.currentYear, projection);
+  const takeHome = toDisplayValue(currentRow.takeHome / 12, projection.currentYear, projection);
+  const taxes = grossIncome - retirementSaving - takeHome;
   const mortgage = toDisplayValue(currentRow.mortgageLineItem / 12, projection.currentYear, projection);
   const expenses = toDisplayValue(currentRow.nonHousingExpenses / 12, projection.currentYear, projection);
   const netFlow = grossIncome - taxes - retirementSaving - mortgage - expenses;
