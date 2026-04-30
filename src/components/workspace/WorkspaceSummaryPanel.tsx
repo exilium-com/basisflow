@@ -4,6 +4,7 @@ import { ChartPanel } from "../ChartPanel";
 import { CheckboxField, NumberField, SelectField, SliderField } from "../Field";
 import { MonthlyCashFlowPanel } from "../ProjectionCashFlowPanel";
 import { NetWorthChart } from "../ProjectionLineCharts";
+import { PeriodSuffix } from "../PeriodSuffix";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { metricDeltaBetween, MetricDelta } from "../MetricDelta";
 import { netWorthChartLegend } from "../../lib/colors";
@@ -68,10 +69,9 @@ function SummaryLinkRow({
   const comparisonValue =
     annualComparisonValue == null ? null : period === "monthly" ? annualComparisonValue / 12 : annualComparisonValue;
   const delta = metricDeltaBetween(displayValue, comparisonValue, better);
-  const periodLabel = period === "monthly" ? "/m" : "/y";
 
   return (
-    <div className="flex min-w-0 items-start gap-2 border-t border-(--line) py-4">
+    <div className="period-suffix-container flex min-w-0 items-start gap-2 border-t border-(--line) py-4">
       <a href={href} className={`${labelTextClass} min-w-0 flex-1 hover:text-(--ink)`}>
         {label}
       </a>
@@ -85,7 +85,7 @@ function SummaryLinkRow({
             className={`${labelTextClass} shrink-0 whitespace-nowrap transition hover:text-(--ink)`}
             onClick={() => setPeriod(period === "annual" ? "monthly" : "annual")}
           >
-            {periodLabel}
+            <PeriodSuffix period={period === "monthly" ? "month" : "year"} />
           </button>
         </div>
         {delta == null ? null : <MetricDelta delta={delta} />}

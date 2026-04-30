@@ -90,25 +90,20 @@ export function Field({ label, htmlFor, className, labelClassName, reserveLabelS
   );
 }
 
-export function InputFrame({
-  prefix = null,
-  suffix = null,
-  invalid = false,
-  className,
-  children,
-}: InputFrameProps) {
+export function InputFrame({ prefix = null, suffix = null, invalid = false, className, children }: InputFrameProps) {
   return (
     <div
       className={clsx(
         `flex min-h-10 items-center border border-l-4 border-(--line) border-l-(--teal-soft) bg-(--white) px-4
         transition-colors focus-within:border-(--teal)`,
+        suffix && "period-suffix-container",
         invalid && "border-(--destructive) border-l-(--destructive)",
         className,
       )}
     >
       {prefix ? <span className={clsx("flex-none", labelTextClass, "mr-2")}>{prefix}</span> : null}
       {children}
-      {suffix ? <span className={clsx("flex-none whitespace-nowrap", labelTextClass, "ml-2")}>{suffix}</span> : null}
+      {suffix ? <span className={clsx("flex-none whitespace-nowrap", labelTextClass)}>{suffix}</span> : null}
     </div>
   );
 }
@@ -201,12 +196,7 @@ export function NumberField({
 
   return (
     <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
-      <InputFrame
-        prefix={prefix}
-        suffix={suffix}
-        invalid={invalid}
-        className={clsx(compact && "px-2", frameClassName)}
-      >
+      <InputFrame prefix={prefix} suffix={suffix} invalid={invalid} className={clsx(compact && "px-2", frameClassName)}>
         <input
           id={inputId}
           type="number"

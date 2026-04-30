@@ -3,6 +3,7 @@ import { metricDeltaBetween } from "../MetricDelta";
 import { ProjectedValueDisplay } from "../ProjectedValueDisplay";
 import { RowItem } from "../RowItem";
 import { SegmentedToggle } from "../SegmentedToggle";
+import { PeriodSuffix } from "../PeriodSuffix";
 import { NumberField, SliderField, TextField } from "../Field";
 import { WorkspaceMetricSplit } from "./WorkspaceMetricSplit";
 import { WorkspaceSection } from "./WorkspaceSection";
@@ -64,7 +65,13 @@ type IncomeRowProps<T extends IncomeItem> = {
 
 function renderIncomeSummary(item: IncomeItem, annualizedSalary: number) {
   if (item.type === "salary" || item.type === "passive") {
-    return item.frequency === "monthly" ? `${usd(annualizedSalary)} /y` : "Annual";
+    return item.frequency === "monthly" ? (
+      <>
+        {usd(annualizedSalary)} <PeriodSuffix period="year" />
+      </>
+    ) : (
+      "Annual"
+    );
   }
 
   const vestYears = Math.max(1, Math.round(item.vestingYears ?? 4));

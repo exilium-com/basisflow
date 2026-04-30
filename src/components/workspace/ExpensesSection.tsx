@@ -1,6 +1,7 @@
 import { ActionButton } from "../ActionButton";
 import { NumberField, TextField } from "../Field";
 import { metricDeltaBetween } from "../MetricDelta";
+import { PeriodSuffix } from "../PeriodSuffix";
 import { ProjectedValueDisplay } from "../ProjectedValueDisplay";
 import { RowItem } from "../RowItem";
 import { SegmentedToggle } from "../SegmentedToggle";
@@ -137,7 +138,7 @@ export function ExpensesSection({
                       aria-label={`Switch ${expense.name || "expense"} to ${nextFrequency}`}
                       onClick={() => onUpdateExpense(expense.id, { frequency: nextFrequency })}
                     >
-                      {expense.frequency === "annual" ? "/y" : "/m"}
+                      <PeriodSuffix period={expense.frequency === "annual" ? "year" : "month"} />
                     </button>
                   )
                 }

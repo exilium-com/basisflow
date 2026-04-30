@@ -1,5 +1,6 @@
 import { metricDeltaBetween } from "../MetricDelta";
 import { DollarPercentField, NumberField, SelectField } from "../Field";
+import { PeriodSuffix } from "../PeriodSuffix";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { WorkspaceMetricSplit } from "./WorkspaceMetricSplit";
 import { WorkspaceSection } from "./WorkspaceSection";
@@ -106,7 +107,7 @@ export function MortgageSection({
             <NumberField
               label="Rent"
               prefix="$"
-              suffix="/m"
+              suffix={<PeriodSuffix period="month" />}
               value={loanState?.rentPerMonth}
               step="50"
               onValueChange={(value) => onUpdateLoanField(mortgageScenario.optionId, "rentPerMonth", value)}
@@ -174,7 +175,7 @@ export function MortgageSection({
             <NumberField
               className="sm:col-span-3"
               label="Maintenance"
-              suffix="%/y"
+              suffix={<PeriodSuffix unit="%" period="year" />}
               step="0.1"
               value={mortgageState.maintenanceRate}
               onValueChange={(value) =>
@@ -187,7 +188,7 @@ export function MortgageSection({
               className="sm:col-span-2"
               label="Home insurance"
               prefix="$"
-              suffix="/y"
+              suffix={<PeriodSuffix period="year" />}
               value={mortgageState.insurancePerYear}
               step="50"
               onValueChange={(value) =>
@@ -200,7 +201,7 @@ export function MortgageSection({
               className="sm:col-span-2"
               label="HOA"
               prefix="$"
-              suffix="/m"
+              suffix={<PeriodSuffix period="month" />}
               value={mortgageState.hoaPerMonth}
               step="50"
               onValueChange={(value) =>
