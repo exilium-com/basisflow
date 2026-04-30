@@ -1,6 +1,7 @@
 import { ActionButton } from "../ActionButton";
 import { NumberField, TextField } from "../Field";
 import { metricDeltaBetween } from "../MetricDelta";
+import { PeriodSuffix } from "../PeriodSuffix";
 import { ProjectedValueDisplay } from "../ProjectedValueDisplay";
 import { RowItem } from "../RowItem";
 import { SegmentedToggle } from "../SegmentedToggle";
@@ -71,6 +72,7 @@ export function ExpensesSection({
               comparison.projection.currentYear,
               comparison.projection,
             );
+          const nextFrequency = expense.frequency === "annual" ? "monthly" : "annual";
 
           return (
             <RowItem
@@ -125,7 +127,21 @@ export function ExpensesSection({
               <NumberField
                 label="Amount"
                 prefix="$"
-                suffix={expense.frequency === "annual" ? "/ year" : expense.frequency === "one_off" ? "" : "/ month"}
+                suffix={
+                  expense.frequency === "one_off" ? (
+                    ""
+                  ) : (
+                    <button
+                      type="button"
+                      className="bg-transparent p-0 text-(--ink-soft) transition hover:text-(--ink)
+                        focus-visible:outline-none"
+                      aria-label={`Switch ${expense.name || "expense"} to ${nextFrequency}`}
+                      onClick={() => onUpdateExpense(expense.id, { frequency: nextFrequency })}
+                    >
+                      <PeriodSuffix period={expense.frequency === "annual" ? "year" : "month"} />
+                    </button>
+                  )
+                }
                 step="50"
                 placeholder="0"
                 value={expense.amount}

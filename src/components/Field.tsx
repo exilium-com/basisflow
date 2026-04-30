@@ -96,13 +96,14 @@ export function InputFrame({ prefix = null, suffix = null, invalid = false, clas
       className={clsx(
         `flex min-h-10 items-center border border-l-4 border-(--line) border-l-(--teal-soft) bg-(--white) px-4
         transition-colors focus-within:border-(--teal)`,
+        suffix && "period-suffix-container",
         invalid && "border-(--destructive) border-l-(--destructive)",
         className,
       )}
     >
       {prefix ? <span className={clsx("flex-none", labelTextClass, "mr-2")}>{prefix}</span> : null}
       {children}
-      {suffix ? <span className={clsx("flex-none", labelTextClass, "ml-2")}>{suffix}</span> : null}
+      {suffix ? <span className={clsx("flex-none whitespace-nowrap", labelTextClass)}>{suffix}</span> : null}
     </div>
   );
 }

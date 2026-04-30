@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { computeRsuGrossForItems, computeRsuGrossForProjectionYear } from "../incomeModel";
 import { getMortgageAnnualHousingCost, getMortgageYearInterest } from "../mortgagePage";
 import { computeAdditionalTax, DEFAULT_CONFIG, normalizeConfig } from "../taxConfig";
+import { buildMonthlyCashFlow } from "../projectionUtils";
 import { projectionGoldens } from "./goldens/projection";
 import { runIncomeScenario } from "./helpers/incomeScenario";
 import { runProjectionScenario } from "./helpers/projectionScenario";
@@ -109,6 +110,27 @@ describe("calculateProjection", () => {
     expect(yearOne.residualCash).toBe(today.takeHome);
   });
 
+  it("treats RSU tax as sell-to-cover instead of a monthly cash-flow hit", () => {
+    const scenario = runProjectionScenario({
+      salary: 150000,
+      rsuValue: 100000,
+      currentYear: 0,
+    });
+    const today = scenario.getYear(0);
+    const monthlyCashFlow = buildMonthlyCashFlow({
+      incomeSummary: scenario.scenario.incomeSummary,
+      projection: scenario.projection,
+      currentRow: today,
+    });
+    const taxItem = monthlyCashFlow.items.find((item) => item.label === "Taxes");
+    const rsuSellToCoverTax = today.rsuGross - today.rsuNet;
+
+    expect(today.totalTax).toBeGreaterThan(rsuSellToCoverTax);
+    expect(taxItem?.value).toBeCloseTo((today.totalTax - rsuSellToCoverTax) / 12, 2);
+    expect(taxItem?.value).not.toBeCloseTo(today.totalTax / 12, 2);
+    expect(monthlyCashFlow.netFlow).toBeCloseTo(today.takeHome / 12, 2);
+  });
+
   it("optionally counts vested RSUs in net worth without treating them as reserve cash", () => {
     const projection = runProjectionScenario({
       salary: 150000,
@@ -172,6 +194,26 @@ describe("calculateProjection", () => {
     expect(today.vestedRsuBalanceById["rsu-1"]).toBeUndefined();
     expect(yearOne.vestedRsuBalanceById["rsu-1"]).toBe(today.rsuNet);
     expect(yearOne.vestedRsuBalanceById["rsu-1"]).not.toBe(100000);
+  });
+
+  it("uses per-grant RSU growth overrides in aggregate net worth", () => {
+    const projection = runProjectionScenario({
+      salary: 150000,
+      rsuValue: 100000,
+      horizonYears: 2,
+      currentYear: 2,
+      assetGrowthRate: 0,
+      includeVestedRsusInNetWorth: true,
+      rsuGrowthRateById: {
+        "rsu-1": 0.5,
+      },
+    });
+    const yearOne = projection.getYear(1);
+    const yearTwo = projection.getYear(2);
+
+    expect(yearTwo.vestedRsuBalanceById["rsu-1"]).toBeCloseTo(yearOne.vestedRsuBalanceById["rsu-1"] * 1.5, 1);
+    expect(yearTwo.vestedRsuBalance).toBe(yearTwo.vestedRsuBalanceById["rsu-1"]);
+    expect(yearTwo.netWorth).toBe(yearTwo.assetsGross + yearTwo.homeEquity + yearTwo.vestedRsuBalanceById["rsu-1"]);
   });
 
   it("sells custom assets to restore target cash before drawing from retirement accounts", () => {

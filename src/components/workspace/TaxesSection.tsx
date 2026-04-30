@@ -7,23 +7,25 @@ import { SegmentedToggle } from "../SegmentedToggle";
 import { WorkspaceMetricSplit } from "./WorkspaceMetricSplit";
 import { WorkspaceSection } from "./WorkspaceSection";
 import { usd } from "../../lib/format";
-import { type IncomeResults, type ResolvedIncome } from "../../lib/incomeModel";
 import { type MortgageState } from "../../lib/mortgageConfig";
+import { toDisplayValue, type Projection } from "../../lib/projectionState";
+import { type ProjectionRow } from "../../lib/projectionUtils";
 import type { DraftStateSetter } from "../../lib/state";
 import { type TaxConfig } from "../../lib/taxConfig";
 import { labelTextClass, smallCapsTextClass } from "../../lib/text";
 
 type TaxesSectionProps = {
   comparisonMetrics?: {
-    income: ResolvedIncome;
-    incomeResults: IncomeResults;
+    currentRow: ProjectionRow;
+    projection: Projection;
   } | null;
+  currentRow: ProjectionRow;
   federalBrackets: string;
-  income: ResolvedIncome;
-  incomeResults: IncomeResults;
   longTermCapitalGains: string;
   mortgageState: MortgageState;
+  projection: Projection;
   stateBrackets: string;
+  selectedYearLabel: string;
   taxConfig: TaxConfig;
   taxEditorStatus: string;
   onApplyTaxTables: () => void;
@@ -40,6 +42,12 @@ type TaxFieldGroupProps = {
   children: React.ReactNode;
 };
 
+type TaxMetricKey = keyof Pick<ProjectionRow, "totalTax" | "federalTax" | "californiaTax" | "ficaAndSdi">;
+
+function displayTaxMetric(row: ProjectionRow, projection: Projection, key: TaxMetricKey) {
+  return toDisplayValue(row[key], projection.currentYear, projection);
+}
+
 function TaxFieldGroup({ title, divided = false, children }: TaxFieldGroupProps) {
   return (
     <section className={divided ? "grid gap-4 border-t border-(--line-soft) pt-4" : "grid gap-4"}>
@@ -51,12 +59,13 @@ function TaxFieldGroup({ title, divided = false, children }: TaxFieldGroupProps)
 
 export function TaxesSection({
   comparisonMetrics,
+  currentRow,
   federalBrackets,
-  income,
-  incomeResults,
   longTermCapitalGains,
   mortgageState,
+  projection,
   stateBrackets,
+  selectedYearLabel,
   taxConfig,
   taxEditorStatus,
   onApplyTaxTables,
@@ -66,48 +75,38 @@ export function TaxesSection({
   setMortgageState,
   onUpdateTaxConfig,
 }: TaxesSectionProps) {
-  const totalTaxWithProperty = incomeResults.totalTaxes + income.propertyTax;
-  const ficaAndSdi = incomeResults.fica.total + incomeResults.caSdi;
-  const comparisonTotalTaxWithProperty = comparisonMetrics
-    ? comparisonMetrics.incomeResults.totalTaxes + comparisonMetrics.income.propertyTax
-    : undefined;
-  const comparisonFicaAndSdi = comparisonMetrics
-    ? comparisonMetrics.incomeResults.fica.total + comparisonMetrics.incomeResults.caSdi
-    : undefined;
+  const currentTax = (key: TaxMetricKey) => displayTaxMetric(currentRow, projection, key);
+  const comparisonTax = (key: TaxMetricKey) =>
+    comparisonMetrics ? displayTaxMetric(comparisonMetrics.currentRow, comparisonMetrics.projection, key) : undefined;
+  const totalTax = currentTax("totalTax");
+  const federalTax = currentTax("federalTax");
+  const californiaTax = currentTax("californiaTax");
+  const ficaAndSdi = currentTax("ficaAndSdi");
 
   return (
     <WorkspaceSection id="taxes" index="03" title="Taxes" summary="Deduction Logic">
       <WorkspaceMetricSplit
         metrics={{
           primaryItem: {
-            delta: metricDeltaBetween(totalTaxWithProperty, comparisonTotalTaxWithProperty, "lower"),
-            label: "Total tax",
-            value: usd(totalTaxWithProperty),
+            delta: metricDeltaBetween(totalTax, comparisonTax("totalTax"), "lower"),
+            label: selectedYearLabel === "Today" ? "Total tax today" : `Total tax in ${selectedYearLabel}`,
+            value: usd(totalTax),
           },
           items: [
             {
-              delta: metricDeltaBetween(incomeResults.federalTax, comparisonMetrics?.incomeResults.federalTax, "lower"),
+              delta: metricDeltaBetween(federalTax, comparisonTax("federalTax"), "lower"),
               label: "Federal tax",
-              value: usd(incomeResults.federalTax),
+              value: usd(federalTax),
             },
             {
-              delta: metricDeltaBetween(
-                incomeResults.californiaTax,
-                comparisonMetrics?.incomeResults.californiaTax,
-                "lower",
-              ),
+              delta: metricDeltaBetween(californiaTax, comparisonTax("californiaTax"), "lower"),
               label: "California tax",
-              value: usd(incomeResults.californiaTax),
+              value: usd(californiaTax),
             },
             {
-              delta: metricDeltaBetween(ficaAndSdi, comparisonFicaAndSdi, "lower"),
+              delta: metricDeltaBetween(ficaAndSdi, comparisonTax("ficaAndSdi"), "lower"),
               label: "FICA + CA SDI",
               value: usd(ficaAndSdi),
-            },
-            {
-              delta: metricDeltaBetween(income.propertyTax, comparisonMetrics?.income.propertyTax, "lower"),
-              label: "Property tax",
-              value: usd(income.propertyTax),
             },
           ],
         }}

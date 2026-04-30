@@ -4,6 +4,7 @@ import { ChartPanel } from "../ChartPanel";
 import { CheckboxField, NumberField, SelectField, SliderField } from "../Field";
 import { MonthlyCashFlowPanel } from "../ProjectionCashFlowPanel";
 import { NetWorthChart } from "../ProjectionLineCharts";
+import { PeriodSuffix } from "../PeriodSuffix";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { metricDeltaBetween, MetricDelta } from "../MetricDelta";
 import { netWorthChartLegend } from "../../lib/colors";
@@ -70,21 +71,21 @@ function SummaryLinkRow({
   const delta = metricDeltaBetween(displayValue, comparisonValue, better);
 
   return (
-    <div className="flex items-start gap-2 border-t border-(--line) py-4">
-      <a href={href} className={`${labelTextClass} flex-1 hover:text-(--ink)`}>
+    <div className="period-suffix-container flex min-w-0 items-start gap-2 border-t border-(--line) py-4">
+      <a href={href} className={`${labelTextClass} min-w-0 flex-1 hover:text-(--ink)`}>
         {label}
       </a>
-      <div className="grid justify-items-end">
-        <div className="flex items-baseline gap-2">
-          <a href={href} className="font-bold">
+      <div className="grid min-w-0 justify-items-end">
+        <div className="flex max-w-full min-w-0 items-baseline gap-2">
+          <a href={href} className="min-w-0 truncate font-bold">
             {usd(displayValue)}
           </a>
           <button
             type="button"
-            className={`${labelTextClass} transition hover:text-(--ink)`}
+            className={`${labelTextClass} shrink-0 whitespace-nowrap transition hover:text-(--ink)`}
             onClick={() => setPeriod(period === "annual" ? "monthly" : "annual")}
           >
-            {period === "monthly" ? "/ month" : "/ year"}
+            <PeriodSuffix period={period === "monthly" ? "month" : "year"} />
           </button>
         </div>
         {delta == null ? null : <MetricDelta delta={delta} />}

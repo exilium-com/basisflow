@@ -146,6 +146,24 @@
     display: none;
   }
 
+  .period-suffix-container {
+    container-type: inline-size;
+  }
+
+  .period-suffix-short {
+    display: none;
+  }
+
+  @container (max-width: 7rem) {
+    .period-suffix-long {
+      display: none;
+    }
+
+    .period-suffix-short {
+      display: inline;
+    }
+  }
+
   .slider-input {
     -webkit-appearance: none;
     appearance: none;

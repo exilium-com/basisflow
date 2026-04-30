@@ -24,7 +24,7 @@ export function AddMenu({ label, options, align = "right", className }: AddMenuP
       return;
     }
 
-    function handlePointerDown(event: MouseEvent) {
+    function handlePointerDown(event: PointerEvent) {
       if (rootRef.current?.contains(event.target as Node)) {
         return;
       }
@@ -38,11 +38,11 @@ export function AddMenu({ label, options, align = "right", className }: AddMenuP
       }
     }
 
-    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [open]);
