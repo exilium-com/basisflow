@@ -1,12 +1,12 @@
 import { AddMenu } from "../AddMenu";
 import { metricDeltaBetween } from "../MetricDelta";
-import { ProjectedValueDisplay } from "../ProjectedValueDisplay";
 import { RowItem } from "../RowItem";
 import { SegmentedToggle } from "../SegmentedToggle";
 import { PeriodSuffix } from "../PeriodSuffix";
-import { NumberField, SliderField, TextField } from "../Field";
+import { NumberField, SliderField } from "../Field";
+import { RowMoneyField, RowValueProjection } from "./RowValueProjection";
 import { WorkspaceMetricSplit } from "./WorkspaceMetricSplit";
-import { WorkspaceSection } from "./WorkspaceSection";
+import { workspaceSectionActionClassName, WorkspaceSection, WorkspaceSectionFooter } from "./WorkspaceSection";
 import { usd } from "../../lib/format";
 import {
   computeRsuGrossForProjectionYear,
@@ -124,17 +124,17 @@ function RecurringIncomeRowItem({
 
   return (
     <RowItem
-      onRemove={(event) => {
-        event.stopPropagation();
-        onRemoveIncomeItem(item.id);
-      }}
-      detailsTitle="Income details"
+      fallbackName={isPassive ? "Passive income" : "Salary"}
+      name={item.name}
+      canRename
+      renameAriaLabel="Income name"
+      onRemove={() => onRemoveIncomeItem(item.id)}
+      onRename={(nextName) => onUpdateIncomeItem(item.id, { name: nextName })}
       detailsSummary={renderIncomeSummary(item, annualizedSalary)}
       details={
         <SegmentedToggle
           label="Frequency"
           ariaLabel={`${item.name || (isPassive ? "Passive income" : "Salary")} frequency`}
-          className="w-fit"
           value={item.frequency}
           onChange={(frequency) => onUpdateIncomeItem(item.id, { frequency })}
           options={[
@@ -144,23 +144,18 @@ function RecurringIncomeRowItem({
         />
       }
     >
-      <TextField
-        label="Income name"
-        value={item.name}
-        onChange={(event) => onUpdateIncomeItem(item.id, { name: event.target.value })}
-      />
-      <NumberField
-        label="Amount"
-        prefix="$"
-        step="1000"
-        value={item.amount}
-        onValueChange={(value) => onUpdateIncomeItem(item.id, { amount: value })}
-      />
-      <ProjectedValueDisplay
+      <RowValueProjection
         delta={metricDeltaBetween(value, comparisonValue)}
         label={selectedYearLabel}
         value={usd(value)}
-      />
+      >
+        <RowMoneyField
+          label="Amount"
+          step="1000"
+          value={item.amount}
+          onValueChange={(value) => onUpdateIncomeItem(item.id, { amount: value })}
+        />
+      </RowValueProjection>
     </RowItem>
   );
 }
@@ -178,13 +173,15 @@ function RsuRowItem({
 
   return (
     <RowItem
-      onRemove={(event) => {
-        event.stopPropagation();
-        onRemoveIncomeItem(item.id);
-      }}
-      detailsTitle="RSU details"
+      fallbackName="RSU grant"
+      name={item.name}
+      canRename
+      renameAriaLabel="Income name"
+      detailsSummary={renderIncomeSummary(item, 0)}
+      onRemove={() => onRemoveIncomeItem(item.id)}
+      onRename={(nextName) => onUpdateIncomeItem(item.id, { name: nextName })}
       details={
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-3">
           <NumberField
             label="Annual refresher"
             prefix="$"
@@ -202,7 +199,6 @@ function RsuRowItem({
           <SegmentedToggle
             label="Liquidity"
             ariaLabel={`${item.name || "RSU grant"} liquidity`}
-            className="w-fit"
             value={item.illiquid ? "illiquid" : "liquid"}
             onChange={(value) => onUpdateIncomeItem(item.id, { illiquid: value === "illiquid" })}
             options={[
@@ -213,23 +209,18 @@ function RsuRowItem({
         </div>
       }
     >
-      <TextField
-        label="Income name"
-        value={item.name}
-        onChange={(event) => onUpdateIncomeItem(item.id, { name: event.target.value })}
-      />
-      <NumberField
-        label="Unvested remaining"
-        prefix="$"
-        step="1000"
-        value={item.grantAmount}
-        onValueChange={(value) => onUpdateIncomeItem(item.id, { grantAmount: value })}
-      />
-      <ProjectedValueDisplay
+      <RowValueProjection
         delta={metricDeltaBetween(value, comparisonValue)}
         label={selectedYearLabel}
         value={usd(value)}
-      />
+      >
+        <RowMoneyField
+          label="Unvested remaining"
+          step="1000"
+          value={item.grantAmount}
+          onValueChange={(value) => onUpdateIncomeItem(item.id, { grantAmount: value })}
+        />
+      </RowValueProjection>
     </RowItem>
   );
 }
@@ -272,23 +263,7 @@ export function IncomeSection({
   }
 
   return (
-    <WorkspaceSection
-      id="income"
-      index="01"
-      title="Income"
-      summary="Cash In"
-      actions={
-        <AddMenu
-          className="w-full sm:w-auto"
-          label="Add income"
-          options={[
-            { id: "salary", label: "Salary", onSelect: onAddSalaryItem },
-            { id: "passive", label: "Passive income", onSelect: onAddPassiveIncomeItem },
-            { id: "rsu", label: "RSU", onSelect: onAddRsuItem },
-          ]}
-        />
-      }
-    >
+    <WorkspaceSection id="income" index="01" title="Income" summary="Cash In">
       <div className="grid gap-2">
         {income.incomeItems.map((item) =>
           item.type === "salary" || item.type === "passive" ? (
@@ -316,6 +291,18 @@ export function IncomeSection({
           ),
         )}
       </div>
+
+      <WorkspaceSectionFooter>
+        <AddMenu
+          className={workspaceSectionActionClassName}
+          label="Add income"
+          options={[
+            { id: "salary", label: "Salary", onSelect: onAddSalaryItem },
+            { id: "passive", label: "Passive income", onSelect: onAddPassiveIncomeItem },
+            { id: "rsu", label: "RSU", onSelect: onAddRsuItem },
+          ]}
+        />
+      </WorkspaceSectionFooter>
 
       <div className="mt-8">
         <WorkspaceMetricSplit

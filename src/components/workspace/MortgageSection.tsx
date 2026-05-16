@@ -1,3 +1,4 @@
+import type React from "react";
 import { metricDeltaBetween } from "../MetricDelta";
 import { DollarPercentField, NumberField, SelectField } from "../Field";
 import { PeriodSuffix } from "../PeriodSuffix";
@@ -14,6 +15,11 @@ import { type MortgageScenario } from "../../lib/mortgageSchedule";
 import type { DraftStateSetter } from "../../lib/state";
 
 type MetricItem = { label: string; value: string; metricValue?: number };
+
+type MortgageFieldGridProps = {
+  children: React.ReactNode;
+  columns?: 2 | 3;
+};
 
 type MortgageSectionProps = {
   assetOptions: Array<{ id: string; name: string }>;
@@ -32,6 +38,10 @@ type MortgageSectionProps = {
   onUpdateMortgageFundingBucketId: (bucketId: string) => void;
   setMortgageState: DraftStateSetter<MortgageState>;
 };
+
+function MortgageFieldGrid({ children, columns = 2 }: MortgageFieldGridProps) {
+  return <div className={columns === 3 ? "grid gap-4 lg:grid-cols-3" : "grid gap-4 lg:grid-cols-2"}>{children}</div>;
+}
 
 export function MortgageSection({
   assetOptions,
@@ -103,7 +113,7 @@ export function MortgageSection({
           ) : null}
         </div>
         {isRentScenario ? (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <MortgageFieldGrid>
             <NumberField
               label="Rent"
               prefix="$"
@@ -119,164 +129,156 @@ export function MortgageSection({
               step="0.5"
               onValueChange={(value) => onUpdateLoanField(mortgageScenario.optionId, "rentGrowthRate", value)}
             />
-          </div>
+          </MortgageFieldGrid>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-6">
-            <NumberField
-              className="sm:col-span-3"
-              label={mortgageType === "arm" ? "Initial rate" : "Interest rate"}
-              suffix="%"
-              value={mortgageType === "arm" ? loanState?.initialRate : loanState?.rate}
-              step="0.125"
-              onValueChange={(value) =>
-                onUpdateLoanField(mortgageScenario.optionId, mortgageType === "arm" ? "initialRate" : "rate", value)
-              }
-            />
-            <NumberField
-              className="sm:col-span-3"
-              label="Loan term"
-              suffix="years"
-              value={loanState?.term}
-              step="1"
-              onValueChange={(value) => onUpdateLoanField(mortgageScenario.optionId, "term", value)}
-            />
-            {mortgageType === "arm" ? (
-              <>
-                <NumberField
-                  className="sm:col-span-3"
-                  label="Reset rate"
-                  suffix="%"
-                  value={loanState?.adjustedRate}
-                  step="0.125"
-                  onValueChange={(value) => onUpdateLoanField(mortgageScenario.optionId, "adjustedRate", value)}
-                />
-                <NumberField
-                  className="sm:col-span-3"
-                  label="Fixed years"
-                  suffix="years"
-                  value={loanState?.fixedYears}
-                  step="1"
-                  onValueChange={(value) => onUpdateLoanField(mortgageScenario.optionId, "fixedYears", value)}
-                />
-              </>
-            ) : null}
-            <NumberField
-              className="sm:col-span-3"
-              label="Home price"
-              prefix="$"
-              value={mortgageState.homePrice}
-              step="50000"
-              onValueChange={(value) =>
-                setMortgageState((draft) => {
-                  draft.homePrice = value ?? 0;
-                })
-              }
-            />
-            <NumberField
-              className="sm:col-span-3"
-              label="Maintenance"
-              suffix={<PeriodSuffix unit="%" period="year" />}
-              step="0.1"
-              value={mortgageState.maintenanceRate}
-              onValueChange={(value) =>
-                setMortgageState((draft) => {
-                  draft.maintenanceRate = value ?? 0;
-                })
-              }
-            />
-            <NumberField
-              className="sm:col-span-2"
-              label="Home insurance"
-              prefix="$"
-              suffix={<PeriodSuffix period="year" />}
-              value={mortgageState.insurancePerYear}
-              step="50"
-              onValueChange={(value) =>
-                setMortgageState((draft) => {
-                  draft.insurancePerYear = value ?? 0;
-                })
-              }
-            />
-            <NumberField
-              className="sm:col-span-2"
-              label="HOA"
-              prefix="$"
-              suffix={<PeriodSuffix period="month" />}
-              value={mortgageState.hoaPerMonth}
-              step="50"
-              onValueChange={(value) =>
-                setMortgageState((draft) => {
-                  draft.hoaPerMonth = value ?? 0;
-                })
-              }
-            />
-            <SelectField
-              className="sm:col-span-2"
-              label="Funding source"
-              value={mortgageFundingBucketId}
-              onChange={(event) => onUpdateMortgageFundingBucketId(event.target.value)}
-            >
-              <option value="none">None</option>
-              {assetOptions.map((bucket) => (
-                <option key={bucket.id} value={bucket.id}>
-                  {bucket.name}
-                </option>
-              ))}
-            </SelectField>
-            <DollarPercentField
-              className="sm:col-span-2"
-              label="Down payment"
-              mode={mortgageState.downPayment.mode}
-              value={mortgageState.downPayment.value}
-              dollarStep="1000"
-              percentStep="0.5"
-              onModeToggle={() =>
-                setMortgageState((draft) => {
-                  toggleMortgageValueMode(draft, "downPayment");
-                })
-              }
-              onValueChange={(value) =>
-                setMortgageState((draft) => {
-                  draft.downPayment.value = value ?? 0;
-                })
-              }
-            />
-            <DollarPercentField
-              className="sm:col-span-2"
-              label="Buy closing cost"
-              mode={mortgageState.purchaseClosingCost.mode}
-              value={mortgageState.purchaseClosingCost.value}
-              dollarStep="500"
-              percentStep="0.1"
-              onModeToggle={() =>
-                setMortgageState((draft) => {
-                  toggleMortgageValueMode(draft, "purchaseClosingCost");
-                })
-              }
-              onValueChange={(value) =>
-                setMortgageState((draft) => {
-                  draft.purchaseClosingCost.value = value ?? 0;
-                })
-              }
-            />
-            <DollarPercentField
-              className="sm:col-span-2"
-              label="Selling cost"
-              mode={mortgageState.saleClosingCost.mode}
-              value={mortgageState.saleClosingCost.value}
-              dollarStep="500"
-              percentStep="0.1"
-              onModeToggle={() =>
-                setMortgageState((draft) => {
-                  toggleMortgageValueMode(draft, "saleClosingCost");
-                })
-              }
-              onValueChange={(value) =>
-                setMortgageState((draft) => {
-                  draft.saleClosingCost.value = value ?? 0;
-                })
-              }
-            />
+          <div className="grid gap-4">
+            <MortgageFieldGrid>
+              <NumberField
+                label={mortgageType === "arm" ? "Initial rate" : "Interest rate"}
+                suffix="%"
+                value={mortgageType === "arm" ? loanState?.initialRate : loanState?.rate}
+                step="0.125"
+                onValueChange={(value) =>
+                  onUpdateLoanField(mortgageScenario.optionId, mortgageType === "arm" ? "initialRate" : "rate", value)
+                }
+              />
+              <NumberField
+                label="Loan term"
+                suffix="years"
+                value={loanState?.term}
+                step="1"
+                onValueChange={(value) => onUpdateLoanField(mortgageScenario.optionId, "term", value)}
+              />
+              {mortgageType === "arm" ? (
+                <>
+                  <NumberField
+                    label="Reset rate"
+                    suffix="%"
+                    value={loanState?.adjustedRate}
+                    step="0.125"
+                    onValueChange={(value) => onUpdateLoanField(mortgageScenario.optionId, "adjustedRate", value)}
+                  />
+                  <NumberField
+                    label="Fixed years"
+                    suffix="years"
+                    value={loanState?.fixedYears}
+                    step="1"
+                    onValueChange={(value) => onUpdateLoanField(mortgageScenario.optionId, "fixedYears", value)}
+                  />
+                </>
+              ) : null}
+              <NumberField
+                label="Home price"
+                prefix="$"
+                value={mortgageState.homePrice}
+                step="50000"
+                onValueChange={(value) =>
+                  setMortgageState((draft) => {
+                    draft.homePrice = value ?? 0;
+                  })
+                }
+              />
+              <NumberField
+                label="Maintenance"
+                suffix={<PeriodSuffix unit="%" period="year" />}
+                step="0.1"
+                value={mortgageState.maintenanceRate}
+                onValueChange={(value) =>
+                  setMortgageState((draft) => {
+                    draft.maintenanceRate = value ?? 0;
+                  })
+                }
+              />
+            </MortgageFieldGrid>
+            <MortgageFieldGrid columns={3}>
+              <NumberField
+                label="Home insurance"
+                prefix="$"
+                suffix={<PeriodSuffix period="year" />}
+                value={mortgageState.insurancePerYear}
+                step="50"
+                onValueChange={(value) =>
+                  setMortgageState((draft) => {
+                    draft.insurancePerYear = value ?? 0;
+                  })
+                }
+              />
+              <NumberField
+                label="HOA"
+                prefix="$"
+                suffix={<PeriodSuffix period="month" />}
+                value={mortgageState.hoaPerMonth}
+                step="50"
+                onValueChange={(value) =>
+                  setMortgageState((draft) => {
+                    draft.hoaPerMonth = value ?? 0;
+                  })
+                }
+              />
+              <SelectField
+                label="Funding source"
+                value={mortgageFundingBucketId}
+                onChange={(event) => onUpdateMortgageFundingBucketId(event.target.value)}
+              >
+                <option value="none">None</option>
+                {assetOptions.map((bucket) => (
+                  <option key={bucket.id} value={bucket.id}>
+                    {bucket.name}
+                  </option>
+                ))}
+              </SelectField>
+              <DollarPercentField
+                label="Down payment"
+                mode={mortgageState.downPayment.mode}
+                value={mortgageState.downPayment.value}
+                dollarStep="1000"
+                percentStep="0.5"
+                onModeToggle={() =>
+                  setMortgageState((draft) => {
+                    toggleMortgageValueMode(draft, "downPayment");
+                  })
+                }
+                onValueChange={(value) =>
+                  setMortgageState((draft) => {
+                    draft.downPayment.value = value ?? 0;
+                  })
+                }
+              />
+              <DollarPercentField
+                label="Buy closing cost"
+                mode={mortgageState.purchaseClosingCost.mode}
+                value={mortgageState.purchaseClosingCost.value}
+                dollarStep="500"
+                percentStep="0.1"
+                onModeToggle={() =>
+                  setMortgageState((draft) => {
+                    toggleMortgageValueMode(draft, "purchaseClosingCost");
+                  })
+                }
+                onValueChange={(value) =>
+                  setMortgageState((draft) => {
+                    draft.purchaseClosingCost.value = value ?? 0;
+                  })
+                }
+              />
+              <DollarPercentField
+                label="Selling cost"
+                mode={mortgageState.saleClosingCost.mode}
+                value={mortgageState.saleClosingCost.value}
+                dollarStep="500"
+                percentStep="0.1"
+                onModeToggle={() =>
+                  setMortgageState((draft) => {
+                    toggleMortgageValueMode(draft, "saleClosingCost");
+                  })
+                }
+                onValueChange={(value) =>
+                  setMortgageState((draft) => {
+                    draft.saleClosingCost.value = value ?? 0;
+                  })
+                }
+              />
+            </MortgageFieldGrid>
           </div>
         )}
       </WorkspaceMetricSplit>

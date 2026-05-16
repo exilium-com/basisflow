@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import clsx from "clsx";
-import { buttonTextClass, labelTextClass } from "../lib/text";
+import { MenuItemButton, MenuPanel } from "./ThreeDotMenu";
+import { useDismissibleLayer } from "./useDismissibleLayer";
+import { buttonTextClass } from "../lib/text";
 
 type AddMenuOption = {
   id: string;
@@ -18,40 +20,15 @@ type AddMenuProps = {
 export function AddMenu({ label, options, align = "right", className }: AddMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const closeMenu = useCallback(() => setOpen(false), []);
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      if (rootRef.current?.contains(event.target as Node)) {
-        return;
-      }
-
-      setOpen(false);
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open]);
+  useDismissibleLayer(open, closeMenu, rootRef);
 
   return (
     <div ref={rootRef} className={clsx("relative", className)}>
       <button
         type="button"
-        className={clsx("action-button w-full sm:w-auto", buttonTextClass)}
+        className={clsx("action-button w-full lg:w-auto", buttonTextClass)}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
@@ -59,30 +36,23 @@ export function AddMenu({ label, options, align = "right", className }: AddMenuP
         {label}
       </button>
       {open ? (
-        <div
-          className={clsx(
-            "absolute top-full z-20 mt-2 min-w-40 border border-(--line) bg-(--white) p-2 shadow-sm",
-            align === "right" ? "right-0" : "left-0",
-          )}
+        <MenuPanel
+          className={clsx("absolute top-full mt-2 w-44", align === "right" ? "right-0" : "left-0")}
           role="menu"
         >
-          <div className="grid gap-1">
-            {options.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                role="menuitem"
-                className={clsx("flex h-10 items-center px-3 text-left hover:bg-(--teal-soft)", labelTextClass)}
-                onClick={() => {
-                  option.onSelect();
-                  setOpen(false);
-                }}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
+          {options.map((option) => (
+            <MenuItemButton
+              key={option.id}
+              role="menuitem"
+              onClick={() => {
+                option.onSelect();
+                setOpen(false);
+              }}
+            >
+              {option.label}
+            </MenuItemButton>
+          ))}
+        </MenuPanel>
       ) : null}
     </div>
   );

@@ -60,4 +60,53 @@ describe("profileStore", () => {
     expect(duplicated.profiles[0].document).not.toBe(duplicated.profiles[1].document);
     expect(duplicated.profiles[1].document).not.toBe(duplicated.profiles[2].document);
   });
+
+  it("keeps workspace projection settings outside profile documents", () => {
+    const store = updateProfileStore(readProfileStore(), {
+      type: "updateWorkspaceSettings",
+      nextSettings: (draft) => {
+        draft.projection.currentYear = 7;
+        draft.projection.assetGrowthRate = 4;
+        draft.income.matchRate = 75;
+      },
+    });
+    const withSecondProfile = updateProfileStore(store, { type: "create", name: "Second" });
+
+    expect(withSecondProfile.workspaceSettings.projection.currentYear).toBe(7);
+    expect(withSecondProfile.workspaceSettings.projection.assetGrowthRate).toBe(4);
+    expect(withSecondProfile.workspaceSettings.income.matchRate).toBe(75);
+    expect(withSecondProfile.profiles[0].document.projection).not.toHaveProperty("currentYear");
+    expect(withSecondProfile.profiles[1].document.projection).not.toHaveProperty("currentYear");
+  });
+
+  it("migrates old profile-scoped right panel settings into workspace settings", () => {
+    localStorage.setItem(
+      "basisflow_profiles",
+      JSON.stringify({
+        activeProfileName: "Profile",
+        profiles: [
+          {
+            name: "Profile",
+            document: {
+              income: { matchRate: 80 },
+              projection: {
+                currentYear: 3,
+                assetGrowthRate: 9,
+                homeAppreciationRate: 4,
+                mortgageFundingBucketId: "cash-bucket",
+              },
+            },
+          },
+        ],
+      }),
+    );
+
+    const store = readProfileStore();
+
+    expect(store.workspaceSettings.income.matchRate).toBe(80);
+    expect(store.workspaceSettings.projection.currentYear).toBe(3);
+    expect(store.workspaceSettings.projection.assetGrowthRate).toBe(9);
+    expect(store.workspaceSettings.projection.homeAppreciationRate).toBe(4);
+    expect(store.profiles[0].document.projection.mortgageFundingBucketId).toBe("cash-bucket");
+  });
 });

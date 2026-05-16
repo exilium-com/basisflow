@@ -56,6 +56,7 @@ type ProjectionBase = {
 type ProjectionSimulation = {
   base: ProjectionBase;
   bucketStates: ProjectedBucketState[];
+  homeSold: boolean;
   vestedRsuBalance: number;
   vestedRsuBalanceById: Record<string, number>;
   projection: ProjectionRow[];
@@ -259,7 +260,46 @@ function getHomeEquity(base: ProjectionBase, year: number) {
     base.mortgage.saleClosingCostMode === "percent"
       ? (homeValue * base.mortgage.saleClosingCostInput) / 100
       : base.mortgage.saleClosingCostInput;
-  return homeValue - saleClosingCost - getMortgageEndingBalance(base.mortgageSummary, year) - base.mortgage.equityShortfall;
+  return (
+    homeValue - saleClosingCost - getMortgageEndingBalance(base.mortgageSummary, year) - base.mortgage.equityShortfall
+  );
+}
+
+function getHomeSaleYear(base: ProjectionBase) {
+  return base.mortgageSummary.kind === "rent" ? null : base.projection.timeline.homeSaleYear;
+}
+
+function isHomeSoldByYear(base: ProjectionBase, year: number) {
+  const saleYear = getHomeSaleYear(base);
+  return saleYear != null && year >= saleYear;
+}
+
+function shouldSellHomeInYear(base: ProjectionBase, year: number, alreadySold: boolean) {
+  const saleYear = getHomeSaleYear(base);
+  return !alreadySold && saleYear != null && year === saleYear;
+}
+
+function getProjectedHomeEquity(base: ProjectionBase, year: number) {
+  return isHomeSoldByYear(base, year) ? 0 : getHomeEquity(base, year);
+}
+
+function addNetCashToReserve(bucketStates: ProjectedBucketState[], reserveCashBucketId: string, amount: number) {
+  if (amount === 0) {
+    return bucketStates;
+  }
+
+  return bucketStates.map((bucketState) =>
+    bucketState.id === reserveCashBucketId
+      ? {
+          ...bucketState,
+          balance: roundTo(bucketState.balance + amount, 2),
+          basisValue:
+            bucketState.taxTreatment === "none" || bucketState.taxTreatment === "taxDeferred"
+              ? roundTo(Math.max(0, bucketState.basisValue + amount), 2)
+              : bucketState.basisValue,
+        }
+      : bucketState,
+  );
 }
 
 function advanceProjectedBucketWithNetContribution(
@@ -340,9 +380,7 @@ function rebalanceTargetCash(
     .map((bucketState, index) => ({ bucketState, index }))
     .filter(
       ({ bucketState }) =>
-        bucketState.id !== base.reserveCashBucketId &&
-        !bucketState.illiquid &&
-        bucketState.balance > 0,
+        bucketState.id !== base.reserveCashBucketId && !bucketState.illiquid && bucketState.balance > 0,
     )
     .sort((left, right) => {
       const leftIsCustom = !pinnedBucketIds.has(left.bucketState.id);
@@ -476,7 +514,7 @@ function createProjectionSimulation({
     },
     reserveCashBucketId,
   };
-  const equityAmount = mortgageSummary.kind === "rent" ? 0 : mortgageSummary.currentEquity ?? 0;
+  const equityAmount = mortgageSummary.kind === "rent" ? 0 : (mortgageSummary.currentEquity ?? 0);
   const initialBucketStates = base.assets.buckets.map((bucket) => ({
     ...bucket,
     balance: bucket.current,
@@ -504,6 +542,7 @@ function createProjectionSimulation({
   return {
     base,
     bucketStates: currentBucketStates,
+    homeSold: false,
     vestedRsuBalance: 0,
     vestedRsuBalanceById: {},
     projection: [
@@ -523,7 +562,7 @@ function createProjectionSimulation({
         snapshot: currentSnapshot,
         vestedRsuBalance: 0,
         vestedRsuBalanceById: {},
-        homeEquity: mortgageSummary.kind === "rent" ? 0 : getHomeEquity(base, 0),
+        homeEquity: mortgageSummary.kind === "rent" ? 0 : getProjectedHomeEquity(base, 0),
       }),
     ],
   };
@@ -628,17 +667,19 @@ function buildProjectionRow({
 
 function buildProjectionYearContext(base: ProjectionBase, year: number): ProjectionYearContext {
   const growthFactor = Math.pow(1 + base.projection.incomeGrowthRate, year);
+  const homeSold = isHomeSoldByYear(base, year);
   const maintenanceCost =
-    base.mortgageSummary.kind === "rent"
+    base.mortgageSummary.kind === "rent" || homeSold
       ? 0
       : getHomeValue(base, year) * ((base.mortgageSummary.maintenanceRate ?? 0) / 100);
-  const housingCost = getMortgageAnnualHousingCost(base.mortgageSummary, year) + maintenanceCost;
+  const housingCost = homeSold ? 0 : getMortgageAnnualHousingCost(base.mortgageSummary, year) + maintenanceCost;
   const income: ResolvedIncome = {
     ...base.income,
     grossSalary: base.income.grossSalary * growthFactor,
     passiveIncome: base.income.passiveIncome * growthFactor,
-    mortgageAverageBalance: getMortgageYearAverageBalance(base.mortgageSummary, year),
-    mortgageInterest: getMortgageYearInterest(base.mortgageSummary, year),
+    mortgageAverageBalance: homeSold ? 0 : getMortgageYearAverageBalance(base.mortgageSummary, year),
+    mortgageInterest: homeSold ? 0 : getMortgageYearInterest(base.mortgageSummary, year),
+    propertyTax: homeSold ? 0 : getMortgageYearPropertyTax(base.mortgageSummary),
   };
   const rsuGrossById = Object.fromEntries(
     income.rsuItems.map((rsuItem) => [
@@ -715,9 +756,7 @@ function allocateFreeCash(
     extraContributionByBucket,
     reserveCashFlow:
       yearContext.freeCashBeforeAllocation >= 0
-        ? reserveCashTopUp +
-          (base.assetPlan.freeCashFlowBucket ? 0 : investableCash) +
-          extraDeductionTaxSavings
+        ? reserveCashTopUp + (base.assetPlan.freeCashFlowBucket ? 0 : investableCash) + extraDeductionTaxSavings
         : yearContext.freeCashBeforeAllocation,
   };
 }
@@ -767,7 +806,14 @@ function advanceProjectionYear(simulation: ProjectionSimulation, year: number) {
     incomeDirectedContributions: base.assetPlan.incomeDirectedContributions,
     reserveCashFlow: allocation.reserveCashFlow,
   });
-  const nextBucketStatesWithTargetCash = rebalanceTargetCash(base, nextBucketStates, appliedContext.taxBases);
+  const sellsHomeThisYear = shouldSellHomeInYear(base, year, simulation.homeSold);
+  const bucketStatesAfterTimeline = sellsHomeThisYear
+    ? addNetCashToReserve(nextBucketStates, base.reserveCashBucketId, getHomeEquity(base, year))
+    : nextBucketStates;
+  if (sellsHomeThisYear) {
+    simulation.homeSold = true;
+  }
+  const nextBucketStatesWithTargetCash = rebalanceTargetCash(base, bucketStatesAfterTimeline, appliedContext.taxBases);
   const vestedRsuBalanceById = buildNextVestedRsuBalancesById(
     simulation.vestedRsuBalanceById,
     appliedContext.rsuGrossById,
@@ -779,10 +825,7 @@ function advanceProjectionYear(simulation: ProjectionSimulation, year: number) {
     Object.values(vestedRsuBalanceById).reduce((sum, balance) => sum + balance, 0),
     2,
   );
-  const homeEquity =
-    base.mortgageSummary.kind === "rent"
-      ? 0
-      : getHomeEquity(base, year);
+  const homeEquity = base.mortgageSummary.kind === "rent" ? 0 : getProjectedHomeEquity(base, year);
   const yearContext = buildProjectionYearContext(base, year);
   const snapshot = buildProjectionSnapshot({
     base,

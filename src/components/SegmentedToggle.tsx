@@ -2,16 +2,13 @@ import React from "react";
 import clsx from "clsx";
 import { buttonTextClass, labelTextClass } from "../lib/text";
 
-const toggleClassNameBySize = {
-  default: "inline-flex h-10 items-center gap-1 border border-(--line) bg-(--white-soft) p-1",
-  compact: "inline-flex h-8 items-center gap-1 border border-(--line) bg-(--white-soft) p-1",
-};
+const toggleClassName = "inline-flex items-center gap-1 rounded-sm border border-line bg-white-soft p-1";
 const segmentClassNameBySize = {
-  default: `h-8 rounded-sm border bg-transparent px-4 ${buttonTextClass} focus-visible:outline-none`,
-  compact: `h-6 rounded-sm border bg-transparent px-3 ${buttonTextClass} focus-visible:outline-none`,
+  default: `h-8 rounded-sm border bg-transparent px-3 ${buttonTextClass} focus-visible:outline-none`,
+  compact: `h-6 rounded-sm border bg-transparent px-2 ${buttonTextClass} focus-visible:outline-none`,
 };
-const inactiveSegmentClassName = "border-transparent text-(--ink) hover:bg-(--teal-soft)";
-const activeSegmentClassName = "!border-(--teal) !bg-(--teal-tint) !text-(--teal)";
+const inactiveSegmentClassName = "border-transparent text-ink hover:bg-teal-soft";
+const activeSegmentClassName = "!border-teal !bg-teal-tint !text-teal";
 
 type SegmentedToggleOption<T extends string> = {
   value: T;
@@ -40,9 +37,9 @@ export function SegmentedToggle<T extends string>({
   size = "default",
 }: SegmentedToggleProps<T>) {
   return (
-    <div className="grid justify-items-start gap-1">
+    <div className="inline-grid w-fit gap-1 justify-self-start">
       {label ? <div className={labelTextClass}>{label}</div> : null}
-      <div className={clsx(toggleClassNameBySize[size], className)} role="group" aria-label={ariaLabel}>
+      <div className={clsx(toggleClassName, className)} role="group" aria-label={ariaLabel}>
         {options.map((option: SegmentedToggleOption<T>) => (
           <button
             key={option.value}

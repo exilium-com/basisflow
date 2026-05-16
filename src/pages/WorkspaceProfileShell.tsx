@@ -9,6 +9,7 @@ import {
   updateProfileStore,
   writeProfileStore,
   type WorkspaceProfileDocument,
+  type WorkspaceSettings,
 } from "../lib/profileStore";
 import type { DraftStateSetter } from "../lib/state";
 import { WorkspacePage } from "./WorkspacePage";
@@ -30,6 +31,9 @@ export function WorkspaceProfileShell() {
 
   const setProfileDocument = useCallback<DraftStateSetter<WorkspaceProfileDocument>>((nextDocument) => {
     setProfileStore((store) => updateProfileStore(store, { type: "updateActiveDocument", nextDocument }));
+  }, []);
+  const setWorkspaceSettings = useCallback<DraftStateSetter<WorkspaceSettings>>((nextSettings) => {
+    setProfileStore((store) => updateProfileStore(store, { type: "updateWorkspaceSettings", nextSettings }));
   }, []);
 
   function handleCreateProfile() {
@@ -73,11 +77,11 @@ export function WorkspaceProfileShell() {
   }
 
   return (
-    <div className="mx-auto mb-8 flex min-h-screen w-full max-w-screen-2xl flex-col px-4">
-      <header className="sticky top-0 z-40 -mx-4 mb-4 h-16 border-b border-(--line) bg-(--paper) px-4">
-        <div className="flex h-full min-w-0 gap-4">
+    <div className="mx-auto mb-8 flex min-h-screen w-full max-w-screen-2xl flex-col px-4 lg:px-6">
+      <header className="sticky top-0 z-40 -mx-4 h-12 border-b border-line bg-paper px-4 lg:-mx-6 lg:h-16 lg:px-6">
+        <div className="flex h-full min-w-0 gap-3 lg:gap-6">
           <Link to="/" className="flex shrink-0 items-center no-underline">
-            <h1 className="font-serif text-3xl text-(--ink) sm:text-4xl">Basisflow</h1>
+            <h1 className="font-serif text-xl text-ink lg:text-4xl">Basisflow</h1>
           </Link>
           <ProfileTabs
             activeProfileName={profileStore.activeProfileName}
@@ -96,7 +100,13 @@ export function WorkspaceProfileShell() {
         </div>
       </header>
 
-      <WorkspacePage compareProfile={compareProfile} profile={activeProfile} setProfileDocument={setProfileDocument} />
+      <WorkspacePage
+        compareProfile={compareProfile}
+        profile={activeProfile}
+        setProfileDocument={setProfileDocument}
+        setWorkspaceSettings={setWorkspaceSettings}
+        workspaceSettings={profileStore.workspaceSettings}
+      />
     </div>
   );
 }

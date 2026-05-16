@@ -93,7 +93,10 @@ export const TYPE_DEFAULTS = {
     contribution: 10000,
     growth: 7,
   },
-} satisfies Record<AssetTaxTreatment, { name: string; current: number; contribution: number; growth: number; basis?: number }>;
+} satisfies Record<
+  AssetTaxTreatment,
+  { name: string; current: number; contribution: number; growth: number; basis?: number }
+>;
 
 type PinnedBucketConfig = {
   id: string;
@@ -105,10 +108,7 @@ type PinnedBucketConfig = {
   illiquid?: boolean;
 };
 
-export const PINNED_BUCKETS: Record<
-  string,
-  PinnedBucketConfig
-> = {
+export const PINNED_BUCKETS: Record<string, PinnedBucketConfig> = {
   reserveCashBucketId: {
     id: "cash-bucket",
     name: "Cash",
@@ -198,10 +198,7 @@ export function buildIncomeDirectedContributions(summary: IncomeSummary = DEFAUL
 
 function hasMeaningfulBucketValues(bucket: Partial<AssetBucketState>) {
   return (
-    (bucket.current ?? 0) > 0 ||
-    (bucket.contribution ?? 0) > 0 ||
-    (bucket.basis ?? 0) > 0 ||
-    bucket.growth != null
+    (bucket.current ?? 0) > 0 || (bucket.contribution ?? 0) > 0 || (bucket.basis ?? 0) > 0 || bucket.growth != null
   );
 }
 
@@ -244,9 +241,7 @@ export function resolvePinnedBuckets(
 
   const buckets = state.buckets.filter(
     (bucket) =>
-      !allPinnedBucketIds.has(bucket.id) ||
-      pinnedBucketIds.has(bucket.id) ||
-      hasMeaningfulBucketValues(bucket),
+      !allPinnedBucketIds.has(bucket.id) || pinnedBucketIds.has(bucket.id) || hasMeaningfulBucketValues(bucket),
   );
   let changed = buckets.length !== state.buckets.length;
 
@@ -320,26 +315,25 @@ export function resolvePinnedBuckets(
   };
 }
 
-export function createAssets(
-  state: AssetsState,
-  baselineGrowthRate = TYPE_DEFAULTS.none.growth,
-): Assets {
+export function createAssets(state: AssetsState, baselineGrowthRate = TYPE_DEFAULTS.none.growth): Assets {
   return {
     baselineGrowthRate: baselineGrowthRate / 100,
-    buckets: state.buckets.filter((bucket) => !bucket.linkedRsuId).map((bucket) => {
-      const current = Math.max(0, bucket.current ?? 0);
-      const contribution = Math.max(0, bucket.contribution ?? 0);
-      const growth = (bucket.growth ?? baselineGrowthRate) / 100;
-      const basis = bucket.taxTreatment === "none" ? clamp(bucket.basis ?? current, 0, current) : 0;
+    buckets: state.buckets
+      .filter((bucket) => !bucket.linkedRsuId)
+      .map((bucket) => {
+        const current = Math.max(0, bucket.current ?? 0);
+        const contribution = Math.max(0, bucket.contribution ?? 0);
+        const growth = (bucket.growth ?? baselineGrowthRate) / 100;
+        const basis = bucket.taxTreatment === "none" ? clamp(bucket.basis ?? current, 0, current) : 0;
 
-      return {
-        ...bucket,
-        current,
-        contribution,
-        growth,
-        basis,
-      };
-    }),
+        return {
+          ...bucket,
+          current,
+          contribution,
+          growth,
+          basis,
+        };
+      }),
   };
 }
 
@@ -394,7 +388,10 @@ function computeOrdinaryWithdrawalTax(amount: number, taxConfig: TaxConfig) {
   return roundTo(federal + state, 2);
 }
 
-export function advanceProjectedBucket(bucketState: ProjectedBucketState, annualContribution = 0): ProjectedBucketState {
+export function advanceProjectedBucket(
+  bucketState: ProjectedBucketState,
+  annualContribution = 0,
+): ProjectedBucketState {
   const contribution = Math.max(0, annualContribution);
   const balance = roundTo(
     bucketState.balance * (1 + bucketState.growth) + contribution * (1 + bucketState.growth / 2),

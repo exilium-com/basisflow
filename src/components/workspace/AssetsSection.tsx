@@ -1,9 +1,9 @@
 import { ActionButton } from "../ActionButton";
-import { CheckboxField, NumberField, SelectField, TextField } from "../Field";
+import { CheckboxField, NumberField, SelectField } from "../Field";
 import { metricDeltaBetween } from "../MetricDelta";
-import { ProjectedValueDisplay } from "../ProjectedValueDisplay";
 import { RowItem } from "../RowItem";
-import { WorkspaceSection } from "./WorkspaceSection";
+import { RowMoneyField, RowValueProjection } from "./RowValueProjection";
+import { workspaceSectionActionClassName, WorkspaceSection, WorkspaceSectionFooter } from "./WorkspaceSection";
 import {
   PINNED_BUCKETS,
   type AssetBucketState,
@@ -47,17 +47,7 @@ export function AssetsSection({
   const reserveCashBucketId = PINNED_BUCKETS.reserveCashBucketId.id;
 
   return (
-    <WorkspaceSection
-      id="assets"
-      index="05"
-      title="Assets"
-      summary="Balance Sheet"
-      actions={
-        <ActionButton className="w-full sm:w-auto" onClick={onAddAssetBucket}>
-          Add asset
-        </ActionButton>
-      }
-    >
+    <WorkspaceSection id="assets" index="05" title="Assets" summary="Balance Sheet">
       <div className="grid gap-2">
         {assetsView.orderedBuckets.map((bucket) => {
           const isPinnedBucket = assetsView.pinnedBucketIds.has(bucket.id);
@@ -82,16 +72,18 @@ export function AssetsSection({
             : (comparison?.currentRow.bucketSnapshotsById[bucket.id]?.balance ?? 0);
           const comparisonValue =
             comparison && toDisplayValue(comparisonBalance, comparison.projection.currentYear, comparison.projection);
+          const canEditBucket = !isPinnedBucket && !isLinkedRsuBucket;
 
           return (
             <RowItem
               key={bucket.id}
-              pinned={isPinnedBucket}
-              removeLabel={isPinnedBucket || isLinkedRsuBucket ? undefined : "Remove asset"}
-              onRemove={isPinnedBucket || isLinkedRsuBucket ? undefined : () => onRemoveAssetBucket(bucket.id)}
-              detailsTitle="Asset details"
               detailsSummary={detailsSummary || null}
-              detailsClassName="grid gap-4 sm:grid-cols-2"
+              fallbackName="Untitled asset"
+              name={bucket.name}
+              canRename={canEditBucket}
+              renameAriaLabel="Asset name"
+              onRemove={canEditBucket ? () => onRemoveAssetBucket(bucket.id) : undefined}
+              onRename={(nextName) => onUpdateAssetBucket(bucket.id, { name: nextName })}
               details={
                 <>
                   {showsGrowthOverride ? (
@@ -125,7 +117,6 @@ export function AssetsSection({
                       step="1000"
                       value={bucket.basis}
                       placeholder={String(bucket.current ?? 0)}
-                      inputClassName={isPinnedBucket ? "text-(--ink-soft)" : ""}
                       onValueChange={(value) => onUpdateAssetBucket(bucket.id, { basis: value })}
                     />
                   ) : null}
@@ -139,33 +130,30 @@ export function AssetsSection({
                 </>
               }
             >
-              <TextField
-                label="Asset name"
-                value={bucket.name}
-                placeholder="Asset name"
-                disabled={isPinnedBucket || isLinkedRsuBucket}
-                inputClassName={isPinnedBucket || isLinkedRsuBucket ? "text-(--ink-soft)" : ""}
-                onChange={(event) => onUpdateAssetBucket(bucket.id, { name: event.target.value })}
-              />
-              <NumberField
-                label="Current value"
-                prefix="$"
-                step="1000"
-                value={bucket.current}
-                placeholder="0"
-                disabled={isLinkedRsuBucket}
-                inputClassName={isPinnedBucket || isLinkedRsuBucket ? "text-(--ink-soft)" : ""}
-                onValueChange={(value) => onUpdateAssetBucket(bucket.id, { current: value })}
-              />
-              <ProjectedValueDisplay
+              <RowValueProjection
                 delta={metricDeltaBetween(value, comparisonValue)}
                 label={selectedYearLabel}
                 value={usd(value)}
-              />
+              >
+                <RowMoneyField
+                  label="Current value"
+                  step="1000"
+                  value={bucket.current}
+                  placeholder="0"
+                  disabled={isLinkedRsuBucket}
+                  muted={isLinkedRsuBucket}
+                  onValueChange={(value) => onUpdateAssetBucket(bucket.id, { current: value })}
+                />
+              </RowValueProjection>
             </RowItem>
           );
         })}
       </div>
+      <WorkspaceSectionFooter>
+        <ActionButton className={workspaceSectionActionClassName} onClick={onAddAssetBucket}>
+          Add asset
+        </ActionButton>
+      </WorkspaceSectionFooter>
     </WorkspaceSection>
   );
 }

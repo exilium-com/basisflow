@@ -72,6 +72,14 @@ export function getMortgageYearInterest(summary: MortgageSummary, year = 0) {
   return findMortgageLoanYear(summary, year)?.interest ?? 0;
 }
 
+export function getMortgageInterestThroughYear(summary: MortgageSummary, year = 0) {
+  if (summary.kind === "rent" || year <= 0) {
+    return 0;
+  }
+
+  return summary.yearlyLoan.filter((row) => row.year <= year).reduce((sum, row) => sum + row.interest, 0);
+}
+
 export function getMortgageYearAverageBalance(summary: MortgageSummary, year = 0) {
   return findMortgageLoanYear(summary, year)?.averageBalance ?? 0;
 }

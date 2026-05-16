@@ -37,9 +37,9 @@ export function MetricDelta({ delta }: MetricDeltaProps) {
     <span
       className={clsx(
         "text-xs font-bold",
-        delta.good === null && "text-(--ink-soft)",
-        delta.good === true && "text-(--teal)",
-        delta.good === false && "text-(--destructive)",
+        delta.good === null && "text-ink-soft",
+        delta.good === true && "text-teal",
+        delta.good === false && "text-destructive",
       )}
     >
       {formatMetricDelta(delta.value)}

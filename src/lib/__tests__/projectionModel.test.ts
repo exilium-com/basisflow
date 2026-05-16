@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computeRsuGrossForItems, computeRsuGrossForProjectionYear } from "../incomeModel";
-import { getMortgageAnnualHousingCost, getMortgageYearInterest } from "../mortgagePage";
+import { getMortgageAnnualHousingCost, getMortgageInterestThroughYear, getMortgageYearInterest } from "../mortgagePage";
 import { computeAdditionalTax, DEFAULT_CONFIG, normalizeConfig } from "../taxConfig";
 import { buildMonthlyCashFlow } from "../projectionUtils";
 import { projectionGoldens } from "./goldens/projection";
@@ -354,6 +354,9 @@ describe("calculateProjection", () => {
     expect(getMortgageAnnualHousingCost(mortgageSummary, 1)).toBe(37800);
     expect(getMortgageYearInterest(mortgageSummary, 0)).toBe(900);
     expect(getMortgageYearInterest(mortgageSummary, 1)).toBe(800);
+    expect(getMortgageInterestThroughYear(mortgageSummary, 0)).toBe(0);
+    expect(getMortgageInterestThroughYear(mortgageSummary, 1)).toBe(900);
+    expect(getMortgageInterestThroughYear(mortgageSummary, 2)).toBe(1700);
   });
 
   it("includes principal, tax, insurance, and hoa in year-zero housing cost", () => {
@@ -525,6 +528,33 @@ describe("calculateProjection", () => {
     }).getYear(0);
 
     expect(today.homeEquity).toBe(200000);
+  });
+
+  it("moves home sale proceeds into cash and stops owner housing costs after the sale year", () => {
+    const projection = runProjectionScenario({
+      salary: 0,
+      annualMortgage: 24000,
+      homePrice: 1000000,
+      currentEquity: 200000,
+      maintenanceRate: 1,
+      homeSaleYear: 1,
+      currentYear: 2,
+      yearlyLoan: [
+        { year: 1, principal: 12000, interest: 12000, endingBalance: 788000 },
+        { year: 2, principal: 13000, interest: 11000, endingBalance: 775000 },
+      ],
+    });
+    const today = projection.getYear(0);
+    const yearOne = projection.getYear(1);
+    const yearTwo = projection.getYear(2);
+
+    expect(today.homeEquity).toBe(200000);
+    expect(today.mortgageLineItem).toBe(34000);
+    expect(yearOne.homeEquity).toBe(0);
+    expect(yearOne.mortgageLineItem).toBe(0);
+    expect(yearOne.residualCash).toBe(178000);
+    expect(yearTwo.homeEquity).toBe(0);
+    expect(yearTwo.mortgageLineItem).toBe(0);
   });
 
   it("does not grant unfunded down-payment equity in year zero", () => {

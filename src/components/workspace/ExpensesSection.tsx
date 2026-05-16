@@ -1,16 +1,18 @@
 import { ActionButton } from "../ActionButton";
-import { NumberField, TextField } from "../Field";
+import { NumberField } from "../Field";
 import { metricDeltaBetween } from "../MetricDelta";
 import { PeriodSuffix } from "../PeriodSuffix";
-import { ProjectedValueDisplay } from "../ProjectedValueDisplay";
 import { RowItem } from "../RowItem";
 import { SegmentedToggle } from "../SegmentedToggle";
-import { WorkspaceSection } from "./WorkspaceSection";
+import { RowMoneyField, RowValueProjection } from "./RowValueProjection";
+import { workspaceSectionActionClassName, WorkspaceSection, WorkspaceSectionFooter } from "./WorkspaceSection";
 import { usd } from "../../lib/format";
 import { type ExpenseStateItem, type ExpensesState } from "../../lib/expensesModel";
 import { toDisplayValue, type Projection, type ProjectionExpenseOverride } from "../../lib/projectionState";
 import { type ProjectionRow } from "../../lib/projectionUtils";
 import { labelTextClass } from "../../lib/text";
+
+const expensePeriodButtonClassName = "bg-transparent p-0 text-ink-soft hover:text-ink";
 
 type ExpensesSectionProps = {
   comparison?: {
@@ -43,17 +45,7 @@ export function ExpensesSection({
   onUpdateExpenseOverride,
 }: ExpensesSectionProps) {
   return (
-    <WorkspaceSection
-      id="expenses"
-      index="04"
-      title="Expenses"
-      summary="Cash Out"
-      actions={
-        <ActionButton className="w-full sm:w-auto" onClick={onAddExpense}>
-          Add expense
-        </ActionButton>
-      }
-    >
+    <WorkspaceSection id="expenses" index="04" title="Expenses" summary="Cash Out">
       <div className="grid gap-2">
         {expenseState.expenses.length === 0 ? <div className={`${labelTextClass} py-4`}>Spend some money!</div> : null}
 
@@ -73,17 +65,20 @@ export function ExpensesSection({
               comparison.projection,
             );
           const nextFrequency = expense.frequency === "annual" ? "monthly" : "annual";
+          const detailsSummary =
+            showsGrowthOverride && override?.growthRate != null ? `Annual increase ${override.growthRate}%` : null;
 
           return (
             <RowItem
               key={expense.id}
-              removeLabel="Remove expense"
-              onRemove={() => onRemoveExpense(expense.id)}
-              detailsTitle="Expense details"
-              detailsSummary={
-                showsGrowthOverride && override?.growthRate != null ? `Annual increase ${override.growthRate}%` : null
-              }
               detailsClassName="flex flex-wrap items-start gap-4"
+              detailsSummary={detailsSummary}
+              fallbackName="Untitled expense"
+              name={expense.name}
+              canRename
+              renameAriaLabel="Expense name"
+              onRemove={() => onRemoveExpense(expense.id)}
+              onRename={(nextName) => onUpdateExpense(expense.id, { name: nextName })}
               details={
                 <>
                   <SegmentedToggle
@@ -99,6 +94,7 @@ export function ExpensesSection({
                   />
                   {showsGrowthOverride ? (
                     <NumberField
+                      className="w-28"
                       label="Annual increase"
                       suffix="%"
                       step="0.5"
@@ -109,6 +105,7 @@ export function ExpensesSection({
                   ) : null}
                   {expense.frequency === "one_off" ? (
                     <NumberField
+                      className="w-28"
                       label="Relative year"
                       step="1"
                       value={expense.oneOffYear ?? ""}
@@ -118,44 +115,42 @@ export function ExpensesSection({
                 </>
               }
             >
-              <TextField
-                label="Expense name"
-                placeholder="Expense name"
-                value={expense.name}
-                onChange={(event) => onUpdateExpense(expense.id, { name: event.target.value })}
-              />
-              <NumberField
-                label="Amount"
-                prefix="$"
-                suffix={
-                  expense.frequency === "one_off" ? (
-                    ""
-                  ) : (
-                    <button
-                      type="button"
-                      className="bg-transparent p-0 text-(--ink-soft) transition hover:text-(--ink)
-                        focus-visible:outline-none"
-                      aria-label={`Switch ${expense.name || "expense"} to ${nextFrequency}`}
-                      onClick={() => onUpdateExpense(expense.id, { frequency: nextFrequency })}
-                    >
-                      <PeriodSuffix period={expense.frequency === "annual" ? "year" : "month"} />
-                    </button>
-                  )
-                }
-                step="50"
-                placeholder="0"
-                value={expense.amount}
-                onValueChange={(value) => onUpdateExpense(expense.id, { amount: value })}
-              />
-              <ProjectedValueDisplay
+              <RowValueProjection
                 delta={metricDeltaBetween(value, comparisonValue, "lower")}
                 label={selectedYearLabel}
                 value={usd(value)}
-              />
+              >
+                <RowMoneyField
+                  label="Amount"
+                  suffix={
+                    expense.frequency === "one_off" ? (
+                      ""
+                    ) : (
+                      <button
+                        type="button"
+                        className={expensePeriodButtonClassName}
+                        aria-label={`Switch ${expense.name || "expense"} to ${nextFrequency}`}
+                        onClick={() => onUpdateExpense(expense.id, { frequency: nextFrequency })}
+                      >
+                        <PeriodSuffix period={expense.frequency === "annual" ? "year" : "month"} />
+                      </button>
+                    )
+                  }
+                  step="50"
+                  placeholder="0"
+                  value={expense.amount}
+                  onValueChange={(value) => onUpdateExpense(expense.id, { amount: value })}
+                />
+              </RowValueProjection>
             </RowItem>
           );
         })}
       </div>
+      <WorkspaceSectionFooter>
+        <ActionButton className={workspaceSectionActionClassName} onClick={onAddExpense}>
+          Add expense
+        </ActionButton>
+      </WorkspaceSectionFooter>
     </WorkspaceSection>
   );
 }

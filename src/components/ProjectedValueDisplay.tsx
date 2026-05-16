@@ -1,20 +1,20 @@
+import { InlineLabelLayout } from "./InlineLabelLayout";
 import { MetricDelta, type MetricDeltaValue } from "./MetricDelta";
-import { labelTextClass } from "../lib/text";
 
 type ProjectedValueDisplayProps = {
   delta?: MetricDeltaValue;
   label: string;
+  mobileInline?: boolean;
   value: string;
 };
 
-export function ProjectedValueDisplay({ delta, label, value }: ProjectedValueDisplayProps) {
+export function ProjectedValueDisplay({ delta, label, mobileInline = false, value }: ProjectedValueDisplayProps) {
   return (
-    <div className="grid gap-1">
-      <div className={labelTextClass}>{label}</div>
-      <div className="grid min-h-10 content-center">
-        <div className="text-base font-semibold text-(--ink-soft)">{value}</div>
+    <InlineLabelLayout label={label} mobileInline={mobileInline}>
+      <div className="grid min-h-9 content-center justify-items-end lg:justify-items-start">
+        <div className="text-sm font-semibold text-ink-soft">{value}</div>
         {delta == null ? null : <MetricDelta delta={delta} />}
       </div>
-    </div>
+    </InlineLabelLayout>
   );
 }

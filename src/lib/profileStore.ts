@@ -1,9 +1,17 @@
 import { produce, type Draft } from "immer";
 import { DEFAULT_ASSETS_STATE, normalizeAssetsState, type AssetsState } from "./assetsModel";
 import { DEFAULT_EXPENSES_STATE, normalizeExpensesState, type ExpensesState } from "./expensesModel";
+import { readNumber } from "./format";
 import { DEFAULT_INCOME, normalizeIncome, type Income } from "./incomeModel";
 import { DEFAULT_MORTGAGE_STATE, normalizeMortgageState, type MortgageState } from "./mortgageConfig";
-import { DEFAULT_PROJECTION_STATE, normalizeProjectionState, type ProjectionState } from "./projectionState";
+import {
+  DEFAULT_PROJECTION_PROFILE_STATE,
+  DEFAULT_PROJECTION_SHARED_SETTINGS,
+  normalizeProjectionProfileState,
+  normalizeProjectionSharedSettings,
+  type ProjectionProfileState,
+  type ProjectionSharedSettings,
+} from "./projectionState";
 import type { DraftStateAction } from "./state";
 import { normalizeConfig, type TaxConfig } from "./taxConfig";
 
@@ -14,7 +22,7 @@ export type WorkspaceProfileDocument = {
   mortgage: MortgageState;
   assets: AssetsState;
   expenses: ExpensesState;
-  projection: ProjectionState;
+  projection: ProjectionProfileState;
   taxConfig: TaxConfig;
 };
 
@@ -23,8 +31,18 @@ export type WorkspaceProfile = {
   document: WorkspaceProfileDocument;
 };
 
+export type WorkspaceIncomeSettings = {
+  matchRate: number;
+};
+
+export type WorkspaceSettings = {
+  income: WorkspaceIncomeSettings;
+  projection: ProjectionSharedSettings;
+};
+
 type ProfileStore = {
   activeProfileName: string;
+  workspaceSettings: WorkspaceSettings;
   profiles: WorkspaceProfile[];
 };
 
@@ -35,6 +53,7 @@ type ProfileStoreAction =
   | { type: "remove"; name: string }
   | { type: "rename"; currentName: string; nextName: string }
   | { type: "reset"; name: string }
+  | { type: "updateWorkspaceSettings"; nextSettings: DraftStateAction<WorkspaceSettings> }
   | { type: "updateActiveDocument"; nextDocument: DraftStateAction<WorkspaceProfileDocument> };
 
 function runStorage<T>(fallback: T, action: () => T) {
@@ -89,14 +108,34 @@ function setProfileDocument(
   }
 }
 
+function setWorkspaceSettings(settings: Draft<WorkspaceSettings>, nextSettings: DraftStateAction<WorkspaceSettings>) {
+  if (typeof nextSettings === "function") {
+    nextSettings(settings);
+  } else {
+    const fallback = createDefaultWorkspaceSettings();
+    const normalizedSettings = normalizeWorkspaceSettings(nextSettings, fallback);
+    settings.income = normalizedSettings.income;
+    settings.projection = normalizedSettings.projection;
+  }
+}
+
 function createDefaultProfileDocument(): WorkspaceProfileDocument {
   return {
     income: structuredClone(DEFAULT_INCOME),
     mortgage: structuredClone(DEFAULT_MORTGAGE_STATE),
     assets: structuredClone(DEFAULT_ASSETS_STATE),
     expenses: structuredClone(DEFAULT_EXPENSES_STATE),
-    projection: structuredClone(DEFAULT_PROJECTION_STATE),
+    projection: structuredClone(DEFAULT_PROJECTION_PROFILE_STATE),
     taxConfig: normalizeConfig(null),
+  };
+}
+
+function createDefaultWorkspaceSettings(): WorkspaceSettings {
+  return {
+    income: {
+      matchRate: DEFAULT_INCOME.matchRate,
+    },
+    projection: structuredClone(DEFAULT_PROJECTION_SHARED_SETTINGS),
   };
 }
 
@@ -109,14 +148,27 @@ function normalizeProfileDocument(rawDocument: unknown): WorkspaceProfileDocumen
     mortgage: normalizeMortgageState(document.mortgage, fallback.mortgage),
     assets: normalizeAssetsState(document.assets, fallback.assets),
     expenses: normalizeExpensesState(document.expenses, fallback.expenses),
-    projection: normalizeProjectionState(document.projection, fallback.projection),
+    projection: normalizeProjectionProfileState(document.projection, fallback.projection),
     taxConfig: normalizeConfig(document.taxConfig),
+  };
+}
+
+function normalizeWorkspaceSettings(rawSettings: unknown, fallback: WorkspaceSettings): WorkspaceSettings {
+  const settings = asRecord(rawSettings);
+  const incomeSettings = asRecord(settings.income);
+
+  return {
+    income: {
+      matchRate: readNumber(incomeSettings.matchRate, fallback.income.matchRate),
+    },
+    projection: normalizeProjectionSharedSettings(settings.projection, fallback.projection),
   };
 }
 
 function createDefaultProfileStore(): ProfileStore {
   return {
     activeProfileName: "Profile",
+    workspaceSettings: createDefaultWorkspaceSettings(),
     profiles: [
       {
         name: "Profile",
@@ -147,10 +199,25 @@ function normalizeProfileStore(rawStore: unknown): ProfileStore {
   }
 
   const activeProfileName = normalizeProfileName(store.activeProfileName);
+  const normalizedActiveProfileName = normalizedProfiles.some((profile) => profile.name === activeProfileName)
+    ? activeProfileName
+    : normalizedProfiles[0].name;
+  const rawActiveProfile =
+    profiles.find((rawProfile) => normalizeProfileName(asRecord(rawProfile).name) === normalizedActiveProfileName) ??
+    profiles[0];
+  const rawActiveDocument = asRecord(asRecord(rawActiveProfile).document);
+  const rawActiveProjection = rawActiveDocument.projection;
+  const rawActiveIncome = asRecord(rawActiveDocument.income);
+  const workspaceSettingsFallback = {
+    income: {
+      matchRate: readNumber(rawActiveIncome.matchRate, DEFAULT_INCOME.matchRate),
+    },
+    projection: normalizeProjectionSharedSettings(rawActiveProjection, DEFAULT_PROJECTION_SHARED_SETTINGS),
+  };
+
   return {
-    activeProfileName: normalizedProfiles.some((profile) => profile.name === activeProfileName)
-      ? activeProfileName
-      : normalizedProfiles[0].name,
+    activeProfileName: normalizedActiveProfileName,
+    workspaceSettings: normalizeWorkspaceSettings(store.workspaceSettings, workspaceSettingsFallback),
     profiles: normalizedProfiles,
   };
 }
@@ -243,6 +310,10 @@ export function updateProfileStore(store: ProfileStore, action: ProfileStoreActi
         }
         break;
       }
+
+      case "updateWorkspaceSettings":
+        setWorkspaceSettings(draft.workspaceSettings, action.nextSettings);
+        break;
 
       case "updateActiveDocument": {
         const profile = draft.profiles.find((entry) => entry.name === draft.activeProfileName);

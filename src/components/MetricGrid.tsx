@@ -18,7 +18,7 @@ export function MetricGrid({ items, primaryItem }: MetricGridProps) {
   return (
     <div className="grid gap-2">
       {primaryItem ? (
-        <div className="grid gap-1 border-b border-(--line) pb-4">
+        <div className="grid gap-1 border-b border-line pb-4">
           <span className={smallCapsTextClass}>{primaryItem.label}</span>
           <div className="grid justify-items-start">
             <strong className={primaryNumberTextClass}>{primaryItem.value}</strong>
@@ -32,7 +32,7 @@ export function MetricGrid({ items, primaryItem }: MetricGridProps) {
           key={index}
           className={clsx(
             "flex items-baseline justify-between gap-4",
-            index > 0 ? "border-t border-(--line) pt-2" : primaryItem && "pt-2",
+            index > 0 ? "border-t border-line pt-2" : primaryItem && "pt-2",
           )}
         >
           <span className={labelTextClass}>{item.label}</span>
