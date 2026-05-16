@@ -10,7 +10,7 @@ export type ProjectionExpenseOverride = {
   growthRate?: number | null;
 };
 
-type ProjectionSettings = {
+export type ProjectionSharedSettings = {
   horizonYears: number;
   currentYear: number;
   inflationRate: number;
@@ -20,19 +20,27 @@ type ProjectionSettings = {
   homeAppreciationRate: number;
   displayMode: ProjectionDisplayMode;
   includeVestedRsusInNetWorth: boolean;
-  mortgageFundingBucketId: string;
-  freeCashFlowBucketId: string;
   targetCash: number;
 };
 
-export type ProjectionState = ProjectionSettings & {
-  assetOverrides: Record<string, ProjectionAssetOverride>;
-  expenseOverrides: Record<string, ProjectionExpenseOverride>;
+export type ProjectionTimelineState = {
+  homeSaleYear: number | null;
 };
 
-export type Projection = ProjectionSettings;
+export type ProjectionProfileState = {
+  mortgageFundingBucketId: string;
+  freeCashFlowBucketId: string;
+  assetOverrides: Record<string, ProjectionAssetOverride>;
+  expenseOverrides: Record<string, ProjectionExpenseOverride>;
+  timeline: ProjectionTimelineState;
+};
 
-const PROJECTION_NUMBER_FIELDS = [
+export type ProjectionState = ProjectionSharedSettings & ProjectionProfileState;
+
+export type Projection = ProjectionSharedSettings &
+  Pick<ProjectionProfileState, "mortgageFundingBucketId" | "freeCashFlowBucketId" | "timeline">;
+
+const PROJECTION_SHARED_NUMBER_FIELDS = [
   "horizonYears",
   "currentYear",
   "inflationRate",
@@ -41,9 +49,9 @@ const PROJECTION_NUMBER_FIELDS = [
   "incomeGrowthRate",
   "homeAppreciationRate",
   "targetCash",
-] as const satisfies ReadonlyArray<keyof ProjectionState>;
+] as const satisfies ReadonlyArray<keyof ProjectionSharedSettings>;
 
-export const DEFAULT_PROJECTION_STATE: ProjectionState = {
+export const DEFAULT_PROJECTION_SHARED_SETTINGS: ProjectionSharedSettings = {
   horizonYears: 20,
   currentYear: 20,
   inflationRate: 2.5,
@@ -53,14 +61,53 @@ export const DEFAULT_PROJECTION_STATE: ProjectionState = {
   homeAppreciationRate: 3,
   displayMode: "nominal",
   includeVestedRsusInNetWorth: false,
-  mortgageFundingBucketId: "",
-  freeCashFlowBucketId: "",
   targetCash: 10000,
-  assetOverrides: {},
-  expenseOverrides: {},
 };
 
-export function normalizeProjectionState(parsed: unknown, fallback: ProjectionState): ProjectionState {
+export const DEFAULT_PROJECTION_PROFILE_STATE: ProjectionProfileState = {
+  mortgageFundingBucketId: "",
+  freeCashFlowBucketId: "",
+  assetOverrides: {},
+  expenseOverrides: {},
+  timeline: {
+    homeSaleYear: null,
+  },
+};
+
+export const DEFAULT_PROJECTION_STATE: ProjectionState = {
+  ...DEFAULT_PROJECTION_SHARED_SETTINGS,
+  ...DEFAULT_PROJECTION_PROFILE_STATE,
+};
+
+function asRecord(value: unknown) {
+  return typeof value === "object" && value ? (value as Record<string, unknown>) : {};
+}
+
+export function normalizeProjectionSharedSettings(
+  parsed: unknown,
+  fallback: ProjectionSharedSettings,
+): ProjectionSharedSettings {
+  const state = asRecord(parsed);
+  const numericState = Object.fromEntries(
+    PROJECTION_SHARED_NUMBER_FIELDS.map((field) => [field, readNumber(state[field], fallback[field])]),
+  ) as Pick<ProjectionSharedSettings, (typeof PROJECTION_SHARED_NUMBER_FIELDS)[number]>;
+
+  return {
+    ...fallback,
+    ...numericState,
+    displayMode:
+      state.displayMode === "real" || state.displayMode === "nominal" ? state.displayMode : fallback.displayMode,
+    includeVestedRsusInNetWorth:
+      typeof state.includeVestedRsusInNetWorth === "boolean"
+        ? state.includeVestedRsusInNetWorth
+        : fallback.includeVestedRsusInNetWorth,
+  };
+}
+
+export function normalizeProjectionProfileState(
+  parsed: unknown,
+  fallback: ProjectionProfileState,
+): ProjectionProfileState {
   const state = typeof parsed === "object" && parsed ? (parsed as Record<string, unknown>) : {};
   const rawAssetOverrides =
     typeof state.assetOverrides === "object" && state.assetOverrides
@@ -94,26 +141,45 @@ export function normalizeProjectionState(parsed: unknown, fallback: ProjectionSt
       ];
     }),
   );
-  const numericState = Object.fromEntries(
-    PROJECTION_NUMBER_FIELDS.map((field) => [field, readNumber(state[field], fallback[field])]),
-  ) as Pick<ProjectionState, (typeof PROJECTION_NUMBER_FIELDS)[number]>;
+  const rawTimeline = asRecord(state.timeline);
+  const homeSaleYear = readNumber(rawTimeline.homeSaleYear ?? state.homeSaleYear, fallback.timeline.homeSaleYear);
 
   return {
-    ...fallback,
-    ...numericState,
-    displayMode: state.displayMode === "real" ? "real" : "nominal",
-    includeVestedRsusInNetWorth: Boolean(state.includeVestedRsusInNetWorth),
     mortgageFundingBucketId:
-      typeof state.mortgageFundingBucketId === "string" ? state.mortgageFundingBucketId : fallback.mortgageFundingBucketId,
+      typeof state.mortgageFundingBucketId === "string"
+        ? state.mortgageFundingBucketId
+        : fallback.mortgageFundingBucketId,
     freeCashFlowBucketId:
       typeof state.freeCashFlowBucketId === "string" ? state.freeCashFlowBucketId : fallback.freeCashFlowBucketId,
     assetOverrides,
     expenseOverrides,
+    timeline: {
+      homeSaleYear,
+    },
+  };
+}
+
+export function normalizeProjectionState(parsed: unknown, fallback: ProjectionState): ProjectionState {
+  return {
+    ...normalizeProjectionSharedSettings(parsed, fallback),
+    ...normalizeProjectionProfileState(parsed, fallback),
+  };
+}
+
+export function composeProjectionState(
+  sharedSettings: ProjectionSharedSettings,
+  profileState: ProjectionProfileState,
+): ProjectionState {
+  return {
+    ...sharedSettings,
+    ...profileState,
   };
 }
 
 export function createProjection(state: ProjectionState): Projection {
   const horizonYears = clamp(Math.round(state.horizonYears), 1, 60);
+  const homeSaleYear =
+    state.timeline.homeSaleYear == null ? null : clamp(Math.round(state.timeline.homeSaleYear), 1, horizonYears);
 
   return {
     horizonYears,
@@ -128,6 +194,9 @@ export function createProjection(state: ProjectionState): Projection {
     mortgageFundingBucketId: state.mortgageFundingBucketId,
     freeCashFlowBucketId: state.freeCashFlowBucketId,
     targetCash: Math.max(0, state.targetCash),
+    timeline: {
+      homeSaleYear,
+    },
   };
 }
 

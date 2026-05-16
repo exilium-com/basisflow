@@ -280,7 +280,9 @@ export function toRsuInputs(items: IncomeItem[]): RsuInputItem[] {
 
 export function resolveIncome(
   income: Income,
-  overrides: Partial<Pick<ResolvedIncome, "mortgageInterest" | "mortgageAverageBalance" | "propertyTax" | "rsuGrossNextYear">> = {},
+  overrides: Partial<
+    Pick<ResolvedIncome, "mortgageInterest" | "mortgageAverageBalance" | "propertyTax" | "rsuGrossNextYear">
+  > = {},
 ) {
   const salaryItems = toSalaryInputs(income.incomeItems);
   const passiveIncomeItems = toPassiveIncomeInputs(income.incomeItems);
@@ -346,11 +348,7 @@ export function computeAnnualTaxes(income: ResolvedIncome, taxConfig: TaxConfig,
   };
 }
 
-export function computeIncrementalTakeHome(
-  income: ResolvedIncome,
-  taxConfig: TaxConfig,
-  extraOrdinaryIncome: number,
-) {
+export function computeIncrementalTakeHome(income: ResolvedIncome, taxConfig: TaxConfig, extraOrdinaryIncome: number) {
   const safeExtra = Math.max(0, extraOrdinaryIncome);
   if (safeExtra <= 0) {
     return 0;

@@ -24,6 +24,10 @@ const TOOL_AREAS = [
   },
 ];
 
+const homeCtaClassName = "home-reveal home-delay-2 border-teal bg-teal text-white";
+
+const toolAreaClassName = "home-reveal home-delay-2 border-b border-line-soft py-4";
+
 export function HomePage() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-screen-2xl flex-col px-4">
@@ -51,29 +55,21 @@ export function HomePage() {
             <div className="home-reveal mx-auto grid max-w-4xl flex-1 content-center gap-8 py-8">
               <div className="grid gap-4">
                 <h1 className="max-w-4xl text-4xl">See how income turns to net worth.</h1>
-                <p className="home-reveal home-delay-1 max-w-2xl text-base leading-6 text-(--ink-soft)">
+                <p className="home-reveal home-delay-1 max-w-2xl text-base leading-6 text-ink-soft">
                   Basisflow combines income, assets, mortgage, expenses, and projection into one working model so you
                   can understand how today&apos;s cash flow compounds into long-run outcomes.
                 </p>
-                <ActionButton
-                  to="/workspace"
-                  className="home-reveal home-delay-2 border-(--teal) bg-(--teal) text-base font-extrabold tracking-wide
-                    text-(--white) uppercase"
-                >
+                <ActionButton to="/workspace" className={homeCtaClassName}>
                   Get started
                 </ActionButton>
               </div>
 
-              <div className="grid gap-2 border-t border-(--line-soft) pt-4">
+              <div className="grid gap-2 border-t border-line-soft pt-4">
                 {TOOL_AREAS.map((item) => (
-                  <article
-                    key={item.title}
-                    className="home-reveal home-delay-2 border-b border-(--line-soft) py-4 transition
-                      hover:translate-x-1"
-                  >
+                  <article key={item.title} className={toolAreaClassName}>
                     <div className="grid gap-1 border-l pl-4" style={{ borderColor: item.border }}>
                       <h2 className="text-2xl">{item.title}</h2>
-                      <p className="max-w-xl text-base leading-6 text-(--ink-soft)">{item.description}</p>
+                      <p className="max-w-xl text-base leading-6 text-ink-soft">{item.description}</p>
                     </div>
                   </article>
                 ))}

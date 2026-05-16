@@ -1,14 +1,33 @@
+import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 
 type InlineRenameControlProps = {
+  ariaLabel?: string;
+  variant?: "tab" | "title";
   value: string;
   onCancel: () => void;
   onCommit: (value: string) => void;
 };
 
-export function InlineRenameControl({ value, onCancel, onCommit }: InlineRenameControlProps) {
+const renameInputClassName = clsx(
+  "min-w-0 flex-1 border-b border-teal bg-transparent",
+  "font-bold text-ink-soft focus-visible:outline-none",
+);
+
+const renameSubmitClassName = clsx("shrink-0 font-bold text-teal hover:text-ink", "focus-visible:outline-none");
+
+const titleSubmitClassName = clsx("grid size-6 place-items-center border", "border-teal-soft bg-teal-tint text-xs");
+
+export function InlineRenameControl({
+  ariaLabel = "Profile name",
+  variant = "tab",
+  value,
+  onCancel,
+  onCommit,
+}: InlineRenameControlProps) {
   const [draftValue, setDraftValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isTitleVariant = variant === "title";
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -27,7 +46,7 @@ export function InlineRenameControl({ value, onCancel, onCommit }: InlineRenameC
 
   return (
     <form
-      className="flex h-full w-full min-w-0 items-center gap-2 bg-(--surface) px-4"
+      className={clsx("flex w-full min-w-0 items-center gap-2", isTitleVariant ? "min-h-6" : "h-full bg-surface px-4")}
       onSubmit={(event) => {
         event.preventDefault();
         commit();
@@ -40,10 +59,9 @@ export function InlineRenameControl({ value, onCancel, onCommit }: InlineRenameC
     >
       <input
         ref={inputRef}
-        className="min-w-0 flex-1 border-0 border-b border-(--teal) bg-transparent px-2 text-base font-bold
-          text-(--ink-soft) focus-visible:outline-none"
+        className={clsx(renameInputClassName, isTitleVariant ? "text-sm" : "px-2")}
         value={draftValue}
-        aria-label="Profile name"
+        aria-label={ariaLabel}
         onChange={(event) => setDraftValue(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
@@ -53,7 +71,7 @@ export function InlineRenameControl({ value, onCancel, onCommit }: InlineRenameC
         }}
       />
       <button
-        className="px-2 text-base font-bold text-(--teal) focus-visible:outline-none"
+        className={clsx(renameSubmitClassName, isTitleVariant ? titleSubmitClassName : "px-2")}
         type="submit"
         aria-label="Save name"
       >

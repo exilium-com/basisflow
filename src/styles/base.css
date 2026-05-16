@@ -1,5 +1,28 @@
 @import "tailwindcss";
 
+@theme {
+  --color-sand: var(--sand);
+  --color-sand-soft: var(--sand-soft);
+  --color-paper: var(--paper);
+  --color-paper-soft: var(--paper-soft);
+  --color-sea: var(--sea);
+  --color-sea-soft: var(--sea-soft);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-white: var(--white);
+  --color-white-soft: var(--white-soft);
+  --color-surface: var(--surface);
+  --color-teal: var(--teal);
+  --color-teal-soft: var(--teal-soft);
+  --color-teal-tint: var(--teal-tint);
+  --color-clay: var(--clay);
+  --color-clay-soft: var(--clay-soft);
+  --color-destructive: var(--destructive);
+  --color-destructive-soft: var(--destructive-soft);
+}
+
 :root {
   --sand: #efe4d3;
   --sand-soft: #efe6d8;
@@ -33,6 +56,10 @@
   --chart-expenses: #b9aea1;
   --chart-excess: var(--chart-cash);
   --chart-shortfall: var(--destructive);
+}
+
+@utility workspace-side-panel {
+  height: calc(100vh - 5rem);
 }
 
 @layer base {

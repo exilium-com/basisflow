@@ -17,6 +17,7 @@ type MonthlyCashFlowPanelProps = {
   } | null;
   items: MonthlyCashFlowItem[];
   netFlow: number;
+  period?: "monthly" | "yearly";
 };
 
 function polarPoint(cx: number, cy: number, radius: number, angle: number) {
@@ -53,14 +54,21 @@ function deltaColor(good: boolean | null) {
   return good == null ? "var(--ink-soft)" : good ? "var(--teal)" : "var(--destructive)";
 }
 
-export function MonthlyCashFlowPanel({ comparison, items, netFlow }: MonthlyCashFlowPanelProps) {
+export function MonthlyCashFlowPanel({ comparison, items, netFlow, period = "monthly" }: MonthlyCashFlowPanelProps) {
   const cx = 112;
   const cy = 112;
   const outerRadius = 82;
   const innerRadius = 50;
-  const sliceTotal = items.reduce((sum, item) => sum + item.value, 0);
+  const periodMultiplier = period === "yearly" ? 12 : 1;
+  const displayItems = items.map((item) => ({
+    ...item,
+    value: item.value * periodMultiplier,
+  }));
+  const displayNetFlow = netFlow * periodMultiplier;
+  const comparisonNetFlow = comparison ? comparison.netFlow * periodMultiplier : undefined;
+  const sliceTotal = displayItems.reduce((sum, item) => sum + item.value, 0);
   const comparisonItemsByLabel = new Map((comparison?.items ?? []).map((item) => [item.label, item]));
-  const netFlowDelta = metricDeltaBetween(netFlow, comparison?.netFlow);
+  const netFlowDelta = metricDeltaBetween(displayNetFlow, comparisonNetFlow);
   let currentAngle = -Math.PI / 2;
 
   function getComparisonValue(item: MonthlyCashFlowItem) {
@@ -69,10 +77,10 @@ export function MonthlyCashFlowPanel({ comparison, items, netFlow }: MonthlyCash
     }
 
     if (item.label === "Excess" || item.label === "Shortfall") {
-      return comparison.netFlow;
+      return comparisonNetFlow ?? 0;
     }
 
-    return comparisonItemsByLabel.get(item.label)?.value ?? 0;
+    return (comparisonItemsByLabel.get(item.label)?.value ?? 0) * periodMultiplier;
   }
 
   function betterDirection(item: MonthlyCashFlowItem) {
@@ -87,22 +95,17 @@ export function MonthlyCashFlowPanel({ comparison, items, netFlow }: MonthlyCash
     }
 
     return item.label === "Excess" || item.label === "Shortfall"
-      ? metricDeltaBetween(netFlow, comparison?.netFlow, "higher")
+      ? metricDeltaBetween(displayNetFlow, comparisonNetFlow, "higher")
       : metricDeltaBetween(item.value, comparisonValue, betterDirection(item));
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
-      <div className="flex w-full justify-center sm:w-60 sm:shrink-0">
-        <svg
-          className="h-auto w-full max-w-56"
-          viewBox="0 0 224 224"
-          role="img"
-          aria-label="Monthly cash flow breakdown"
-        >
+    <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center">
+      <div className="flex w-full justify-center lg:w-60 lg:shrink-0">
+        <svg className="h-auto w-full max-w-56" viewBox="0 0 224 224" role="img" aria-label="Cash flow breakdown">
           <circle cx={cx} cy={cy} r={outerRadius} fill="var(--white)" stroke="var(--line-soft)" />
           {sliceTotal > 0
-            ? items.map((item: MonthlyCashFlowItem) => {
+            ? displayItems.map((item: MonthlyCashFlowItem) => {
                 const sliceAngle = (item.value / sliceTotal) * Math.PI * 2;
                 const startAngle = currentAngle;
                 const endAngle = currentAngle + sliceAngle;
@@ -121,17 +124,17 @@ export function MonthlyCashFlowPanel({ comparison, items, netFlow }: MonthlyCash
             : null}
           <circle cx={cx} cy={cy} r={innerRadius} fill="var(--white-soft)" />
           <text x={cx} y={cy - 12} textAnchor="middle" fill="var(--ink-soft)" fontSize="12">
-            Net monthly
+            Net flow
           </text>
           <text
             x={cx}
             y={netFlowDelta == null ? cy + 10 : cy + 6}
             textAnchor="middle"
-            fill={netFlow >= 0 ? colors.teal : colors.destructive}
+            fill={displayNetFlow >= 0 ? colors.teal : colors.destructive}
             fontSize="18"
             fontWeight="700"
           >
-            {usd(netFlow)}
+            {usd(displayNetFlow)}
           </text>
           {netFlowDelta == null ? null : (
             <text
@@ -148,7 +151,7 @@ export function MonthlyCashFlowPanel({ comparison, items, netFlow }: MonthlyCash
         </svg>
       </div>
       <div className="grid min-w-0 flex-1 gap-2">
-        {items.map((item: MonthlyCashFlowItem, index: number) => {
+        {displayItems.map((item: MonthlyCashFlowItem, index: number) => {
           const delta = getItemDelta(item);
 
           return (
@@ -156,7 +159,7 @@ export function MonthlyCashFlowPanel({ comparison, items, netFlow }: MonthlyCash
               key={item.label}
               className={clsx(
                 "flex items-start justify-between gap-4 py-2",
-                index < items.length - 1 && "border-b border-(--line)",
+                index < items.length - 1 && "border-b border-line",
               )}
             >
               <div className="flex min-w-0 items-center gap-4">

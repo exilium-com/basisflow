@@ -57,6 +57,7 @@ export type ProjectionScenarioOptions = {
   incomeGrowthRate?: number;
   homeAppreciationRate?: number;
   includeVestedRsusInNetWorth?: boolean;
+  homeSaleYear?: number | null;
   rsuGrowthRateById?: Record<string, number>;
   mortgageFundingBucketId?: string;
   targetCash?: number;
@@ -328,6 +329,7 @@ function createProjectionState({
   incomeGrowthRate = 0,
   homeAppreciationRate = 0,
   includeVestedRsusInNetWorth = false,
+  homeSaleYear = null,
   freeCashFlowBucketId = "",
   mortgageFundingBucketId = "",
   targetCash = 0,
@@ -344,6 +346,9 @@ function createProjectionState({
     freeCashFlowBucketId,
     mortgageFundingBucketId,
     targetCash,
+    timeline: {
+      homeSaleYear,
+    },
   };
 }
 
@@ -392,6 +397,7 @@ export function runProjectionScenario({
   incomeGrowthRate = 0,
   homeAppreciationRate = 0,
   includeVestedRsusInNetWorth = false,
+  homeSaleYear = null,
   rsuGrowthRateById: providedRsuGrowthRateById,
   mortgageFundingBucketId = "",
   targetCash = 0,
@@ -434,6 +440,7 @@ export function runProjectionScenario({
       incomeGrowthRate,
       homeAppreciationRate,
       includeVestedRsusInNetWorth,
+      homeSaleYear,
       freeCashFlowBucketId,
       mortgageFundingBucketId,
       targetCash,

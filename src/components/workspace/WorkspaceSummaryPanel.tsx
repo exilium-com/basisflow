@@ -71,8 +71,8 @@ function SummaryLinkRow({
   const delta = metricDeltaBetween(displayValue, comparisonValue, better);
 
   return (
-    <div className="period-suffix-container flex min-w-0 items-start gap-2 border-t border-(--line) py-4">
-      <a href={href} className={`${labelTextClass} min-w-0 flex-1 hover:text-(--ink)`}>
+    <div className="period-suffix-container flex min-w-0 items-start gap-2 border-t border-line py-4">
+      <a href={href} className={`${labelTextClass} min-w-0 flex-1 hover:text-ink`}>
         {label}
       </a>
       <div className="grid min-w-0 justify-items-end">
@@ -82,7 +82,7 @@ function SummaryLinkRow({
           </a>
           <button
             type="button"
-            className={`${labelTextClass} shrink-0 whitespace-nowrap transition hover:text-(--ink)`}
+            className={`${labelTextClass} whitespace-nowrap hover:text-ink`}
             onClick={() => setPeriod(period === "annual" ? "monthly" : "annual")}
           >
             <PeriodSuffix period={period === "monthly" ? "month" : "year"} />
@@ -111,6 +111,7 @@ export function WorkspaceSummaryPanel({
   onUpdateProjectionState,
 }: WorkspaceSummaryPanelProps) {
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
+  const [cashFlowPeriod, setCashFlowPeriod] = useState<"monthly" | "yearly">("monthly");
   const netWorth = toDisplayValue(currentRow.netWorth, projection.currentYear, projection);
   const comparisonNetWorth = comparison
     ? toDisplayValue(comparison.currentRow.netWorth, comparison.projection.currentYear, comparison.projection)
@@ -118,7 +119,7 @@ export function WorkspaceSummaryPanel({
   const netWorthDelta = metricDeltaBetween(netWorth, comparisonNetWorth);
   const comparisonRowsByHref = new Map((comparison?.topLevelSummaryRows ?? []).map((row) => [row.href, row]));
   const cashFlowTitle =
-    projection.currentYear === 0 ? "Monthly Cash Flow Today" : `Monthly Cash Flow in Year ${projection.currentYear}`;
+    projection.currentYear === 0 ? "Cash Flow Today" : `Cash Flow in Year ${projection.currentYear}`;
 
   const summaryBody = (
     <>
@@ -131,11 +132,26 @@ export function WorkspaceSummaryPanel({
       ))}
 
       <div className="grid gap-4 py-4">
-        <ChartPanel title={cashFlowTitle}>
+        <ChartPanel
+          title={cashFlowTitle}
+          action={
+            <SegmentedToggle
+              size="compact"
+              ariaLabel="Cash flow period"
+              value={cashFlowPeriod}
+              onChange={setCashFlowPeriod}
+              options={[
+                { value: "monthly", label: "Monthly" },
+                { value: "yearly", label: "Yearly" },
+              ]}
+            />
+          }
+        >
           <MonthlyCashFlowPanel
             comparison={comparison?.monthlyCashFlow}
             items={monthlyCashFlow.items}
             netFlow={monthlyCashFlow.netFlow}
+            period={cashFlowPeriod}
           />
         </ChartPanel>
 
@@ -163,7 +179,7 @@ export function WorkspaceSummaryPanel({
       </div>
 
       <AdvancedPanel id="workspaceParameters" title="Parameters" defaultOpen={false}>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-2">
           <NumberField
             label="Match rate"
             suffix="%"
@@ -219,7 +235,7 @@ export function WorkspaceSummaryPanel({
             onChange={(event) => onUpdateProjectionState({ includeVestedRsusInNetWorth: event.target.checked })}
           />
           <SelectField
-            className="sm:col-span-2"
+            className="lg:col-span-2"
             label="Free cash goes to"
             value={freeCashFlowBucketId}
             onChange={(event) => onUpdateProjectionState({ freeCashFlowBucketId: event.target.value })}
@@ -238,13 +254,13 @@ export function WorkspaceSummaryPanel({
 
   return (
     <div>
-      <div className="grid gap-4 bg-(--white) py-4 lg:border-b lg:border-(--line)">
+      <div className="grid gap-4 bg-white py-4 lg:border-b lg:border-line">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className={smallCapsTextClass}>
               {`Net Worth ${selectedYearLabel === "Today" ? "Today" : `In ${selectedYearLabel}`}`}
             </div>
-            <strong className="font-serif text-3xl text-(--teal) sm:text-4xl">{usd(netWorth)}</strong>
+            <strong className="font-serif text-3xl text-teal lg:text-4xl">{usd(netWorth)}</strong>
             {comparison && netWorthDelta ? (
               <div>
                 <MetricDelta delta={netWorthDelta} />
@@ -252,17 +268,9 @@ export function WorkspaceSummaryPanel({
               </div>
             ) : null}
           </div>
-          <div className="shrink-0 lg:hidden">
+          <div className="shrink-0">
             <SegmentedToggle
               size="compact"
-              ariaLabel="Display mode"
-              value={projectionState.displayMode}
-              onChange={(displayMode) => onUpdateProjectionState({ displayMode })}
-              options={displayModeOptions}
-            />
-          </div>
-          <div className="hidden shrink-0 lg:block">
-            <SegmentedToggle
               ariaLabel="Display mode"
               value={projectionState.displayMode}
               onChange={(displayMode) => onUpdateProjectionState({ displayMode })}
@@ -304,7 +312,7 @@ export function WorkspaceSummaryPanel({
       </div>
 
       <div className="hidden lg:block">{summaryBody}</div>
-      {mobileSummaryOpen ? <div className="border-b border-(--line) bg-(--white) lg:hidden">{summaryBody}</div> : null}
+      {mobileSummaryOpen ? <div className="border-b border-line bg-white lg:hidden">{summaryBody}</div> : null}
     </div>
   );
 }

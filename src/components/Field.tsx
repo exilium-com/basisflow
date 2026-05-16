@@ -1,5 +1,6 @@
 import React from "react";
 import clsx from "clsx";
+import { InlineLabelLayout } from "./InlineLabelLayout";
 import { labelTextClass } from "../lib/text";
 
 type FieldProps = {
@@ -7,7 +8,7 @@ type FieldProps = {
   htmlFor?: string;
   className?: string;
   labelClassName?: string;
-  reserveLabelSpace?: boolean;
+  mobileInline?: boolean;
   children: React.ReactNode;
 };
 
@@ -26,6 +27,7 @@ type BaseFieldProps = {
   labelClassName?: string;
   frameClassName?: string;
   inputClassName?: string;
+  mobileInline?: boolean;
 };
 
 type NativeFieldProps<T> = BaseFieldProps & Omit<T, "className" | "label">;
@@ -42,7 +44,6 @@ type NumberFieldProps = AffixedFieldProps<
     React.InputHTMLAttributes<HTMLInputElement>,
     "className" | "type" | "label" | "prefix" | "suffix" | "value" | "onChange"
   > & {
-    compact?: boolean;
     value?: number | string | null;
     onChange?: React.ChangeEventHandler<HTMLInputElement> | null;
     onValueChange?: (value: number | null, rawValue: string) => void;
@@ -69,24 +70,35 @@ type DollarPercentFieldProps = Omit<NumberFieldProps, "prefix" | "suffix" | "ste
   percentStep?: React.InputHTMLAttributes<HTMLInputElement>["step"];
 };
 
+const inputFrameClassName =
+  "flex min-h-10 items-center border border-l-4 border-line border-l-teal-soft bg-white px-3 focus-within:border-teal";
+
+const inputControlClassName = clsx("w-full min-w-0 border-0 bg-transparent p-0 outline-none", "text-sm font-semibold");
+
+const textareaClassName = clsx(
+  "min-h-48 w-full resize-y border border-line bg-white p-4",
+  "font-mono text-sm outline-none",
+);
+
+const unitToggleClassName =
+  "inline-flex items-center rounded-sm border border-teal-soft px-1 text-sm text-teal focus-visible:outline-none";
+
 function useInputId(htmlFor?: string) {
   const resolvedId = React.useId();
   return htmlFor ?? resolvedId;
 }
 
-export function Field({ label, htmlFor, className, labelClassName, reserveLabelSpace = false, children }: FieldProps) {
+export function Field({ label, htmlFor, className, labelClassName, mobileInline = false, children }: FieldProps) {
   return (
-    <div className={clsx("grid min-w-0 gap-1", className)}>
-      {label || reserveLabelSpace ? (
-        <label
-          className={clsx(labelTextClass, labelClassName, reserveLabelSpace && "invisible select-none")}
-          htmlFor={htmlFor}
-        >
-          {reserveLabelSpace ? "." : label}
-        </label>
-      ) : null}
+    <InlineLabelLayout
+      label={label}
+      htmlFor={htmlFor}
+      className={className}
+      labelClassName={labelClassName}
+      mobileInline={mobileInline}
+    >
       {children}
-    </div>
+    </InlineLabelLayout>
   );
 }
 
@@ -94,16 +106,15 @@ export function InputFrame({ prefix = null, suffix = null, invalid = false, clas
   return (
     <div
       className={clsx(
-        `flex min-h-10 items-center border border-l-4 border-(--line) border-l-(--teal-soft) bg-(--white) px-4
-        transition-colors focus-within:border-(--teal)`,
+        inputFrameClassName,
         suffix && "period-suffix-container",
-        invalid && "border-(--destructive) border-l-(--destructive)",
+        invalid && "border-destructive border-l-destructive",
         className,
       )}
     >
-      {prefix ? <span className={clsx("flex-none", labelTextClass, "mr-2")}>{prefix}</span> : null}
+      {prefix ? <span className={clsx(labelTextClass, "mr-2")}>{prefix}</span> : null}
       {children}
-      {suffix ? <span className={clsx("flex-none whitespace-nowrap", labelTextClass)}>{suffix}</span> : null}
+      {suffix ? <span className={clsx("whitespace-nowrap", labelTextClass)}>{suffix}</span> : null}
     </div>
   );
 }
@@ -119,22 +130,21 @@ export function TextField({
   labelClassName,
   frameClassName,
   inputClassName,
+  mobileInline,
   ...inputProps
 }: TextFieldProps) {
   const inputId = useInputId(htmlFor);
 
   return (
-    <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
+    <Field
+      label={label}
+      htmlFor={inputId}
+      className={className}
+      labelClassName={labelClassName}
+      mobileInline={mobileInline}
+    >
       <InputFrame prefix={prefix} suffix={suffix} invalid={invalid} className={frameClassName}>
-        <input
-          id={inputId}
-          type={type}
-          className={clsx(
-            "w-full min-w-0 border-0 bg-transparent p-0 text-base font-semibold outline-none",
-            inputClassName,
-          )}
-          {...inputProps}
-        />
+        <input id={inputId} type={type} className={clsx(inputControlClassName, inputClassName)} {...inputProps} />
       </InputFrame>
     </Field>
   );
@@ -146,11 +156,11 @@ export function NumberField({
   prefix = null,
   suffix = null,
   invalid = false,
-  compact = false,
   className,
   labelClassName,
   frameClassName,
   inputClassName,
+  mobileInline,
   value = "",
   onChange = null,
   onValueChange,
@@ -195,16 +205,18 @@ export function NumberField({
   }
 
   return (
-    <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
-      <InputFrame prefix={prefix} suffix={suffix} invalid={invalid} className={clsx(compact && "px-2", frameClassName)}>
+    <Field
+      label={label}
+      htmlFor={inputId}
+      className={className}
+      labelClassName={labelClassName}
+      mobileInline={mobileInline}
+    >
+      <InputFrame prefix={prefix} suffix={suffix} invalid={invalid} className={frameClassName}>
         <input
           id={inputId}
           type="number"
-          className={clsx(
-            "w-full min-w-0 border-0 bg-transparent p-0 text-base font-semibold outline-none",
-            compact && "text-sm",
-            inputClassName,
-          )}
+          className={clsx(inputControlClassName, inputClassName)}
           {...inputProps}
           value={isNumericValue ? draftValue : value}
           onFocus={() => setIsEditing(true)}
@@ -224,15 +236,22 @@ export function SelectField({
   labelClassName,
   frameClassName,
   inputClassName,
+  mobileInline,
   children,
   ...inputProps
 }: SelectFieldProps) {
   const inputId = useInputId(htmlFor);
 
   return (
-    <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
+    <Field
+      label={label}
+      htmlFor={inputId}
+      className={className}
+      labelClassName={labelClassName}
+      mobileInline={mobileInline}
+    >
       <InputFrame invalid={invalid} className={frameClassName}>
-        <select id={inputId} className={clsx("w-full font-semibold", inputClassName)} {...inputProps}>
+        <select id={inputId} className={clsx(inputControlClassName, inputClassName)} {...inputProps}>
           {children}
         </select>
       </InputFrame>
@@ -253,16 +272,13 @@ export function CheckboxField({
   const inputId = useInputId(htmlFor);
 
   return (
-    <Field className={className} labelClassName={labelClassName} reserveLabelSpace>
-      <InputFrame invalid={invalid} className={clsx("justify-start px-2", frameClassName)}>
-        <label
-          className={clsx("flex w-full items-center gap-2 text-base font-semibold", labelClassName)}
-          htmlFor={inputId}
-        >
+    <Field label="." className={className} labelClassName="invisible select-none">
+      <InputFrame invalid={invalid} className={clsx("h-10 w-fit justify-start px-2", frameClassName)}>
+        <label className={clsx("flex items-center gap-2 text-sm font-semibold", labelClassName)} htmlFor={inputId}>
           <input
             id={inputId}
             type="checkbox"
-            className={clsx("h-4 w-4 shrink-0 accent-(--teal)", inputClassName)}
+            className={clsx("h-4 w-4 shrink-0 accent-teal", inputClassName)}
             {...inputProps}
           />
           <span>{label}</span>
@@ -284,14 +300,7 @@ export function TextAreaField({
 
   return (
     <Field label={label} htmlFor={inputId} className={className} labelClassName={labelClassName}>
-      <textarea
-        id={inputId}
-        className={clsx(
-          "min-h-48 w-full resize-y border border-(--line) bg-(--white) p-4 font-mono text-sm leading-6 outline-none",
-          inputClassName,
-        )}
-        {...props}
-      />
+      <textarea id={inputId} className={clsx(textareaClassName, inputClassName)} {...props} />
     </Field>
   );
 }
@@ -309,10 +318,10 @@ export function SliderField({ id, label, valueLabel, className, labelClassName, 
       }
       htmlFor={inputId}
       className={className}
-      labelClassName={clsx("flex items-center justify-between gap-4", labelClassName)}
+      labelClassName={clsx("flex justify-between gap-4", labelClassName)}
     >
-      <InputFrame className="px-4">
-        <input id={inputId} className="slider-input w-full" type="range" {...inputProps} />
+      <InputFrame>
+        <input id={inputId} className="slider-input" type="range" {...inputProps} />
       </InputFrame>
     </Field>
   );
@@ -329,11 +338,7 @@ export function DollarPercentField({
   const unitButton = (
     <button
       type="button"
-      className={clsx(
-        `inline-flex items-center rounded-sm border border-(--teal-soft) px-1 text-(--teal) transition
-        focus-visible:outline-none`,
-        labelTextClass,
-      )}
+      className={unitToggleClassName}
       aria-label={`Switch to ${nextMode === "dollar" ? "dollars" : "percent"}`}
       onClick={onModeToggle}
     >

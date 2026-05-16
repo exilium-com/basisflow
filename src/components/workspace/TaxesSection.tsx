@@ -50,9 +50,9 @@ function displayTaxMetric(row: ProjectionRow, projection: Projection, key: TaxMe
 
 function TaxFieldGroup({ title, divided = false, children }: TaxFieldGroupProps) {
   return (
-    <section className={divided ? "grid gap-4 border-t border-(--line-soft) pt-4" : "grid gap-4"}>
+    <section className={divided ? "grid gap-4 border-t border-line-soft pt-4" : "grid gap-4"}>
       <div className={smallCapsTextClass}>{title}</div>
-      <div className="grid gap-4 sm:grid-cols-2">{children}</div>
+      <div className="grid gap-4 lg:grid-cols-2">{children}</div>
     </section>
   );
 }
@@ -114,7 +114,6 @@ export function TaxesSection({
         <SegmentedToggle
           label="Deduction mode"
           ariaLabel="Deduction mode"
-          className="w-fit"
           value={taxConfig.deductionMode}
           onChange={(deductionMode) => onUpdateTaxConfig({ deductionMode })}
           options={[
@@ -260,7 +259,7 @@ export function TaxesSection({
               onChange={(event) => onSetLongTermCapitalGains(event.target.value)}
             />
           </div>
-          <div className="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+          <div className="mt-4 flex flex-col items-start gap-4 lg:flex-row lg:items-center">
             <ActionButton onClick={onApplyTaxTables}>Apply tax tables</ActionButton>
             <div className={`min-h-6 ${labelTextClass}`}>{taxEditorStatus}</div>
           </div>

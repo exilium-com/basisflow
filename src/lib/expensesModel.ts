@@ -61,7 +61,8 @@ function normalizeExpense(
 }
 
 export function normalizeExpensesState(parsed: unknown, fallback: ExpensesState): ExpensesState {
-  const state = typeof parsed === "object" && parsed ? (parsed as { expenses?: unknown[]; advancedOpen?: unknown }) : {};
+  const state =
+    typeof parsed === "object" && parsed ? (parsed as { expenses?: unknown[]; advancedOpen?: unknown }) : {};
   const expenses = Array.isArray(state.expenses)
     ? state.expenses.map((rawExpense) =>
         normalizeExpense((rawExpense as Partial<ExpenseStateItem> & { monthly?: string | number }) ?? {}),
@@ -74,10 +75,7 @@ export function normalizeExpensesState(parsed: unknown, fallback: ExpensesState)
   };
 }
 
-export function createExpenses(
-  state: ExpensesState,
-  baselineGrowthRate = 2.5,
-): Expenses {
+export function createExpenses(state: ExpensesState, baselineGrowthRate = 2.5): Expenses {
   return {
     baselineGrowthRate: baselineGrowthRate / 100,
     expenses: state.expenses.map((expense) => {

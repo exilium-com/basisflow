@@ -4,6 +4,7 @@ import { ExpensesSection } from "../components/workspace/ExpensesSection";
 import { IncomeSection } from "../components/workspace/IncomeSection";
 import { MortgageSection } from "../components/workspace/MortgageSection";
 import { TaxesSection } from "../components/workspace/TaxesSection";
+import { TimelineSection } from "../components/workspace/TimelineSection";
 import { WorkspaceSummaryPanel } from "../components/workspace/WorkspaceSummaryPanel";
 import { WorkspaceLayout } from "../components/WorkspaceLayout";
 import { useDraftFieldSetter } from "../hooks/useDraftFieldSetter";
@@ -22,6 +23,7 @@ import { buildIncomeSummary, calculateIncome, resolveIncome, type Income, type I
 import { createMortgageOption, type MortgageLoanField, type MortgageOptionKind } from "../lib/mortgageConfig";
 import {
   getMortgageInterestForYear,
+  getMortgageInterestThroughYear,
   getMortgagePrincipalForYear,
   getMortgageYearAverageBalance,
   getMortgageYearInterest,
@@ -31,15 +33,18 @@ import {
 import { buildMortgageScenario } from "../lib/mortgageSchedule";
 import { calculateProjection } from "../lib/projectionCalculation";
 import {
+  composeProjectionState,
   createProjection,
   toDisplayValue,
   type ProjectionDisplayMode,
-  type ProjectionState,
   type ProjectionAssetOverride,
   type ProjectionExpenseOverride,
+  type ProjectionProfileState,
+  type ProjectionSharedSettings,
+  type ProjectionState,
 } from "../lib/projectionState";
 import { buildMonthlyCashFlow } from "../lib/projectionUtils";
-import { type WorkspaceProfile, type WorkspaceProfileDocument } from "../lib/profileStore";
+import { type WorkspaceProfile, type WorkspaceProfileDocument, type WorkspaceSettings } from "../lib/profileStore";
 import type { DraftStateSetter } from "../lib/state";
 import { normalizeConfig, type TaxConfig } from "../lib/taxConfig";
 import { surfaceClass } from "../lib/ui";
@@ -48,6 +53,8 @@ type WorkspacePageProps = {
   compareProfile?: WorkspaceProfile | null;
   profile: WorkspaceProfile;
   setProfileDocument: DraftStateSetter<WorkspaceProfileDocument>;
+  setWorkspaceSettings: DraftStateSetter<WorkspaceSettings>;
+  workspaceSettings: WorkspaceSettings;
 };
 
 type BuildWorkspaceModelOptions = {
@@ -56,12 +63,19 @@ type BuildWorkspaceModelOptions = {
   horizonYears?: number;
 };
 
-function buildWorkspaceModel(profileDocument: WorkspaceProfileDocument, options: BuildWorkspaceModelOptions = {}) {
-  const income = profileDocument.income;
+function buildWorkspaceModel(
+  profileDocument: WorkspaceProfileDocument,
+  workspaceSettings: WorkspaceSettings,
+  options: BuildWorkspaceModelOptions = {},
+) {
+  const income = {
+    ...profileDocument.income,
+    matchRate: workspaceSettings.income.matchRate,
+  };
   const mortgageState = profileDocument.mortgage;
   const assetState = profileDocument.assets;
   const expenseState = profileDocument.expenses;
-  const projectionState = profileDocument.projection;
+  const projectionState = composeProjectionState(workspaceSettings.projection, profileDocument.projection);
   const taxConfig = profileDocument.taxConfig;
   const mortgageScenario = buildMortgageScenario(mortgageState, mortgageState.activeLoanId);
   const mortgageSummary = serializeMortgageSummary(mortgageScenario);
@@ -161,11 +175,24 @@ function buildWorkspaceModel(profileDocument: WorkspaceProfileDocument, options:
           },
         ]
       : (() => {
-          const monthlyPrincipal = getMortgagePrincipalForYear(mortgageScenario, projection.currentYear);
-          const monthlyInterest = getMortgageInterestForYear(mortgageScenario, projection.currentYear);
-          const monthlyPropertyTax = annualPropertyTax / 12;
-          const monthlyUpkeep = annualHousingCost / 12 - monthlyPrincipal - monthlyInterest - monthlyPropertyTax;
+          const homeSoldAtSelectedYear =
+            projection.timeline.homeSaleYear != null && projection.currentYear >= projection.timeline.homeSaleYear;
+          const monthlyPrincipal = homeSoldAtSelectedYear
+            ? 0
+            : getMortgagePrincipalForYear(mortgageScenario, projection.currentYear);
+          const monthlyInterest = homeSoldAtSelectedYear
+            ? 0
+            : getMortgageInterestForYear(mortgageScenario, projection.currentYear);
+          const monthlyPropertyTax = homeSoldAtSelectedYear ? 0 : annualPropertyTax / 12;
+          const monthlyUpkeep = homeSoldAtSelectedYear
+            ? 0
+            : annualHousingCost / 12 - monthlyPrincipal - monthlyInterest - monthlyPropertyTax;
           const monthlyLabelSuffix = projection.currentYear > 0 ? `in year ${projection.currentYear}` : "today";
+          const interestThroughYear =
+            projection.timeline.homeSaleYear != null && projection.currentYear >= projection.timeline.homeSaleYear
+              ? projection.timeline.homeSaleYear
+              : projection.currentYear;
+          const totalInterestAtSelectedTime = getMortgageInterestThroughYear(mortgageSummary, interestThroughYear);
 
           return [
             {
@@ -189,9 +216,9 @@ function buildWorkspaceModel(profileDocument: WorkspaceProfileDocument, options:
               metricValue: toDisplayValue(monthlyPropertyTax, projection.currentYear, projection),
             },
             {
-              label: "Total interest",
-              value: usd(mortgageScenario.totalInterest),
-              metricValue: mortgageScenario.totalInterest,
+              label: "Total interest paid",
+              value: usd(toDisplayValue(totalInterestAtSelectedTime, projection.currentYear, projection)),
+              metricValue: toDisplayValue(totalInterestAtSelectedTime, projection.currentYear, projection),
             },
           ];
         })();
@@ -253,6 +280,7 @@ function buildWorkspaceModel(profileDocument: WorkspaceProfileDocument, options:
     monthlyHousingCostValue,
     mortgageScenario,
     mortgageSummaryItems,
+    projectionState,
     projection,
     projectionResults,
     reserveCashBucketId,
@@ -263,12 +291,20 @@ function buildWorkspaceModel(profileDocument: WorkspaceProfileDocument, options:
   };
 }
 
-export function WorkspacePage({ compareProfile, profile, setProfileDocument }: WorkspacePageProps) {
+export function WorkspacePage({
+  compareProfile,
+  profile,
+  setProfileDocument,
+  setWorkspaceSettings,
+  workspaceSettings,
+}: WorkspacePageProps) {
   const { document: profileDocument, name: profileName } = profile;
-  const income = profileDocument.income;
+  const income = {
+    ...profileDocument.income,
+    matchRate: workspaceSettings.income.matchRate,
+  };
   const mortgageState = profileDocument.mortgage;
   const expenseState = profileDocument.expenses;
-  const projectionState = profileDocument.projection;
   const taxConfig = profileDocument.taxConfig;
   const setIncome = useDraftFieldSetter(setProfileDocument, "income");
   const setMortgageState = useDraftFieldSetter(setProfileDocument, "mortgage");
@@ -290,7 +326,7 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
     setTaxEditorStatus("");
   }, [profileName]);
 
-  const workspace = buildWorkspaceModel(profileDocument);
+  const workspace = buildWorkspaceModel(profileDocument, workspaceSettings);
   const {
     assetOptions,
     assetsView,
@@ -306,6 +342,7 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
     monthlyHousingCostValue,
     mortgageScenario,
     mortgageSummaryItems,
+    projectionState,
     projection,
     projectionResults,
     reserveCashBucketId,
@@ -315,7 +352,7 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
     topLevelSummaryRows,
   } = workspace;
   const comparisonWorkspace = compareProfile
-    ? buildWorkspaceModel(compareProfile.document, {
+    ? buildWorkspaceModel(compareProfile.document, workspaceSettings, {
         currentYear: projection.currentYear,
         displayMode: projection.displayMode,
         horizonYears: projection.horizonYears,
@@ -357,6 +394,13 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
     field: keyof Omit<Income, "incomeItems">,
     value: Income[keyof Omit<Income, "incomeItems">],
   ) {
+    if (field === "matchRate") {
+      setWorkspaceSettings((draft) => {
+        draft.income.matchRate = Number(value) || 0;
+      });
+      return;
+    }
+
     setIncome((draft) => {
       Object.assign(draft, { [field]: value } as Partial<Income>);
     });
@@ -500,9 +544,39 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
   }
 
   function updateProjectionState(patch: Partial<ProjectionState>) {
-    setProjectionState((draft) => {
-      Object.assign(draft, patch);
-    });
+    const sharedPatch: Partial<ProjectionSharedSettings> = {};
+    const profilePatch: Partial<ProjectionProfileState> = {};
+
+    if ("horizonYears" in patch) sharedPatch.horizonYears = patch.horizonYears;
+    if ("currentYear" in patch) sharedPatch.currentYear = patch.currentYear;
+    if ("inflationRate" in patch) sharedPatch.inflationRate = patch.inflationRate;
+    if ("assetGrowthRate" in patch) sharedPatch.assetGrowthRate = patch.assetGrowthRate;
+    if ("expenseGrowthRate" in patch) sharedPatch.expenseGrowthRate = patch.expenseGrowthRate;
+    if ("incomeGrowthRate" in patch) sharedPatch.incomeGrowthRate = patch.incomeGrowthRate;
+    if ("homeAppreciationRate" in patch) sharedPatch.homeAppreciationRate = patch.homeAppreciationRate;
+    if ("displayMode" in patch) sharedPatch.displayMode = patch.displayMode;
+    if ("includeVestedRsusInNetWorth" in patch) {
+      sharedPatch.includeVestedRsusInNetWorth = patch.includeVestedRsusInNetWorth;
+    }
+    if ("targetCash" in patch) sharedPatch.targetCash = patch.targetCash;
+
+    if ("mortgageFundingBucketId" in patch) profilePatch.mortgageFundingBucketId = patch.mortgageFundingBucketId;
+    if ("freeCashFlowBucketId" in patch) profilePatch.freeCashFlowBucketId = patch.freeCashFlowBucketId;
+    if ("assetOverrides" in patch) profilePatch.assetOverrides = patch.assetOverrides;
+    if ("expenseOverrides" in patch) profilePatch.expenseOverrides = patch.expenseOverrides;
+    if ("timeline" in patch) profilePatch.timeline = patch.timeline;
+
+    if (Object.keys(sharedPatch).length > 0) {
+      setWorkspaceSettings((draft) => {
+        Object.assign(draft.projection, sharedPatch);
+      });
+    }
+
+    if (Object.keys(profilePatch).length > 0) {
+      setProjectionState((draft) => {
+        Object.assign(draft, profilePatch);
+      });
+    }
   }
 
   function updateAssetOverride(bucketId: string, patch: ProjectionAssetOverride) {
@@ -655,6 +729,13 @@ export function WorkspacePage({ compareProfile, profile, setProfileDocument }: W
           onRemoveAssetBucket={removeAssetBucket}
           onUpdateAssetBucket={updateAssetBucket}
           onUpdateAssetOverride={updateAssetOverride}
+        />
+
+        <TimelineSection
+          isHomeOwner={mortgageScenario.kind !== "rent"}
+          projection={projection}
+          timeline={projectionState.timeline}
+          onUpdateTimeline={(timeline) => updateProjectionState({ timeline })}
         />
       </WorkspaceLayout>
     </main>
